@@ -278,6 +278,7 @@ def test_draw_is_rejected_during_betting() -> None:
             discard_indices=[],
         )
 
+
 def test_single_winner_receives_entire_pot() -> None:
     game = create_three_player_game()
 
@@ -416,6 +417,7 @@ def test_pot_cannot_be_awarded_twice() -> None:
 
     with pytest.raises(RuntimeError):
         game._award_pots()
+
 
 def test_different_players_can_win_main_and_side_pots() -> None:
     game = create_three_player_game()
@@ -593,6 +595,7 @@ def test_pot_total_must_match_commitments() -> None:
     with pytest.raises(RuntimeError):
         game._award_pots()
 
+
 def test_big_blind_ante_is_dead_money_in_main_pot() -> None:
     game = create_three_player_game()
 
@@ -628,6 +631,7 @@ def test_big_blind_ante_is_dead_money_in_main_pot() -> None:
     assert game.winner_seats == (0,)
     assert len(game.pot_awards) == 1
     assert game.pot_awards[0].winner_seats == (0,)
+
 
 def test_different_starting_stacks_create_real_side_pots() -> None:
     game = SingleDrawGame(
@@ -689,6 +693,7 @@ def test_different_starting_stacks_create_real_side_pots() -> None:
     assert game.betting_state.players[0].stack == 15.0
     assert game.betting_state.players[1].stack == 0.0
     assert game.betting_state.players[2].stack == 10.0
+
 
 def test_discarded_cards_enter_game_muck() -> None:
     game = create_three_player_game()

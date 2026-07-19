@@ -1,5 +1,6 @@
 import pytest
 
+from solver.actions import DiscardAction
 from solver.cards import Card
 from solver.draw import draw_cards
 from solver.draw_deck import DrawDeck
@@ -11,13 +12,16 @@ def test_draw_one_card() -> None:
     deck = DrawDeck(shuffle=False)
     deck.stock = [Card.from_string("2h")]
 
+    action = DiscardAction((4,))
+
     result = draw_cards(
         hand=hand,
         deck=deck,
-        discard_indices=[4],
+        action=action,
     )
 
     assert result.original_hand == hand
+    assert result.action == action
     assert str(result.final_hand) == "7s 5h 4d 3c 2h"
     assert result.discarded_cards == (
         Card.from_string("Ks"),
@@ -46,12 +50,15 @@ def test_draw_multiple_cards() -> None:
         Card.from_string("4c"),
     ]
 
+    action = DiscardAction((2, 3, 4))
+
     result = draw_cards(
         hand=hand,
         deck=deck,
-        discard_indices=[2, 3, 4],
+        action=action,
     )
 
+    assert result.action == action
     assert len(result.final_hand.cards) == 5
     assert set(result.final_hand.cards) == {
         Card.from_string("7s"),
@@ -79,12 +86,15 @@ def test_stand_pat_draws_no_cards() -> None:
     deck = DrawDeck(shuffle=False)
     original_stock_size = deck.stock_size
 
+    action = DiscardAction(())
+
     result = draw_cards(
         hand=hand,
         deck=deck,
-        discard_indices=[],
+        action=action,
     )
 
+    assert result.action == action
     assert result.final_hand == hand
     assert result.discarded_cards == ()
     assert result.drawn_cards == ()
@@ -101,31 +111,19 @@ def test_invalid_discard_index_raises_error() -> None:
         "Ks",
     )
     deck = DrawDeck(shuffle=False)
-
-    with pytest.raises(IndexError):
-        draw_cards(
-            hand=hand,
-            deck=deck,
-            discard_indices=[5],
-        )
-
-
-def test_duplicate_discard_indices_raise_error() -> None:
-    hand = Hand.from_strings(
-        "7s",
-        "5h",
-        "4d",
-        "3c",
-        "Ks",
-    )
-    deck = DrawDeck(shuffle=False)
+    action = DiscardAction((5,))
 
     with pytest.raises(ValueError):
         draw_cards(
             hand=hand,
             deck=deck,
-            discard_indices=[4, 4],
+            action=action,
         )
+
+
+def test_duplicate_discard_indices_raise_error() -> None:
+    with pytest.raises(ValueError):
+        DiscardAction((4, 4))
 
 
 def test_cannot_draw_more_cards_than_deck_contains() -> None:
@@ -143,10 +141,36 @@ def test_cannot_draw_more_cards_than_deck_contains() -> None:
         ],
         shuffle=False,
     )
+    action = DiscardAction((2, 3, 4))
 
     with pytest.raises(ValueError):
         draw_cards(
             hand=hand,
             deck=deck,
-            discard_indices=[2, 3, 4],
+            action=action,
         )
+
+
+def test_draw_result_stores_action() -> None:
+    hand = Hand.from_strings(
+        "7s",
+        "5h",
+        "4d",
+        "3c",
+        "Ks",
+    )
+    deck = DrawDeck(
+        cards=[
+            Card.from_string("2h"),
+        ],
+        shuffle=False,
+    )
+    action = DiscardAction((4,))
+
+    result = draw_cards(
+        hand=hand,
+        deck=deck,
+        action=action,
+    )
+
+    assert result.action == action

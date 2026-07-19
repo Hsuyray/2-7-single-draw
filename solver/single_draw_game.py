@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+from solver.actions import DiscardAction
 from solver.cards import Card
-from solver.draw_deck import DrawDeck
 from solver.draw import DrawResult, draw_cards
+from solver.draw_deck import DrawDeck
 from solver.game_state import ActionType, GameConfig, GameState
 from solver.hand import Hand
 from solver.pots import Pot, build_pots
+from solver.action_history import PublicAction
 
 
 class GamePhase(str, Enum):
@@ -15,11 +17,13 @@ class GamePhase(str, Enum):
     POSTDRAW_BETTING = "postdraw_betting"
     COMPLETE = "complete"
 
+
 @dataclass(frozen=True)
 class PotAward:
     pot: Pot
     winner_seats: tuple[int, ...]
     amount_per_winner: float
+
 
 @dataclass
 class SingleDrawGame:
@@ -30,6 +34,7 @@ class SingleDrawGame:
     betting_state: GameState = field(init=False)
     hands: list[Hand | None] = field(init=False)
     phase: GamePhase = field(init=False)
+
     draw_order: list[int] = field(
         init=False,
         default_factory=list,
@@ -58,6 +63,10 @@ class SingleDrawGame:
         init=False,
         default=False,
     )
+    action_history: list[PublicAction] = field(
+        init=False,
+        default_factory=list,
+    )   
 
     def __post_init__(self) -> None:
         self.deck = DrawDeck(
@@ -138,9 +147,27 @@ class SingleDrawGame:
                 f"during the {self.phase.value} phase."
             )
 
+        acting_seat = self.betting_state.acting_seat
+
+        if acting_seat is None:
+            raise RuntimeError(
+                "No player is currently allowed to act."
+            )
+
+        action_phase = self.phase.value
+
         self.betting_state.apply_action(
             action,
             raise_to=raise_to,
+        )
+
+        self.action_history.append(
+            PublicAction(
+                phase=action_phase,
+                seat=acting_seat,
+                action_type=action.value,
+                amount=raise_to,
+            )
         )
 
         if self.betting_state.hand_complete:
@@ -208,14 +235,28 @@ class SingleDrawGame:
                 f"Seat {seat} does not have a hand."
             )
 
+        action = DiscardAction(
+            tuple(discard_indices)
+        )
+
         result = draw_cards(
             hand=hand,
             deck=self.deck,
-            discard_indices=discard_indices,
+            action=action,
         )
 
         self.hands[seat] = result.final_hand
         self.draw_results[seat] = result
+
+        self.action_history.append(
+            PublicAction(
+                phase=GamePhase.DRAW.value,
+                seat=seat,
+                action_type="draw",
+                draw_count=result.action.draw_count,
+            )
+        )
+
         self.draw_index += 1
 
         if self.draw_index >= len(self.draw_order):
@@ -237,7 +278,9 @@ class SingleDrawGame:
             self._resolve_showdown()
             return
 
-        first_acting_seat = self._find_first_postdraw_actor()
+        first_acting_seat = (
+            self._find_first_postdraw_actor()
+        )
 
         self.betting_state.start_new_betting_round(
             first_acting_seat=first_acting_seat,
@@ -317,7 +360,7 @@ class SingleDrawGame:
             commitments=commitments,
             folded_seats=folded_seats,
         )
-        
+
         if total_dead_money > 0:
             if not pots:
                 eligible_seats = tuple(
@@ -340,16 +383,26 @@ class SingleDrawGame:
                         main_pot.amount
                         + total_dead_money
                     ),
-                    eligible_seats=main_pot.eligible_seats,
+                    eligible_seats=(
+                        main_pot.eligible_seats
+                    ),
                 )
+
         calculated_total = sum(
             pot.amount
             for pot in pots
         )
 
-        if abs(calculated_total - self.betting_state.pot) > 1e-9:
+        if (
+            abs(
+                calculated_total
+                - self.betting_state.pot
+            )
+            > 1e-9
+        ):
             raise RuntimeError(
-                "Pot total does not match player commitments."
+                "Pot total does not match "
+                "player commitments."
             )
 
         self.payouts = {}
@@ -365,7 +418,9 @@ class SingleDrawGame:
             )
 
             for seat in winners:
-                player = self.betting_state.players[seat]
+                player = (
+                    self.betting_state.players[seat]
+                )
                 player.stack += amount_per_winner
 
                 self.payouts[seat] = (
@@ -379,7 +434,9 @@ class SingleDrawGame:
                 PotAward(
                     pot=pot,
                     winner_seats=winners,
-                    amount_per_winner=amount_per_winner,
+                    amount_per_winner=(
+                        amount_per_winner
+                    ),
                 )
             )
 
