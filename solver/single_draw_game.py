@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
-from solver.cards import Card, Deck
+from solver.cards import Card
+from solver.draw_deck import DrawDeck
 from solver.draw import DrawResult, draw_cards
 from solver.game_state import ActionType, GameConfig, GameState
 from solver.hand import Hand
@@ -25,7 +26,7 @@ class SingleDrawGame:
     config: GameConfig
     button_seat: int = 0
     shuffle_deck: bool = True
-    deck: Deck = field(init=False)
+    deck: DrawDeck = field(init=False)
     betting_state: GameState = field(init=False)
     hands: list[Hand | None] = field(init=False)
     phase: GamePhase = field(init=False)
@@ -59,10 +60,9 @@ class SingleDrawGame:
     )
 
     def __post_init__(self) -> None:
-        self.deck = Deck()
-
-        if self.shuffle_deck:
-            self.deck.shuffle()
+        self.deck = DrawDeck(
+            shuffle=self.shuffle_deck,
+        )
 
         self.betting_state = GameState(
             config=self.config,

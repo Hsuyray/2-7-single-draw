@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from solver.cards import Card, Deck
+from solver.cards import Card
+from solver.draw_deck import DrawDeck
 from solver.hand import Hand
 
 
@@ -14,13 +15,18 @@ class DrawResult:
 
 def draw_cards(
     hand: Hand,
-    deck: Deck,
+    deck: DrawDeck,
     discard_indices: list[int],
 ) -> DrawResult:
     partial_hand, discarded_cards = hand.discard(discard_indices)
 
-    drawn_cards = tuple(deck.draw(len(discarded_cards)))
-    final_hand = partial_hand.complete(list(drawn_cards))
+    drawn_cards = tuple(
+        deck.replace(discarded_cards)
+    )
+
+    final_hand = partial_hand.complete(
+        list(drawn_cards)
+    )
 
     return DrawResult(
         original_hand=hand,

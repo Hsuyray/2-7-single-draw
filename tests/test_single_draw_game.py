@@ -112,8 +112,8 @@ def test_player_can_replace_one_card() -> None:
     original_hand = game.hands[1]
     assert original_hand is not None
 
-    replacement_card = game.deck.cards[-1]
-    game.deck.cards = [replacement_card]
+    replacement_card = game.deck.stock[-1]
+    game.deck.stock = [replacement_card]
 
     result = game.submit_draw(
         seat=1,
@@ -689,3 +689,84 @@ def test_different_starting_stacks_create_real_side_pots() -> None:
     assert game.betting_state.players[0].stack == 15.0
     assert game.betting_state.players[1].stack == 0.0
     assert game.betting_state.players[2].stack == 10.0
+
+def test_discarded_cards_enter_game_muck() -> None:
+    game = create_three_player_game()
+
+    complete_predraw_betting(game)
+
+    acting_seat = game.draw_acting_seat
+    assert acting_seat is not None
+
+    original_hand = game.hands[acting_seat]
+    assert original_hand is not None
+
+    discarded_card = original_hand.cards[4]
+
+    game.submit_draw(
+        seat=acting_seat,
+        discard_indices=[4],
+    )
+
+    assert discarded_card in game.deck.muck
+
+
+def test_player_cannot_immediately_redraw_discarded_card() -> None:
+    game = create_three_player_game()
+
+    complete_predraw_betting(game)
+
+    acting_seat = game.draw_acting_seat
+    assert acting_seat is not None
+
+    original_hand = game.hands[acting_seat]
+    assert original_hand is not None
+
+    discarded_card = original_hand.cards[4]
+    replacement_card = game.deck.stock[-1]
+
+    result = game.submit_draw(
+        seat=acting_seat,
+        discard_indices=[4],
+    )
+
+    assert result.drawn_cards == (replacement_card,)
+    assert discarded_card not in result.drawn_cards
+    assert discarded_card in game.deck.muck
+
+
+def test_later_player_can_draw_from_previous_players_muck() -> None:
+    game = create_three_player_game()
+
+    complete_predraw_betting(game)
+
+    first_seat = game.draw_acting_seat
+    assert first_seat is not None
+
+    first_hand = game.hands[first_seat]
+    assert first_hand is not None
+
+    first_discard = first_hand.cards[4]
+
+    # Leave exactly one card in stock for the first player.
+    first_replacement = game.deck.stock[-1]
+    game.deck.stock = [first_replacement]
+
+    game.submit_draw(
+        seat=first_seat,
+        discard_indices=[4],
+    )
+
+    assert game.deck.stock_size == 0
+    assert first_discard in game.deck.muck
+
+    second_seat = game.draw_acting_seat
+    assert second_seat is not None
+
+    result = game.submit_draw(
+        seat=second_seat,
+        discard_indices=[4],
+    )
+
+    assert result.drawn_cards == (first_discard,)
+    assert game.deck.muck_size == 1
