@@ -4,6 +4,7 @@ from solver.actions import DiscardAction
 from solver.cards import Card
 from solver.draw_deck import DrawDeck
 from solver.hand import Hand
+from solver.canonical_hand import canonicalize_hand
 
 
 @dataclass(frozen=True)
@@ -32,8 +33,10 @@ def draw_cards(
         deck.replace(discarded_cards)
     )
 
-    final_hand = partial_hand.complete(
-        list(drawn_cards)
+    final_hand = canonicalize_hand(
+        partial_hand.complete(
+            list(drawn_cards)
+        )
     )
 
     return DrawResult(

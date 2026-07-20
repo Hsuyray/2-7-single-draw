@@ -9,6 +9,7 @@ from solver.game_state import ActionType, GameConfig, GameState
 from solver.hand import Hand
 from solver.pots import Pot, build_pots
 from solver.action_history import PublicAction
+from solver.canonical_hand import canonicalize_hand
 
 
 class GamePhase(str, Enum):
@@ -30,6 +31,7 @@ class SingleDrawGame:
     config: GameConfig
     button_seat: int = 0
     shuffle_deck: bool = True
+    deck_seed: int | None = None
     deck: DrawDeck = field(init=False)
     betting_state: GameState = field(init=False)
     hands: list[Hand | None] = field(init=False)
@@ -71,6 +73,7 @@ class SingleDrawGame:
     def __post_init__(self) -> None:
         self.deck = DrawDeck(
             shuffle=self.shuffle_deck,
+            seed=self.deck_seed,
         )
 
         self.betting_state = GameState(
@@ -130,7 +133,9 @@ class SingleDrawGame:
                 seat = self._next_seat(seat)
 
         for seat, cards in enumerate(dealt_cards):
-            self.hands[seat] = Hand(tuple(cards))
+            self.hands[seat] = canonicalize_hand(
+                Hand(tuple(cards))
+            )
 
     def apply_betting_action(
         self,

@@ -22,7 +22,7 @@ def test_draw_one_card() -> None:
 
     assert result.original_hand == hand
     assert result.action == action
-    assert str(result.final_hand) == "7s 5h 4d 3c 2h"
+    assert str(result.final_hand) == "2h 3c 4d 5h 7s"
     assert result.discarded_cards == (
         Card.from_string("Ks"),
     )
@@ -95,7 +95,6 @@ def test_stand_pat_draws_no_cards() -> None:
     )
 
     assert result.action == action
-    assert result.final_hand == hand
     assert result.discarded_cards == ()
     assert result.drawn_cards == ()
     assert deck.stock_size == original_stock_size
@@ -174,3 +173,33 @@ def test_draw_result_stores_action() -> None:
     )
 
     assert result.action == action
+
+
+def test_final_hand_is_canonicalized() -> None:
+    hand = Hand.from_strings(
+        "3c",
+        "4d",
+        "5h",
+        "7s",
+        "Ks",
+    )
+    deck = DrawDeck(
+        cards=[
+            Card.from_string("2h"),
+        ],
+        shuffle=False,
+    )
+
+    result = draw_cards(
+        hand=hand,
+        deck=deck,
+        action=DiscardAction((4,)),
+    )
+
+    assert result.final_hand.cards == (
+        Card.from_string("2h"),
+        Card.from_string("3c"),
+        Card.from_string("4d"),
+        Card.from_string("5h"),
+        Card.from_string("7s"),
+    )

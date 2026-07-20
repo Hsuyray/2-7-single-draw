@@ -11,6 +11,7 @@ from solver.information_state import (
     PublicPlayerState,
 )
 from solver.action_history import PublicAction
+from solver.hand_abstraction import exact_hand_key
 
 
 def make_fake_game() -> SimpleNamespace:
@@ -103,12 +104,8 @@ def test_information_state_contains_own_cards() -> None:
         observer_seat=0,
     )
 
-    assert state.own_cards == (
-        "7s",
-        "5h",
-        "4d",
-        "3c",
-        "Ks",
+    assert state.own_hand_key == exact_hand_key(
+        game.hands[0]
     )
 
 
@@ -147,7 +144,10 @@ def test_different_observers_see_different_private_cards() -> None:
         observer_seat=1,
     )
 
-    assert state_zero.own_cards != state_one.own_cards
+    assert (
+        state_zero.own_hand_key
+        != state_one.own_hand_key
+    )
     assert state_zero != state_one
 
 

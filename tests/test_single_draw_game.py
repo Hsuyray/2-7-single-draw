@@ -775,3 +775,36 @@ def test_later_player_can_draw_from_previous_players_muck() -> None:
 
     assert result.drawn_cards == (first_discard,)
     assert game.deck.muck_size == 1
+
+
+def test_starting_hands_are_canonicalized() -> None:
+    game = create_three_player_game()
+
+    for hand in game.hands:
+        assert hand is not None
+
+        ranks = [
+            card.rank
+            for card in hand.cards
+        ]
+
+        rank_values = [
+            {
+                "2": 2,
+                "3": 3,
+                "4": 4,
+                "5": 5,
+                "6": 6,
+                "7": 7,
+                "8": 8,
+                "9": 9,
+                "T": 10,
+                "J": 11,
+                "Q": 12,
+                "K": 13,
+                "A": 14,
+            }[rank]
+            for rank in ranks
+        ]
+
+        assert rank_values == sorted(rank_values)

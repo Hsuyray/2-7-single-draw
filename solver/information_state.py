@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from solver.action_history import PublicAction
+from solver.hand_abstraction import (
+    ExactHandKey,
+    exact_hand_key,
+)
 
 if TYPE_CHECKING:
     from solver.single_draw_game import SingleDrawGame
@@ -24,7 +28,7 @@ class InformationState:
     acting_seat: int | None
     button_seat: int
     pot: float
-    own_cards: tuple[str, ...]
+    own_hand_key: ExactHandKey
     players: tuple[PublicPlayerState, ...]
     action_history: tuple[PublicAction, ...]
 
@@ -84,9 +88,8 @@ class InformationState:
             acting_seat=game.acting_seat,
             button_seat=game.button_seat,
             pot=game.pot,
-            own_cards=tuple(
-                str(card)
-                for card in own_hand.cards
+            own_hand_key=exact_hand_key(
+                own_hand
             ),
             players=tuple(public_players),
             action_history=tuple(
