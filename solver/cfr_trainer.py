@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from math import prod
 
 from solver.action_executor import apply_solver_action
-from solver.information_state import InformationState
 from solver.legal_actions import legal_actions
 from solver.node_store import NodeStore
 from solver.single_draw_game import (
@@ -12,6 +11,10 @@ from solver.single_draw_game import (
     SingleDrawGame,
 )
 from solver.terminal_utility import terminal_utility
+from solver.information_state import (
+    AbstractionMode,
+    InformationState,
+)
 
 
 GameFactory = Callable[[], SingleDrawGame]
@@ -21,11 +24,12 @@ GameFactory = Callable[[], SingleDrawGame]
 class CFRTrainer:
     max_draw: int = 3
     raise_sizes: tuple[float, ...] = ()
+    abstraction: AbstractionMode = "exact"
     node_store: NodeStore = field(
         default_factory=NodeStore,
     )
     completed_iterations: int = 0
-
+    
     def train(
         self,
         game_factory: GameFactory,
@@ -87,6 +91,7 @@ class CFRTrainer:
         information_state = InformationState.from_game(
             game,
             observer_seat=acting_seat,
+            abstraction=self.abstraction,
         )
 
         node = self.node_store.get_or_create(

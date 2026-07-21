@@ -1,14 +1,28 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from solver.action_history import PublicAction
-from solver.hand_abstraction import (
-    ExactHandKey,
-    exact_hand_key,
+from solver.hand_abstraction import ExactHandKey, exact_hand_key
+from solver.hand_bucket import HandBucket, hand_bucket
+from solver.made_hand_bucket import (
+    MadeHandBucket,
+    made_hand_bucket,
 )
 
 if TYPE_CHECKING:
     from solver.single_draw_game import SingleDrawGame
+
+
+AbstractionMode = Literal[
+    "exact",
+    "bucket",
+]
+
+PrivateHandKey: TypeAlias = (
+    ExactHandKey
+    | HandBucket
+    | MadeHandBucket
+)
 
 
 @dataclass(frozen=True)
@@ -28,7 +42,7 @@ class InformationState:
     acting_seat: int | None
     button_seat: int
     pot: float
-    own_hand_key: ExactHandKey
+    own_hand_key: PrivateHandKey
     players: tuple[PublicPlayerState, ...]
     action_history: tuple[PublicAction, ...]
 
@@ -38,6 +52,7 @@ class InformationState:
         game: "SingleDrawGame",
         *,
         observer_seat: int,
+        abstraction: AbstractionMode = "exact",
     ) -> "InformationState":
         if not (
             0
@@ -55,7 +70,27 @@ class InformationState:
                 "Observer does not have a hand."
             )
 
-        public_players: list[PublicPlayerState] = []
+        if abstraction == "exact":
+            own_hand_key: PrivateHandKey = (
+                exact_hand_key(own_hand)
+            )
+        elif abstraction == "bucket":
+            if game.phase.value == "postdraw_betting":
+                own_hand_key = made_hand_bucket(
+                    own_hand
+                )
+            else:
+                own_hand_key = hand_bucket(
+                    own_hand
+                )
+        else:
+            raise ValueError(
+                "Unknown information-state abstraction."
+            )
+
+        public_players: list[
+            PublicPlayerState
+        ] = []
 
         for player in game.betting_state.players:
             draw_result = game.draw_results.get(
@@ -88,9 +123,7 @@ class InformationState:
             acting_seat=game.acting_seat,
             button_seat=game.button_seat,
             pot=game.pot,
-            own_hand_key=exact_hand_key(
-                own_hand
-            ),
+            own_hand_key=own_hand_key,
             players=tuple(public_players),
             action_history=tuple(
                 game.action_history

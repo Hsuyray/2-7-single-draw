@@ -4,6 +4,8 @@ from solver.cfr_trainer import CFRTrainer
 from solver.game_state import GameConfig
 from solver.single_draw_game import SingleDrawGame
 from solver.training_factory import TrainingGameFactory
+from solver.hand_abstraction import ExactHandKey
+from solver.hand_bucket import HandBucket
 
 
 def make_heads_up_game() -> SingleDrawGame:
@@ -216,3 +218,44 @@ def test_trainer_uses_multiple_sampled_deals() -> None:
     assert factory.games_created == 5
     assert trainer.completed_iterations == 5
     assert len(trainer.node_store) > 0
+
+
+def test_trainer_uses_exact_abstraction_by_default() -> None:
+    trainer = CFRTrainer(
+        max_draw=0,
+        raise_sizes=(),
+    )
+
+    trainer.train(
+        make_heads_up_game,
+        iterations=1,
+    )
+
+    assert all(
+        isinstance(
+            state.own_hand_key,
+            ExactHandKey,
+        )
+        for state in trainer.node_store.nodes
+    )
+
+
+def test_trainer_can_use_bucket_abstraction() -> None:
+    trainer = CFRTrainer(
+        max_draw=0,
+        raise_sizes=(),
+        abstraction="bucket",
+    )
+
+    trainer.train(
+        make_heads_up_game,
+        iterations=1,
+    )
+
+    assert all(
+        isinstance(
+            state.own_hand_key,
+            HandBucket,
+        )
+        for state in trainer.node_store.nodes
+    )

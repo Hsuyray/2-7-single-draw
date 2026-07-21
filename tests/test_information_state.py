@@ -11,7 +11,18 @@ from solver.information_state import (
     PublicPlayerState,
 )
 from solver.action_history import PublicAction
-from solver.hand_abstraction import exact_hand_key
+from solver.hand_abstraction import (
+    ExactHandKey,
+    exact_hand_key,
+)
+from solver.hand_bucket import (
+    HandBucket,
+    hand_bucket,
+)
+from solver.made_hand_bucket import (
+    MadeHandBucket,
+    made_hand_bucket,
+)
 
 
 def make_fake_game() -> SimpleNamespace:
@@ -339,3 +350,106 @@ def test_different_action_histories_create_different_states() -> None:
     )
 
     assert state_one != state_two
+
+
+def test_exact_abstraction_is_default() -> None:
+    game = make_fake_game()
+
+    state = InformationState.from_game(
+        game,
+        observer_seat=0,
+    )
+
+    assert isinstance(
+        state.own_hand_key,
+        ExactHandKey,
+    )
+
+    assert state.own_hand_key == exact_hand_key(
+        game.hands[0]
+    )
+
+
+def test_bucket_abstraction_uses_hand_bucket() -> None:
+    game = make_fake_game()
+    game.phase.value = "postdraw_betting"
+
+    state = InformationState.from_game(
+        game,
+        observer_seat=0,
+        abstraction="bucket",
+    )
+
+    assert isinstance(
+        state.own_hand_key,
+        HandBucket,
+    )
+
+    assert state.own_hand_key == hand_bucket(
+        game.hands[0]
+    )
+
+
+def test_exact_and_bucket_states_are_different() -> None:
+    game = make_fake_game()
+
+    exact_state = InformationState.from_game(
+        game,
+        observer_seat=0,
+        abstraction="exact",
+    )
+
+    bucket_state = InformationState.from_game(
+        game,
+        observer_seat=0,
+        abstraction="bucket",
+    )
+
+    assert exact_state != bucket_state
+
+
+def test_unknown_abstraction_is_rejected() -> None:
+    game = make_fake_game()
+
+    with pytest.raises(ValueError):
+        InformationState.from_game(
+            game,
+            observer_seat=0,
+            abstraction="unknown",  # type: ignore[arg-type]
+        )
+
+
+def test_bucket_abstraction_uses_made_hand_postdraw() -> None:
+    game = make_fake_game()
+    game.phase.value = "postdraw_betting"
+
+    state = InformationState.from_game(
+        game,
+        observer_seat=0,
+        abstraction="bucket",
+    )
+
+    assert isinstance(
+        state.own_hand_key,
+        MadeHandBucket,
+    )
+
+    assert state.own_hand_key == made_hand_bucket(
+        game.hands[0]
+    )
+
+
+def test_bucket_abstraction_uses_draw_bucket_predraw() -> None:
+    game = make_fake_game()
+    game.phase.value = "predraw_betting"
+
+    state = InformationState.from_game(
+        game,
+        observer_seat=0,
+        abstraction="bucket",
+    )
+
+    assert isinstance(
+        state.own_hand_key,
+        HandBucket,
+    )
