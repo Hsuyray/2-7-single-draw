@@ -5,8 +5,8 @@ from solver.game_state import GameConfig
 from solver.single_draw_game import SingleDrawGame
 from solver.training_factory import TrainingGameFactory
 from solver.hand_abstraction import ExactHandKey
-from solver.hand_bucket import HandBucket
 from solver.made_hand_bucket import MadeHandBucket
+from solver.draw_hand_bucket import DrawHandBucket
 
 
 def make_heads_up_game() -> SingleDrawGame:
@@ -262,5 +262,5 @@ def test_trainer_can_use_bucket_abstraction() -> None:
         else:
             assert isinstance(
                 state.own_hand_key,
-                HandBucket,
+                DrawHandBucket,
             )

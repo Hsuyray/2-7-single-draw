@@ -15,13 +15,13 @@ from solver.hand_abstraction import (
     ExactHandKey,
     exact_hand_key,
 )
-from solver.hand_bucket import (
-    HandBucket,
-    hand_bucket,
-)
 from solver.made_hand_bucket import (
     MadeHandBucket,
     made_hand_bucket,
+)
+from solver.draw_hand_bucket import (
+    DrawHandBucket,
+    draw_hand_bucket,
 )
 
 
@@ -399,7 +399,7 @@ def test_unknown_abstraction_is_rejected() -> None:
         )
 
 
-def test_bucket_abstraction_uses_hand_bucket_predraw() -> None:
+def test_bucket_abstraction_uses_draw_hand_bucket_predraw() -> None:
     game = make_fake_game()
     game.phase.value = "predraw_betting"
 
@@ -411,10 +411,10 @@ def test_bucket_abstraction_uses_hand_bucket_predraw() -> None:
 
     assert isinstance(
         state.own_hand_key,
-        HandBucket,
+        DrawHandBucket,
     )
 
-    assert state.own_hand_key == hand_bucket(
+    assert state.own_hand_key == draw_hand_bucket(
         game.hands[0]
     )
 

@@ -3,10 +3,13 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from solver.action_history import PublicAction
 from solver.hand_abstraction import ExactHandKey, exact_hand_key
-from solver.hand_bucket import HandBucket, hand_bucket
 from solver.made_hand_bucket import (
     MadeHandBucket,
     made_hand_bucket,
+)
+from solver.draw_hand_bucket import (
+    DrawHandBucket,
+    draw_hand_bucket,
 )
 
 if TYPE_CHECKING:
@@ -20,7 +23,7 @@ AbstractionMode = Literal[
 
 PrivateHandKey: TypeAlias = (
     ExactHandKey
-    | HandBucket
+    | DrawHandBucket
     | MadeHandBucket
 )
 
@@ -80,7 +83,7 @@ class InformationState:
                     own_hand
                 )
             else:
-                own_hand_key = hand_bucket(
+                own_hand_key = draw_hand_bucket(
                     own_hand
                 )
         else:
