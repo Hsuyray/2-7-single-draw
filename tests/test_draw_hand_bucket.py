@@ -43,7 +43,7 @@ def test_rank_bands_are_created() -> None:
     )
 
 
-def test_similar_high_cards_share_bucket() -> None:
+def test_similar_rank_structures_share_bucket() -> None:
     first_hand = Hand.from_strings(
         "2c",
         "3d",
@@ -53,11 +53,11 @@ def test_similar_high_cards_share_bucket() -> None:
     )
 
     second_hand = Hand.from_strings(
-        "2c",
-        "4d",
-        "5h",
-        "Qs",
-        "Ac",
+        "2h",
+        "4s",
+        "5c",
+        "Qd",
+        "Ah",
     )
 
     assert draw_hand_bucket(
@@ -67,7 +67,7 @@ def test_similar_high_cards_share_bucket() -> None:
     )
 
 
-def test_different_rank_bands_do_not_share_bucket() -> None:
+def test_different_rank_bands_differ() -> None:
     first_hand = Hand.from_strings(
         "2c",
         "3d",
@@ -109,7 +109,6 @@ def test_pair_positions_are_preserved() -> None:
         False,
         False,
     )
-    assert bucket.unique_rank_count == 4
 
 
 def test_unpaired_hand_has_no_duplicate_flags() -> None:
@@ -132,13 +131,53 @@ def test_unpaired_hand_has_no_duplicate_flags() -> None:
     )
 
 
+def test_three_card_suit_is_preserved() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "5c",
+        "7h",
+        "Kc",
+    )
+
+    bucket = draw_hand_bucket(hand)
+
+    assert bucket.dominant_suit_flags == (
+        True,
+        False,
+        True,
+        False,
+        True,
+    )
+
+
+def test_two_card_suit_is_ignored() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "5h",
+        "7s",
+        "Kc",
+    )
+
+    bucket = draw_hand_bucket(hand)
+
+    assert bucket.dominant_suit_flags == (
+        False,
+        False,
+        False,
+        False,
+        False,
+    )
+
+
 def test_suit_names_do_not_matter() -> None:
     first_hand = Hand.from_strings(
         "2c",
         "3d",
         "5c",
         "7h",
-        "Ks",
+        "Kc",
     )
 
     second_hand = Hand.from_strings(
@@ -146,7 +185,7 @@ def test_suit_names_do_not_matter() -> None:
         "3s",
         "5h",
         "7c",
-        "Kd",
+        "Kh",
     )
 
     assert draw_hand_bucket(
@@ -156,27 +195,7 @@ def test_suit_names_do_not_matter() -> None:
     )
 
 
-def test_suit_multiplicity_is_position_specific() -> None:
-    hand = Hand.from_strings(
-        "2c",
-        "3d",
-        "5c",
-        "7h",
-        "Kc",
-    )
-
-    bucket = draw_hand_bucket(hand)
-
-    assert bucket.suit_multiplicities == (
-        3,
-        1,
-        3,
-        1,
-        3,
-    )
-
-
-def test_different_suit_structures_differ() -> None:
+def test_different_dominant_suit_positions_differ() -> None:
     first_hand = Hand.from_strings(
         "2c",
         "3d",
@@ -187,57 +206,14 @@ def test_different_suit_structures_differ() -> None:
 
     second_hand = Hand.from_strings(
         "2c",
-        "3d",
+        "3c",
         "5h",
-        "7s",
-        "Kc",
+        "7c",
+        "Kd",
     )
 
     assert draw_hand_bucket(
         first_hand
     ) != draw_hand_bucket(
         second_hand
-    )
-
-
-def test_unique_low_count_ignores_pairs() -> None:
-    hand = Hand.from_strings(
-        "2c",
-        "2d",
-        "5h",
-        "7s",
-        "Kc",
-    )
-
-    bucket = draw_hand_bucket(hand)
-
-    assert bucket.unique_low_count == 3
-    assert bucket.high_card_count == 1
-
-
-def test_straight_pressure_detects_connected_cards() -> None:
-    connected = Hand.from_strings(
-        "2c",
-        "3d",
-        "4h",
-        "5s",
-        "Kc",
-    )
-
-    disconnected = Hand.from_strings(
-        "2c",
-        "4d",
-        "7h",
-        "9s",
-        "Kc",
-    )
-
-    assert (
-        draw_hand_bucket(
-            connected
-        ).straight_pressure
-        >
-        draw_hand_bucket(
-            disconnected
-        ).straight_pressure
     )

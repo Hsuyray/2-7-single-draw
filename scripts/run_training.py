@@ -6,7 +6,7 @@ from solver.training_factory import TrainingGameFactory
 
 
 def main() -> None:
-    iterations = 100
+    iterations = 1000
 
     config = GameConfig(
         player_count=2,
