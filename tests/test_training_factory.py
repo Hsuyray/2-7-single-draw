@@ -1,5 +1,8 @@
 from solver.game_state import GameConfig
-from solver.training_factory import TrainingGameFactory
+from solver.training_factory import (
+    FixedTrainingGameFactory,
+    TrainingGameFactory,
+)
 
 
 def make_config(
@@ -151,3 +154,72 @@ def test_factory_does_not_reuse_game_objects() -> None:
     assert first_game.betting_state is not (
         second_game.betting_state
     )
+
+
+def test_fixed_factory_reuses_same_deal() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    factory = FixedTrainingGameFactory(
+        config=config,
+        button_seat=0,
+        deck_seed=42,
+    )
+
+    first_game = factory()
+    second_game = factory()
+
+    assert first_game.hands == second_game.hands
+    assert first_game.button_seat == second_game.button_seat
+    assert first_game.acting_seat == second_game.acting_seat
+    assert first_game.phase == second_game.phase
+    assert factory.games_created == 2
+
+
+def test_fixed_factory_does_not_alternate_button() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    factory = FixedTrainingGameFactory(
+        config=config,
+        button_seat=1,
+        deck_seed=42,
+    )
+
+    first_game = factory()
+    second_game = factory()
+
+    assert first_game.button_seat == 1
+    assert second_game.button_seat == 1
+
+
+def test_different_fixed_seeds_create_different_deals() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    first_factory = FixedTrainingGameFactory(
+        config=config,
+        deck_seed=42,
+    )
+
+    second_factory = FixedTrainingGameFactory(
+        config=config,
+        deck_seed=43,
+    )
+
+    first_game = first_factory()
+    second_game = second_factory()
+
+    assert first_game.hands != second_game.hands

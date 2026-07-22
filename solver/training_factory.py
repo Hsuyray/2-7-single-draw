@@ -33,3 +33,23 @@ class TrainingGameFactory:
         self.games_created += 1
 
         return game
+
+
+@dataclass
+class FixedTrainingGameFactory:
+    config: GameConfig
+    button_seat: int = 0
+    deck_seed: int = 0
+    games_created: int = 0
+
+    def __call__(self) -> SingleDrawGame:
+        game = SingleDrawGame(
+            config=self.config,
+            button_seat=self.button_seat,
+            shuffle_deck=True,
+            deck_seed=self.deck_seed,
+        )
+
+        self.games_created += 1
+
+        return game

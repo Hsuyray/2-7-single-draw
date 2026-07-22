@@ -2,7 +2,7 @@ from time import perf_counter
 
 from solver.cfr_trainer import CFRTrainer
 from solver.game_state import GameConfig
-from solver.training_factory import TrainingGameFactory
+from solver.training_factory import FixedTrainingGameFactory
 
 
 def main() -> None:
@@ -15,16 +15,34 @@ def main() -> None:
         big_blind=2.0,
     )
 
-    factory = TrainingGameFactory(
+    factory = FixedTrainingGameFactory(
         config=config,
-        initial_seed=42,
-        alternate_button=True,
+        button_seat=0,
+        deck_seed=42,
     )
+
+    preview_game = factory()
+
+    print("Fixed training deal")
+    print("-------------------")
+
+    for seat, hand in enumerate(preview_game.hands):
+        print(
+            f"Seat {seat}: "
+            + " ".join(
+                str(card)
+                for card in hand.cards
+            )
+        )
+
+    print()
+
+    factory.games_created = 0
 
     trainer = CFRTrainer(
         max_draw=1,
         raise_sizes=(),
-        abstraction="bucket",
+        abstraction="exact",
     )
 
     start_time = perf_counter()
