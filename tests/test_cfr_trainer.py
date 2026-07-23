@@ -264,3 +264,172 @@ def test_trainer_can_use_bucket_abstraction() -> None:
                 state.own_hand_key,
                 DrawHandBucket,
             )
+
+
+def test_full_traversal_is_default() -> None:
+    trainer = CFRTrainer()
+
+    assert trainer.traversal_mode == "full"
+
+
+def test_invalid_traversal_mode_is_rejected() -> None:
+    with pytest.raises(ValueError):
+        CFRTrainer(
+            traversal_mode="invalid",  # type: ignore[arg-type]
+        )
+
+
+def test_external_sampling_creates_nodes() -> None:
+    trainer = CFRTrainer(
+        max_draw=1,
+        raise_sizes=(),
+        traversal_mode="external_sampling",
+        random_seed=42,
+    )
+
+    trainer.train(
+        make_heads_up_game,
+        iterations=2,
+    )
+
+    assert trainer.completed_iterations == 2
+    assert len(trainer.node_store) > 0
+
+
+def test_external_sampling_updates_regrets() -> None:
+    trainer = CFRTrainer(
+        max_draw=1,
+        raise_sizes=(),
+        traversal_mode="external_sampling",
+        random_seed=42,
+    )
+
+    trainer.train(
+        make_heads_up_game,
+        iterations=5,
+    )
+
+    has_nonzero_regret = any(
+        abs(regret) > 1e-12
+        for node
+        in trainer.node_store.nodes.values()
+        for regret in node.regret_sum.values()
+    )
+
+    assert has_nonzero_regret is True
+
+
+def test_external_sampling_is_reproducible() -> None:
+    first_trainer = CFRTrainer(
+        max_draw=1,
+        raise_sizes=(),
+        traversal_mode="external_sampling",
+        random_seed=42,
+    )
+
+    second_trainer = CFRTrainer(
+        max_draw=1,
+        raise_sizes=(),
+        traversal_mode="external_sampling",
+        random_seed=42,
+    )
+
+    first_trainer.train(
+        make_heads_up_game,
+        iterations=5,
+    )
+
+    second_trainer.train(
+        make_heads_up_game,
+        iterations=5,
+    )
+
+    assert (
+        first_trainer.node_store.nodes.keys()
+        == second_trainer.node_store.nodes.keys()
+    )
+
+    for information_state in (
+        first_trainer.node_store.nodes
+    ):
+        first_node = (
+            first_trainer.node_store.nodes[
+                information_state
+            ]
+        )
+
+        second_node = (
+            second_trainer.node_store.nodes[
+                information_state
+            ]
+        )
+
+        assert (
+            first_node.regret_sum
+            == second_node.regret_sum
+        )
+        assert (
+            first_node.strategy_sum
+            == second_node.strategy_sum
+        )
+
+
+def test_external_sampling_explores_fewer_nodes() -> None:
+    full_trainer = CFRTrainer(
+        max_draw=3,
+        raise_sizes=(),
+        traversal_mode="full",
+        random_seed=42,
+    )
+
+    sampled_trainer = CFRTrainer(
+        max_draw=3,
+        raise_sizes=(),
+        traversal_mode="external_sampling",
+        random_seed=42,
+    )
+
+    full_trainer.train(
+        make_heads_up_game,
+        iterations=1,
+    )
+
+    sampled_trainer.train(
+        make_heads_up_game,
+        iterations=1,
+    )
+
+    assert (
+        len(sampled_trainer.node_store)
+        < len(full_trainer.node_store)
+    )
+
+
+def test_external_sampling_average_strategies_are_valid() -> None:
+    trainer = CFRTrainer(
+        max_draw=1,
+        raise_sizes=(),
+        traversal_mode="external_sampling",
+        random_seed=42,
+    )
+
+    trainer.train(
+        make_heads_up_game,
+        iterations=5,
+    )
+
+    strategies = trainer.average_strategies()
+
+    assert strategies
+
+    for strategy in strategies.values():
+        assert sum(
+            strategy.values()
+        ) == pytest.approx(1.0)
+
+        for probability in strategy.values():
+            assert (
+                0.0
+                <= probability
+                <= 1.0
+            )

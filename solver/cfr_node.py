@@ -6,12 +6,18 @@ from solver.legal_actions import SolverAction
 @dataclass
 class CFRNode:
     actions: tuple[SolverAction, ...]
+
     regret_sum: dict[SolverAction, float] = field(
         init=False,
     )
     strategy_sum: dict[SolverAction, float] = field(
         init=False,
     )
+
+    visit_count: int = 0
+    strategy_update_count: int = 0
+    regret_update_count: int = 0
+    strategy_weight_sum: float = 0.0
 
     def __post_init__(self) -> None:
         if not self.actions:
@@ -33,6 +39,29 @@ class CFRNode:
             action: 0.0
             for action in self.actions
         }
+
+    @property
+    def positive_regret_sum(self) -> float:
+        return sum(
+            max(regret, 0.0)
+            for regret in self.regret_sum.values()
+        )
+
+    @property
+    def absolute_regret_sum(self) -> float:
+        return sum(
+            abs(regret)
+            for regret in self.regret_sum.values()
+        )
+
+    @property
+    def strategy_sum_total(self) -> float:
+        return sum(
+            self.strategy_sum.values()
+        )
+
+    def record_visit(self) -> None:
+        self.visit_count += 1
 
     def current_strategy(
         self,
@@ -84,6 +113,9 @@ class CFRNode:
                 * strategy[action]
             )
 
+        self.strategy_update_count += 1
+        self.strategy_weight_sum += realization_weight
+
         return strategy
 
     def add_regret(
@@ -94,6 +126,7 @@ class CFRNode:
         self._validate_action(action)
 
         self.regret_sum[action] += regret
+        self.regret_update_count += 1
 
     def add_regrets(
         self,
@@ -110,6 +143,8 @@ class CFRNode:
 
         for action, regret in regrets.items():
             self.regret_sum[action] += regret
+
+        self.regret_update_count += 1
 
     def average_strategy(
         self,

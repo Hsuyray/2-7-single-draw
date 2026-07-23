@@ -1,5 +1,10 @@
+from solver.canonical_hand import canonicalize_hand
 from solver.game_state import GameConfig
+from solver.hand import Hand
+from solver.single_draw_game import GamePhase
 from solver.training_factory import (
+    FixedDrawTrainingGameFactory,
+    FixedHandsDrawTrainingGameFactory,
     FixedTrainingGameFactory,
     TrainingGameFactory,
 )
@@ -223,3 +228,180 @@ def test_different_fixed_seeds_create_different_deals() -> None:
     second_game = second_factory()
 
     assert first_game.hands != second_game.hands
+
+
+def test_fixed_draw_factory_reuses_same_draw_state() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    factory = FixedDrawTrainingGameFactory(
+        config=config,
+        button_seat=0,
+        deck_seed=42,
+    )
+
+    first_game = factory()
+    second_game = factory()
+
+    assert first_game.phase == GamePhase.DRAW
+    assert second_game.phase == GamePhase.DRAW
+    assert first_game.hands == second_game.hands
+    assert first_game.acting_seat == second_game.acting_seat
+    assert factory.games_created == 2
+
+
+def test_fixed_draw_factory_starts_in_draw_phase() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    factory = FixedDrawTrainingGameFactory(
+        config=config,
+        button_seat=0,
+        deck_seed=42,
+    )
+
+    game = factory()
+
+    assert game.phase == GamePhase.DRAW
+    assert game.acting_seat is not None
+    assert factory.games_created == 1
+
+
+def test_fixed_hands_factory_preserves_starting_hands() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    first_hand = Hand.from_strings(
+        "3c",
+        "4s",
+        "5c",
+        "Td",
+        "Kc",
+    )
+
+    second_hand = Hand.from_strings(
+        "2h",
+        "3d",
+        "5d",
+        "6h",
+        "Qs",
+    )
+
+    factory = FixedHandsDrawTrainingGameFactory(
+        config=config,
+        fixed_hands=(
+            first_hand,
+            second_hand,
+        ),
+        initial_seed=42,
+    )
+
+    game = factory()
+
+    assert game.phase == GamePhase.DRAW
+    assert game.hands[0] == canonicalize_hand(
+        first_hand
+    )
+    assert game.hands[1] == canonicalize_hand(
+        second_hand
+    )
+
+
+def test_fixed_hands_factory_randomizes_remaining_deck() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    fixed_hands = (
+        Hand.from_strings(
+            "3c",
+            "4s",
+            "5c",
+            "Td",
+            "Kc",
+        ),
+        Hand.from_strings(
+            "2h",
+            "3d",
+            "5d",
+            "6h",
+            "Qs",
+        ),
+    )
+
+    factory = FixedHandsDrawTrainingGameFactory(
+        config=config,
+        fixed_hands=fixed_hands,
+        initial_seed=42,
+    )
+
+    first_game = factory()
+    second_game = factory()
+
+    assert first_game.hands == second_game.hands
+    assert first_game.deck.stock != second_game.deck.stock
+    assert first_game.phase == GamePhase.DRAW
+    assert second_game.phase == GamePhase.DRAW
+    assert factory.games_created == 2
+
+
+def test_fixed_cards_are_removed_from_remaining_deck() -> None:
+    config = GameConfig(
+        player_count=2,
+        starting_stack=100.0,
+        small_blind=1.0,
+        big_blind=2.0,
+    )
+
+    fixed_hands = (
+        Hand.from_strings(
+            "3c",
+            "4s",
+            "5c",
+            "Td",
+            "Kc",
+        ),
+        Hand.from_strings(
+            "2h",
+            "3d",
+            "5d",
+            "6h",
+            "Qs",
+        ),
+    )
+
+    factory = FixedHandsDrawTrainingGameFactory(
+        config=config,
+        fixed_hands=fixed_hands,
+        initial_seed=42,
+    )
+
+    game = factory()
+
+    fixed_cards = {
+        card
+        for hand in fixed_hands
+        for card in hand.cards
+    }
+
+    remaining_cards = set(game.deck.stock)
+
+    assert fixed_cards.isdisjoint(
+        remaining_cards
+    )
+    assert len(game.deck.stock) == 42

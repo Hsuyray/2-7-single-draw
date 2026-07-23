@@ -57,6 +57,20 @@ def test_new_node_initializes_zero_strategy_sum() -> None:
     }
 
 
+def test_new_node_initializes_statistics() -> None:
+    node = CFRNode(
+        actions=make_betting_actions(),
+    )
+
+    assert node.visit_count == 0
+    assert node.strategy_update_count == 0
+    assert node.regret_update_count == 0
+    assert node.strategy_weight_sum == 0.0
+    assert node.strategy_sum_total == 0.0
+    assert node.positive_regret_sum == 0.0
+    assert node.absolute_regret_sum == 0.0
+
+
 def test_zero_regrets_produce_uniform_strategy() -> None:
     actions = make_betting_actions()
     node = CFRNode(actions=actions)
@@ -121,7 +135,25 @@ def test_add_regret_updates_one_action() -> None:
         -0.5,
     )
 
-    assert node.regret_sum[actions[1]] == 2.0
+    assert node.regret_sum[actions[1]] == pytest.approx(
+        2.0
+    )
+
+
+def test_add_regret_records_each_update() -> None:
+    actions = make_betting_actions()
+    node = CFRNode(actions=actions)
+
+    node.add_regret(
+        actions[0],
+        1.0,
+    )
+    node.add_regret(
+        actions[1],
+        -2.0,
+    )
+
+    assert node.regret_update_count == 2
 
 
 def test_add_regret_rejects_unknown_action() -> None:
@@ -159,6 +191,22 @@ def test_add_multiple_regrets() -> None:
     }
 
 
+def test_add_regrets_records_update_count() -> None:
+    actions = make_betting_actions()
+    node = CFRNode(actions=actions)
+
+    node.add_regrets(
+        {
+            action: float(index)
+            for index, action in enumerate(
+                actions
+            )
+        }
+    )
+
+    assert node.regret_update_count == 1
+
+
 def test_add_multiple_regrets_rejects_unknown_action() -> None:
     actions = make_betting_actions()
     node = CFRNode(actions=actions)
@@ -191,6 +239,27 @@ def test_accumulate_strategy_uses_realization_weight() -> None:
         assert node.strategy_sum[action] == (
             pytest.approx(1.0)
         )
+
+
+def test_accumulate_strategy_records_statistics() -> None:
+    node = CFRNode(
+        actions=make_betting_actions(),
+    )
+
+    node.accumulate_strategy(
+        realization_weight=0.25,
+    )
+    node.accumulate_strategy(
+        realization_weight=0.75,
+    )
+
+    assert node.strategy_update_count == 2
+    assert node.strategy_weight_sum == pytest.approx(
+        1.0
+    )
+    assert node.strategy_sum_total == pytest.approx(
+        1.0
+    )
 
 
 def test_negative_realization_weight_is_rejected() -> None:
@@ -258,3 +327,37 @@ def test_node_supports_discard_actions() -> None:
     assert strategy[DiscardAction((4,))] == 1.0
     assert strategy[DiscardAction(())] == 0.0
     assert strategy[DiscardAction((3, 4))] == 0.0
+
+
+def test_node_records_visits() -> None:
+    node = CFRNode(
+        actions=make_betting_actions(),
+    )
+
+    assert node.visit_count == 0
+
+    node.record_visit()
+    node.record_visit()
+
+    assert node.visit_count == 2
+
+
+def test_positive_regret_sum_ignores_negative_regret() -> None:
+    actions = make_betting_actions()
+    node = CFRNode(actions=actions)
+
+    node.add_regret(
+        actions[0],
+        2.0,
+    )
+    node.add_regret(
+        actions[1],
+        -5.0,
+    )
+
+    assert node.positive_regret_sum == pytest.approx(
+        2.0
+    )
+    assert node.absolute_regret_sum == pytest.approx(
+        7.0
+    )
