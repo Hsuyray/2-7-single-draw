@@ -1,10 +1,22 @@
 from dataclasses import dataclass
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 from solver.actions import DiscardAction
-from solver.discard_actions import generate_discard_actions
+from solver.discard_actions import (
+    candidate_discard_actions,
+    generate_discard_actions,
+)
 from solver.game_state import ActionType
-from solver.single_draw_game import GamePhase, SingleDrawGame
+from solver.single_draw_game import (
+    GamePhase,
+    SingleDrawGame,
+)
+
+
+DrawActionMode = Literal[
+    "full",
+    "candidate",
+]
 
 
 @dataclass(frozen=True)
@@ -16,21 +28,27 @@ class BettingAction:
         if self.action_type == ActionType.RAISE:
             if self.raise_to is None:
                 raise ValueError(
-                    "Raise action must include raise_to."
+                    "Raise action must include "
+                    "raise_to."
                 )
 
             if self.raise_to < 0:
                 raise ValueError(
-                    "Raise amount cannot be negative."
+                    "Raise amount cannot "
+                    "be negative."
                 )
 
         elif self.raise_to is not None:
             raise ValueError(
-                "Only raise actions may include raise_to."
+                "Only raise actions may "
+                "include raise_to."
             )
 
 
-SolverAction: TypeAlias = BettingAction | DiscardAction
+SolverAction: TypeAlias = (
+    BettingAction
+    | DiscardAction
+)
 
 
 def legal_actions(
@@ -38,19 +56,60 @@ def legal_actions(
     *,
     max_draw: int = 3,
     raise_sizes: tuple[float, ...] = (),
+    draw_action_mode: DrawActionMode = "full",
 ) -> tuple[SolverAction, ...]:
     if game.phase == GamePhase.COMPLETE:
         return ()
 
     if game.phase == GamePhase.DRAW:
-        return generate_discard_actions(
-            hand_size=5,
+        return _legal_draw_actions(
+            game,
             max_draw=max_draw,
+            draw_action_mode=(
+                draw_action_mode
+            ),
         )
 
     return _legal_betting_actions(
         game,
         raise_sizes=raise_sizes,
+    )
+
+
+def _legal_draw_actions(
+    game: SingleDrawGame,
+    *,
+    max_draw: int,
+    draw_action_mode: DrawActionMode,
+) -> tuple[DiscardAction, ...]:
+    acting_seat = game.draw_acting_seat
+
+    if acting_seat is None:
+        return ()
+
+    hand = game.hands[acting_seat]
+
+    if hand is None:
+        raise RuntimeError(
+            f"Seat {acting_seat} does not "
+            "have a hand."
+        )
+
+    if draw_action_mode == "full":
+        return generate_discard_actions(
+            hand_size=len(hand.cards),
+            max_draw=max_draw,
+        )
+
+    if draw_action_mode == "candidate":
+        return candidate_discard_actions(
+            hand,
+            max_draw=max_draw,
+        )
+
+    raise ValueError(
+        "Unknown draw action mode: "
+        f"{draw_action_mode}"
     )
 
 
@@ -67,7 +126,10 @@ def _legal_betting_actions(
 
     player = state.players[acting_seat]
 
-    if player.has_folded or player.is_all_in:
+    if (
+        player.has_folded
+        or player.is_all_in
+    ):
         return ()
 
     actions: list[BettingAction] = []
@@ -83,6 +145,7 @@ def _legal_betting_actions(
                 ActionType.FOLD
             )
         )
+
         actions.append(
             BettingAction(
                 ActionType.CALL
@@ -123,7 +186,10 @@ def _raise_is_legal(
 
     player = state.players[acting_seat]
 
-    if player.has_folded or player.is_all_in:
+    if (
+        player.has_folded
+        or player.is_all_in
+    ):
         return False
 
     if raise_to <= state.current_bet:
@@ -137,10 +203,16 @@ def _raise_is_legal(
     if raise_to > maximum_raise_to:
         return False
 
-    minimum_raise_to = state.minimum_raise_to()
+    minimum_raise_to = (
+        state.minimum_raise_to()
+    )
 
     if raise_to >= minimum_raise_to:
         return True
 
-    # Allow an all-in raise below the normal minimum raise.
-    return raise_to == maximum_raise_to
+    # Allow an all-in raise below
+    # the normal minimum raise.
+    return (
+        raise_to
+        == maximum_raise_to
+    )

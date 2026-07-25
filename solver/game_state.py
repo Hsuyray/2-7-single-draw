@@ -12,6 +12,7 @@ class ActionType(str, Enum):
     CHECK = "check"
     RAISE = "raise"
 
+
 @dataclass(frozen=True)
 class GameConfig:
     player_count: int
@@ -73,7 +74,6 @@ class PlayerState:
     is_all_in: bool = False
     has_acted_since_last_raise: bool = False
     
-
     def post_forced_bet(
         self,
         amount: float,

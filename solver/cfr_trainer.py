@@ -11,6 +11,7 @@ from solver.information_state import (
     InformationState,
 )
 from solver.legal_actions import (
+    DrawActionMode,
     SolverAction,
     legal_actions,
 )
@@ -29,6 +30,12 @@ TraversalMode = Literal[
     "external_sampling",
 ]
 
+DrawActionModeSetting = Literal[
+    "auto",
+    "full",
+    "candidate",
+]
+
 
 @dataclass
 class CFRTrainer:
@@ -36,6 +43,7 @@ class CFRTrainer:
     raise_sizes: tuple[float, ...] = ()
     abstraction: AbstractionMode = "exact"
     traversal_mode: TraversalMode = "full"
+    draw_action_mode: DrawActionModeSetting = "auto"
     random_seed: int | None = None
     node_store: NodeStore = field(
         default_factory=NodeStore,
@@ -43,6 +51,11 @@ class CFRTrainer:
     completed_iterations: int = 0
 
     _random: random.Random = field(
+        init=False,
+        repr=False,
+    )
+
+    _resolved_draw_action_mode: DrawActionMode = field(
         init=False,
         repr=False,
     )
@@ -57,9 +70,54 @@ class CFRTrainer:
                 "'full' or 'external_sampling'."
             )
 
+        if self.draw_action_mode not in {
+            "auto",
+            "full",
+            "candidate",
+        }:
+            raise ValueError(
+                "Draw action mode must be "
+                "'auto', 'full', or 'candidate'."
+            )
+
+        if self.max_draw < 0:
+            raise ValueError(
+                "Maximum draw cannot be negative."
+            )
+
+        if self.max_draw > 5:
+            raise ValueError(
+                "Maximum draw cannot exceed "
+                "five cards."
+            )
+
+        self._resolved_draw_action_mode = (
+            self._resolve_draw_action_mode()
+        )
+
         self._random = random.Random(
             self.random_seed
         )
+
+    @property
+    def resolved_draw_action_mode(
+        self,
+    ) -> DrawActionMode:
+        return self._resolved_draw_action_mode
+
+    def _resolve_draw_action_mode(
+        self,
+    ) -> DrawActionMode:
+        if self.draw_action_mode == "full":
+            return "full"
+
+        if self.draw_action_mode == "candidate":
+            return "candidate"
+
+        if self.abstraction == "exact":
+            return "full"
+
+        return "candidate"
 
     def train(
         self,
@@ -128,11 +186,7 @@ class CFRTrainer:
                 "acting player."
             )
 
-        actions = legal_actions(
-            game,
-            max_draw=self.max_draw,
-            raise_sizes=self.raise_sizes,
-        )
+        actions = self._legal_actions(game)
 
         if not actions:
             raise RuntimeError(
@@ -244,11 +298,7 @@ class CFRTrainer:
                 "acting player."
             )
 
-        actions = legal_actions(
-            game,
-            max_draw=self.max_draw,
-            raise_sizes=self.raise_sizes,
-        )
+        actions = self._legal_actions(game)
 
         if not actions:
             raise RuntimeError(
@@ -340,6 +390,19 @@ class CFRTrainer:
 
         return node_utility
 
+    def _legal_actions(
+        self,
+        game: SingleDrawGame,
+    ) -> tuple[SolverAction, ...]:
+        return legal_actions(
+            game,
+            max_draw=self.max_draw,
+            raise_sizes=self.raise_sizes,
+            draw_action_mode=(
+                self._resolved_draw_action_mode
+            ),
+        )
+
     def _get_node(
         self,
         *,
@@ -393,8 +456,8 @@ class CFRTrainer:
             ):
                 return action
 
-        # 防止浮點數加總出現
-        # 0.9999999999999999。
+        # Prevent floating-point sums such as
+        # 0.9999999999999999 from missing all actions.
         return actions[-1]
 
     def average_strategies(

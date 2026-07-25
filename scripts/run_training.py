@@ -29,7 +29,7 @@ def main() -> None:
     trainer = CFRTrainer(
         max_draw=3,
         raise_sizes=(),
-        abstraction=abstraction,
+        abstraction="bucket",
         traversal_mode="external_sampling",
         random_seed=42,
     )

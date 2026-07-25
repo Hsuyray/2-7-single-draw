@@ -433,3 +433,47 @@ def test_external_sampling_average_strategies_are_valid() -> None:
                 <= probability
                 <= 1.0
             )
+
+
+def test_exact_abstraction_uses_full_draw_actions() -> None:
+    trainer = CFRTrainer(
+        abstraction="exact",
+    )
+
+    assert (
+        trainer.resolved_draw_action_mode
+        == "full"
+    )
+
+
+def test_bucket_abstraction_uses_candidate_draw_actions() -> None:
+    trainer = CFRTrainer(
+        abstraction="bucket",
+    )
+
+    assert (
+        trainer.resolved_draw_action_mode
+        == "candidate"
+    )
+
+
+def test_draw_action_mode_can_be_overridden() -> None:
+    exact_trainer = CFRTrainer(
+        abstraction="exact",
+        draw_action_mode="candidate",
+    )
+
+    bucket_trainer = CFRTrainer(
+        abstraction="bucket",
+        draw_action_mode="full",
+    )
+
+    assert (
+        exact_trainer.resolved_draw_action_mode
+        == "candidate"
+    )
+
+    assert (
+        bucket_trainer.resolved_draw_action_mode
+        == "full"
+    )
