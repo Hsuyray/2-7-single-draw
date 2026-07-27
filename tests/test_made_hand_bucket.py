@@ -1,5 +1,3 @@
-import pytest
-
 from solver.hand import Hand
 from solver.made_hand_bucket import (
     MadeHandBucket,
@@ -39,10 +37,9 @@ def test_same_hand_with_different_suits_shares_bucket() -> None:
         "7h",
     )
 
-    assert made_hand_bucket(
-        first_hand
-    ) == made_hand_bucket(
-        second_hand
+    assert (
+        made_hand_bucket(first_hand)
+        == made_hand_bucket(second_hand)
     )
 
 
@@ -63,10 +60,9 @@ def test_same_hand_order_does_not_matter() -> None:
         "2c",
     )
 
-    assert made_hand_bucket(
-        first_hand
-    ) == made_hand_bucket(
-        second_hand
+    assert (
+        made_hand_bucket(first_hand)
+        == made_hand_bucket(second_hand)
     )
 
 
@@ -87,10 +83,44 @@ def test_seven_low_and_eight_low_differ() -> None:
         "8c",
     )
 
-    assert made_hand_bucket(
-        seven_low
-    ) != made_hand_bucket(
-        eight_low
+    assert (
+        made_hand_bucket(seven_low)
+        != made_hand_bucket(eight_low)
+    )
+
+
+def test_same_primary_strength_can_share_secondary_bucket() -> None:
+    first_hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "4h",
+        "6s",
+        "9c",
+    )
+
+    second_hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "5h",
+        "6s",
+        "9c",
+    )
+
+    first_bucket = made_hand_bucket(
+        first_hand
+    )
+    second_bucket = made_hand_bucket(
+        second_hand
+    )
+
+    assert (
+        first_bucket.category
+        == second_bucket.category
+    )
+
+    assert (
+        first_bucket.primary_strength
+        == second_bucket.primary_strength
     )
 
 
@@ -111,10 +141,32 @@ def test_pair_and_unpaired_hand_differ() -> None:
         "7c",
     )
 
-    assert made_hand_bucket(
-        pair_hand
-    ) != made_hand_bucket(
-        unpaired_hand
+    assert (
+        made_hand_bucket(pair_hand)
+        != made_hand_bucket(unpaired_hand)
+    )
+
+
+def test_two_different_pair_strengths_differ() -> None:
+    low_pair = Hand.from_strings(
+        "2c",
+        "2d",
+        "4h",
+        "5s",
+        "7c",
+    )
+
+    higher_pair = Hand.from_strings(
+        "4c",
+        "4d",
+        "5h",
+        "6s",
+        "8c",
+    )
+
+    assert (
+        made_hand_bucket(low_pair)
+        != made_hand_bucket(higher_pair)
     )
 
 
@@ -135,10 +187,9 @@ def test_straight_and_non_straight_differ() -> None:
         "7c",
     )
 
-    assert made_hand_bucket(
-        straight
-    ) != made_hand_bucket(
-        non_straight
+    assert (
+        made_hand_bucket(straight)
+        != made_hand_bucket(non_straight)
     )
 
 
@@ -159,14 +210,13 @@ def test_flush_and_non_flush_differ() -> None:
         "7c",
     )
 
-    assert made_hand_bucket(
-        flush
-    ) != made_hand_bucket(
-        non_flush
+    assert (
+        made_hand_bucket(flush)
+        != made_hand_bucket(non_flush)
     )
 
 
-def test_custom_score_depth() -> None:
+def test_bucket_fields_match_hand_score_structure() -> None:
     hand = Hand.from_strings(
         "2c",
         "3d",
@@ -175,25 +225,39 @@ def test_custom_score_depth() -> None:
         "7c",
     )
 
-    bucket = made_hand_bucket(
-        hand,
-        score_depth=2,
+    bucket = made_hand_bucket(hand)
+
+    assert bucket.category == hand.score[0]
+    assert (
+        bucket.primary_strength
+        == hand.score[1]
     )
 
-    assert bucket.score_prefix == hand.score[:2]
 
-
-def test_non_positive_score_depth_is_rejected() -> None:
+def test_secondary_strength_is_bucketed() -> None:
     hand = Hand.from_strings(
         "2c",
         "3d",
         "4h",
-        "5s",
-        "7c",
+        "6s",
+        "9c",
     )
 
-    with pytest.raises(ValueError):
-        made_hand_bucket(
-            hand,
-            score_depth=0,
-        )
+    bucket = made_hand_bucket(hand)
+
+    assert 0 <= bucket.secondary_strength <= 4
+
+
+def test_made_hand_bucket_returns_same_result_repeatedly() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "8s",
+        "9c",
+    )
+
+    first = made_hand_bucket(hand)
+    second = made_hand_bucket(hand)
+
+    assert first == second
