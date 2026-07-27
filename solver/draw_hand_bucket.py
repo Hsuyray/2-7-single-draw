@@ -105,19 +105,36 @@ def _rank_class(
     rank: int,
 ) -> int:
     """
-    Preserve strategically important low ranks.
+    Intermediate draw abstraction.
 
-    2 through 9 remain exact.
-    Ten and Jack share one class.
-    Queen, King, and Ace share one class.
+    Classes:
+        2-3   -> 0
+        4-5   -> 1
+        6-7   -> 2
+        8-9   -> 3
+        T-J   -> 4
+        Q-K-A -> 5
+
+    This keeps the general lowball structure while
+    allowing substantially more information-state
+    sharing than preserving ranks 2 through 9 exactly.
     """
+    if rank <= 3:
+        return 0
+
+    if rank <= 5:
+        return 1
+
+    if rank <= 7:
+        return 2
+
     if rank <= 9:
-        return rank
+        return 3
 
     if rank <= 11:
-        return 10
+        return 4
 
-    return 11
+    return 5
 
 
 def _is_straight(
@@ -131,8 +148,10 @@ def _is_straight(
         return False
 
     return all(
-        unique_ranks[index + 1]
-        - unique_ranks[index]
-        == 1
+        (
+            unique_ranks[index + 1]
+            - unique_ranks[index]
+            == 1
+        )
         for index in range(4)
     )

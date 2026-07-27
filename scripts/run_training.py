@@ -9,7 +9,7 @@ from solver.training_factory import (
 
 
 def main() -> None:
-    iterations = 5000
+    iterations = 1000
     abstraction = "bucket"
 
     config = GameConfig(

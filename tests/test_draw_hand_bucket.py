@@ -7,7 +7,7 @@ from solver.draw_hand_bucket import (
 from solver.hand import Hand
 
 
-def test_low_ranks_are_preserved_exactly() -> None:
+def test_rank_classes_use_v4_bands() -> None:
     hand = Hand.from_strings(
         "2c",
         "6d",
@@ -19,15 +19,115 @@ def test_low_ranks_are_preserved_exactly() -> None:
     bucket = draw_hand_bucket(hand)
 
     assert bucket.rank_classes == (
+        0,
         2,
-        6,
-        8,
-        9,
-        11,
+        3,
+        3,
+        5,
     )
 
 
-def test_ten_and_jack_share_rank_class() -> None:
+def test_two_and_three_share_class() -> None:
+    two_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "8s",
+        "Qc",
+    )
+
+    three_hand = Hand.from_strings(
+        "3c",
+        "4d",
+        "6h",
+        "8s",
+        "Qc",
+    )
+
+    assert (
+        draw_hand_bucket(two_hand).rank_classes
+        == draw_hand_bucket(
+            three_hand
+        ).rank_classes
+    )
+
+
+def test_four_and_five_share_class() -> None:
+    four_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "8s",
+        "Qc",
+    )
+
+    five_hand = Hand.from_strings(
+        "2c",
+        "5d",
+        "6h",
+        "8s",
+        "Qc",
+    )
+
+    assert (
+        draw_hand_bucket(four_hand).rank_classes
+        == draw_hand_bucket(
+            five_hand
+        ).rank_classes
+    )
+
+
+def test_six_and_seven_share_class() -> None:
+    six_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "8s",
+        "Qc",
+    )
+
+    seven_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "7h",
+        "8s",
+        "Qc",
+    )
+
+    assert (
+        draw_hand_bucket(six_hand).rank_classes
+        == draw_hand_bucket(
+            seven_hand
+        ).rank_classes
+    )
+
+
+def test_eight_and_nine_share_class() -> None:
+    eight_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "8s",
+        "Qc",
+    )
+
+    nine_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "9s",
+        "Qc",
+    )
+
+    assert (
+        draw_hand_bucket(eight_hand).rank_classes
+        == draw_hand_bucket(
+            nine_hand
+        ).rank_classes
+    )
+
+
+def test_ten_and_jack_share_class() -> None:
     ten_hand = Hand.from_strings(
         "2c",
         "4d",
@@ -44,14 +144,15 @@ def test_ten_and_jack_share_rank_class() -> None:
         "Jc",
     )
 
-    assert draw_hand_bucket(
-        ten_hand
-    ) == draw_hand_bucket(
-        jack_hand
+    assert (
+        draw_hand_bucket(ten_hand).rank_classes
+        == draw_hand_bucket(
+            jack_hand
+        ).rank_classes
     )
 
 
-def test_queen_king_and_ace_share_rank_class() -> None:
+def test_queen_king_and_ace_share_class() -> None:
     queen_hand = Hand.from_strings(
         "2c",
         "4d",
@@ -79,38 +180,44 @@ def test_queen_king_and_ace_share_rank_class() -> None:
     queen_bucket = draw_hand_bucket(
         queen_hand
     )
-    king_bucket = draw_hand_bucket(
-        king_hand
-    )
-    ace_bucket = draw_hand_bucket(
-        ace_hand
-    )
 
-    assert queen_bucket == king_bucket
-    assert king_bucket == ace_bucket
-
-
-def test_strategically_different_low_ranks_do_not_share_bucket() -> None:
-    first_hand = Hand.from_strings(
-        "2c",
-        "3d",
-        "5h",
-        "Ts",
-        "Kc",
+    assert (
+        queen_bucket.rank_classes
+        == draw_hand_bucket(
+            king_hand
+        ).rank_classes
     )
 
-    second_hand = Hand.from_strings(
+    assert (
+        queen_bucket.rank_classes
+        == draw_hand_bucket(
+            ace_hand
+        ).rank_classes
+    )
+
+
+def test_different_rank_bands_differ() -> None:
+    low_hand = Hand.from_strings(
         "2c",
         "4d",
-        "5h",
-        "Ts",
-        "Kc",
+        "6h",
+        "8s",
+        "Qc",
     )
 
-    assert draw_hand_bucket(
-        first_hand
-    ) != draw_hand_bucket(
-        second_hand
+    high_hand = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "Tc",
+        "Qs",
+    )
+
+    assert (
+        draw_hand_bucket(low_hand).rank_classes
+        != draw_hand_bucket(
+            high_hand
+        ).rank_classes
     )
 
 
@@ -133,7 +240,7 @@ def test_pair_multiplicity_is_preserved() -> None:
         1,
     )
 
-    assert bucket.pair_classes == (2,)
+    assert bucket.pair_classes == (0,)
     assert bucket.trip_classes == ()
     assert bucket.quad_classes == ()
     assert bucket.unique_rank_count == 4
@@ -142,9 +249,9 @@ def test_pair_multiplicity_is_preserved() -> None:
 def test_unpaired_hand_has_no_duplicate_classes() -> None:
     hand = Hand.from_strings(
         "2c",
-        "3d",
-        "5h",
-        "7s",
+        "4d",
+        "6h",
+        "8s",
         "Kc",
     )
 
@@ -176,18 +283,12 @@ def test_two_pair_classes_are_preserved() -> None:
     bucket = draw_hand_bucket(hand)
 
     assert bucket.pair_classes == (
-        2,
-        5,
-    )
-
-    assert bucket.rank_multiplicities == (
-        2,
-        2,
-        2,
-        2,
+        0,
         1,
     )
 
+    assert bucket.trip_classes == ()
+    assert bucket.quad_classes == ()
     assert bucket.unique_rank_count == 3
 
 
@@ -203,16 +304,9 @@ def test_trip_class_is_preserved() -> None:
     bucket = draw_hand_bucket(hand)
 
     assert bucket.pair_classes == ()
-    assert bucket.trip_classes == (4,)
+    assert bucket.trip_classes == (1,)
     assert bucket.quad_classes == ()
-
-    assert bucket.rank_multiplicities == (
-        3,
-        3,
-        3,
-        1,
-        1,
-    )
+    assert bucket.unique_rank_count == 3
 
 
 def test_quad_class_is_preserved() -> None:
@@ -228,48 +322,64 @@ def test_quad_class_is_preserved() -> None:
 
     assert bucket.pair_classes == ()
     assert bucket.trip_classes == ()
-    assert bucket.quad_classes == (9,)
-
-    assert bucket.rank_multiplicities == (
-        4,
-        4,
-        4,
-        4,
-        1,
-    )
+    assert bucket.quad_classes == (3,)
+    assert bucket.unique_rank_count == 2
 
 
 def test_three_card_flush_structure_is_ignored() -> None:
-    three_clubs = Hand.from_strings(
+    first = Hand.from_strings(
         "2c",
-        "3d",
-        "5c",
-        "7h",
+        "4c",
+        "6c",
+        "8d",
+        "Ks",
+    )
+
+    second = Hand.from_strings(
+        "2c",
+        "4d",
+        "6h",
+        "8s",
         "Kc",
     )
 
-    rainbow_hand = Hand.from_strings(
-        "2c",
-        "3d",
-        "5h",
-        "7s",
-        "Kc",
+    first_bucket = draw_hand_bucket(
+        first
+    )
+    second_bucket = draw_hand_bucket(
+        second
     )
 
-    assert draw_hand_bucket(
-        three_clubs
-    ) == draw_hand_bucket(
-        rainbow_hand
+    assert (
+        first_bucket.flush_risk_positions
+        == (
+            False,
+            False,
+            False,
+            False,
+            False,
+        )
+    )
+
+    assert (
+        second_bucket.flush_risk_positions
+        == (
+            False,
+            False,
+            False,
+            False,
+            False,
+        )
     )
 
 
-def test_four_card_flush_risk_is_preserved() -> None:
+def test_four_card_flush_risk_positions_are_preserved() -> None:
     hand = Hand.from_strings(
         "2c",
-        "3c",
-        "5c",
-        "7c",
-        "Kd",
+        "4c",
+        "6c",
+        "8c",
+        "Ks",
     )
 
     bucket = draw_hand_bucket(hand)
@@ -285,30 +395,33 @@ def test_four_card_flush_risk_is_preserved() -> None:
         )
     )
 
-    assert bucket.is_flush is False
+    assert not bucket.is_flush
 
 
-def test_four_card_flush_and_rainbow_do_not_share_bucket() -> None:
-    four_clubs = Hand.from_strings(
+def test_four_card_flush_differs_from_rainbow() -> None:
+    flush_draw = Hand.from_strings(
         "2c",
-        "3c",
-        "5c",
-        "7c",
-        "Kd",
+        "4c",
+        "6c",
+        "8c",
+        "Ks",
     )
 
-    rainbow_hand = Hand.from_strings(
+    rainbow = Hand.from_strings(
         "2c",
-        "3d",
-        "5h",
-        "7s",
+        "4d",
+        "6h",
+        "8s",
         "Kc",
     )
 
-    assert draw_hand_bucket(
-        four_clubs
-    ) != draw_hand_bucket(
-        rainbow_hand
+    assert (
+        draw_hand_bucket(
+            flush_draw
+        ).flush_risk_positions
+        != draw_hand_bucket(
+            rainbow
+        ).flush_risk_positions
     )
 
 
@@ -323,7 +436,7 @@ def test_flush_is_detected() -> None:
 
     bucket = draw_hand_bucket(hand)
 
-    assert bucket.is_flush is True
+    assert bucket.is_flush
 
     assert (
         bucket.flush_risk_positions
@@ -337,7 +450,7 @@ def test_flush_is_detected() -> None:
     )
 
 
-def test_non_flush_has_no_flush_risk_positions() -> None:
+def test_non_flush_has_no_flush_risk() -> None:
     hand = Hand.from_strings(
         "2c",
         "4d",
@@ -348,7 +461,7 @@ def test_non_flush_has_no_flush_risk_positions() -> None:
 
     bucket = draw_hand_bucket(hand)
 
-    assert bucket.is_flush is False
+    assert not bucket.is_flush
 
     assert (
         bucket.flush_risk_positions
@@ -364,47 +477,47 @@ def test_non_flush_has_no_flush_risk_positions() -> None:
 
 def test_straight_is_detected() -> None:
     hand = Hand.from_strings(
-        "3c",
+        "5c",
+        "6d",
+        "7h",
+        "8s",
+        "9c",
+    )
+
+    bucket = draw_hand_bucket(hand)
+
+    assert bucket.is_straight
+
+
+def test_non_straight_is_not_detected() -> None:
+    hand = Hand.from_strings(
+        "2c",
         "4d",
-        "5h",
-        "6s",
-        "7c",
+        "6h",
+        "8s",
+        "9c",
     )
 
     bucket = draw_hand_bucket(hand)
 
-    assert bucket.is_straight is True
+    assert not bucket.is_straight
 
 
-def test_non_straight_is_detected() -> None:
+def test_wheel_is_not_straight_in_deuce_to_seven() -> None:
     hand = Hand.from_strings(
-        "2c",
-        "3d",
-        "4h",
-        "5s",
-        "7c",
-    )
-
-    bucket = draw_hand_bucket(hand)
-
-    assert bucket.is_straight is False
-
-
-def test_ace_is_high_in_straight_detection() -> None:
-    hand = Hand.from_strings(
-        "2c",
-        "3d",
-        "4h",
-        "5s",
         "Ac",
+        "2d",
+        "3h",
+        "4s",
+        "5c",
     )
 
     bucket = draw_hand_bucket(hand)
 
-    assert bucket.is_straight is False
+    assert not bucket.is_straight
 
 
-def test_broadway_is_detected_as_straight() -> None:
+def test_broadway_is_straight() -> None:
     hand = Hand.from_strings(
         "Tc",
         "Jd",
@@ -415,10 +528,10 @@ def test_broadway_is_detected_as_straight() -> None:
 
     bucket = draw_hand_bucket(hand)
 
-    assert bucket.is_straight is True
+    assert bucket.is_straight
 
 
-def test_hand_requires_five_cards() -> None:
+def test_hand_requires_exactly_five_cards() -> None:
     with pytest.raises(ValueError):
         Hand.from_strings(
             "2c",
@@ -428,13 +541,13 @@ def test_hand_requires_five_cards() -> None:
         )
 
 
-def test_return_type_is_draw_hand_bucket() -> None:
+def test_draw_hand_bucket_returns_bucket_type() -> None:
     hand = Hand.from_strings(
         "2c",
-        "3d",
-        "4h",
-        "5s",
-        "7c",
+        "4d",
+        "6h",
+        "8s",
+        "Kc",
     )
 
     bucket = draw_hand_bucket(hand)
