@@ -332,6 +332,7 @@ def print_checkpoint_report(
     )
 
     print_sanity_spots(
+        trainer=trainer,
         config=config,
         strategies=strategies,
     )
@@ -737,6 +738,7 @@ def copy_strategy_snapshot(
 
 def print_sanity_spots(
     *,
+    trainer: CFRTrainer,
     config: GameConfig,
     strategies: StrategySnapshot,
 ) -> None:
@@ -744,28 +746,58 @@ def print_sanity_spots(
     print("Poker sanity spots")
     print("------------------")
 
+    contexts = (
+        (
+            "seat 0 / button 1",
+            0,
+            1,
+        ),
+        (
+            "seat 1 / button 0",
+            1,
+            0,
+        ),
+    )
+
     for label, hand in SANITY_SPOTS:
-        print_sanity_spot(
-            label=label,
-            hand=hand,
-            config=config,
-            strategies=strategies,
+        print()
+        print(
+            f"{label}: "
+            f"{format_hand(hand)}"
         )
+
+        for (
+            context_label,
+            hero_seat,
+            button_seat,
+        ) in contexts:
+            print_sanity_spot(
+                trainer=trainer,
+                label=context_label,
+                hand=hand,
+                config=config,
+                strategies=strategies,
+                hero_seat=hero_seat,
+                button_seat=button_seat,
+            )
 
 
 def print_sanity_spot(
     *,
+    trainer: CFRTrainer,
     label: str,
     hand: Hand,
     config: GameConfig,
     strategies: StrategySnapshot,
+    hero_seat: int,
+    button_seat: int,
 ) -> None:
     factory = (
         FixedHeroDrawTrainingGameFactory(
             config=config,
             hero_hand=hand,
-            hero_seat=0,
-            button_seat=1,
+            hero_seat=hero_seat,
+            button_seat=button_seat,
             initial_seed=987_654,
         )
     )
@@ -774,7 +806,7 @@ def print_sanity_spot(
 
     state = InformationState.from_game(
         game,
-        observer_seat=0,
+        observer_seat=hero_seat,
         abstraction="bucket",
     )
 
@@ -782,28 +814,132 @@ def print_sanity_spot(
         state
     )
 
+    node = trainer.node_store.get(
+        state
+    )
+
     print()
     print(
-        f"{label}: "
-        f"{format_hand(hand)}"
+        f"  Context: {label}"
     )
 
     print(
-        "  hand_key="
+        "    observer="
+        f"{state.observer_seat}, "
+        "acting="
+        f"{state.acting_seat}, "
+        "button="
+        f"{state.button_seat}"
+    )
+
+    print(
+        "    hand_key="
         f"{state.own_hand_key}"
+    )
+
+    print(
+        "    action_history="
+        f"{state.action_history}"
     )
 
     if strategy is None:
         print(
-            "  Strategy not found "
-            "in random training."
+            "    Strategy: NOT FOUND"
         )
+
+        print(
+            "    Random training has not "
+            "created this exact "
+            "information state yet."
+        )
+
         return
+
+    if node is None:
+        raise RuntimeError(
+            "Sanity strategy has no "
+            "matching CFR node."
+        )
+
+    print(
+        "    Strategy: FOUND"
+    )
+
+    print(
+        "    visits="
+        f"{node.visit_count}, "
+        "strategy_updates="
+        f"{node.strategy_update_count}, "
+        "regret_updates="
+        f"{node.regret_update_count}"
+    )
+
+    print(
+        "    strategy_weight="
+        f"{node.strategy_weight_sum:.6f}"
+    )
+
+    if (
+        node.strategy_update_count == 0
+        or node.strategy_weight_sum <= 0
+    ):
+        print(
+            "    Coverage: UNTRAINED"
+        )
+
+    elif node.strategy_weight_sum < 5:
+        print(
+            "    Coverage: VERY LOW "
+            "(do not interpret strategy)"
+        )
+
+    elif node.strategy_weight_sum < 10:
+        print(
+            "    Coverage: LOW"
+        )
+
+    elif node.strategy_weight_sum < 25:
+        print(
+            "    Coverage: MODERATE"
+        )
+
+    else:
+        print(
+            "    Coverage: HIGH"
+        )
 
     ordered_strategy = sorted(
         strategy.items(),
         key=lambda item: item[1],
         reverse=True,
+    )
+
+    discard_probabilities = [
+        probability
+        for action, probability
+        in ordered_strategy
+        if isinstance(
+            action,
+            DiscardAction,
+        )
+    ]
+
+    if discard_probabilities:
+        probability_range = (
+            max(discard_probabilities)
+            - min(discard_probabilities)
+        )
+
+        if (
+            probability_range < 1e-9
+        ):
+            print(
+                "    Warning: strategy is "
+                "uniform across actions."
+            )
+
+    print(
+        "    Strategy:"
     )
 
     for action, probability in (
@@ -823,7 +959,7 @@ def print_sanity_spot(
         )
 
         print(
-            f"  {action_text}: "
+            f"      {action_text}: "
             f"{probability:.4f}"
         )
 
@@ -908,16 +1044,19 @@ def print_final_draw_strategies(
 
     print()
     print("=" * 72)
+
     print(
         "Final most-trained "
         "draw strategies"
     )
+
     print("=" * 72)
 
     if not draw_entries:
         print(
             "No draw states found."
         )
+
         return
 
     max_draw_states_to_print = 10
