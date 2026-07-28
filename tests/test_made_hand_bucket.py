@@ -20,6 +20,20 @@ def test_made_hand_bucket_is_hashable() -> None:
     assert isinstance(hash(bucket), int)
 
 
+def test_bucket_keeps_full_hand_score() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "4h",
+        "5s",
+        "7c",
+    )
+
+    bucket = made_hand_bucket(hand)
+
+    assert bucket.score == hand.score
+
+
 def test_same_hand_with_different_suits_shares_bucket() -> None:
     first_hand = Hand.from_strings(
         "2c",
@@ -89,7 +103,7 @@ def test_seven_low_and_eight_low_differ() -> None:
     )
 
 
-def test_same_primary_strength_can_share_secondary_bucket() -> None:
+def test_same_high_card_but_different_second_card_differ() -> None:
     first_hand = Hand.from_strings(
         "2c",
         "3d",
@@ -102,25 +116,41 @@ def test_same_primary_strength_can_share_secondary_bucket() -> None:
         "2c",
         "3d",
         "5h",
-        "6s",
+        "7s",
         "9c",
     )
 
-    first_bucket = made_hand_bucket(
-        first_hand
+    assert (
+        made_hand_bucket(first_hand)
+        != made_hand_bucket(second_hand)
     )
-    second_bucket = made_hand_bucket(
-        second_hand
+
+
+def test_same_top_two_cards_but_different_lower_kickers_differ() -> None:
+    first_hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "4h",
+        "7s",
+        "9c",
+    )
+
+    second_hand = Hand.from_strings(
+        "2c",
+        "3d",
+        "5h",
+        "7s",
+        "9c",
     )
 
     assert (
-        first_bucket.category
-        == second_bucket.category
+        first_hand.score[:3]
+        == second_hand.score[:3]
     )
 
     assert (
-        first_bucket.primary_strength
-        == second_bucket.primary_strength
+        made_hand_bucket(first_hand)
+        != made_hand_bucket(second_hand)
     )
 
 
@@ -170,6 +200,57 @@ def test_two_different_pair_strengths_differ() -> None:
     )
 
 
+def test_same_pair_but_different_kickers_differ() -> None:
+    first_hand = Hand.from_strings(
+        "2c",
+        "2d",
+        "4h",
+        "5s",
+        "7c",
+    )
+
+    second_hand = Hand.from_strings(
+        "2c",
+        "2d",
+        "4h",
+        "6s",
+        "7c",
+    )
+
+    assert (
+        made_hand_bucket(first_hand)
+        != made_hand_bucket(second_hand)
+    )
+
+
+def test_two_pair_full_score_is_preserved() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "2d",
+        "4c",
+        "4d",
+        "7c",
+    )
+
+    bucket = made_hand_bucket(hand)
+
+    assert bucket.score == hand.score
+
+
+def test_trips_full_score_is_preserved() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "2d",
+        "2h",
+        "5s",
+        "7c",
+    )
+
+    bucket = made_hand_bucket(hand)
+
+    assert bucket.score == hand.score
+
+
 def test_straight_and_non_straight_differ() -> None:
     straight = Hand.from_strings(
         "2c",
@@ -216,36 +297,32 @@ def test_flush_and_non_flush_differ() -> None:
     )
 
 
-def test_bucket_fields_match_hand_score_structure() -> None:
+def test_full_house_score_is_preserved() -> None:
     hand = Hand.from_strings(
         "2c",
-        "3d",
-        "4h",
-        "5s",
+        "2d",
+        "2h",
+        "4c",
+        "4d",
+    )
+
+    bucket = made_hand_bucket(hand)
+
+    assert bucket.score == hand.score
+
+
+def test_quads_score_is_preserved() -> None:
+    hand = Hand.from_strings(
+        "2c",
+        "2d",
+        "2h",
+        "2s",
         "7c",
     )
 
     bucket = made_hand_bucket(hand)
 
-    assert bucket.category == hand.score[0]
-    assert (
-        bucket.primary_strength
-        == hand.score[1]
-    )
-
-
-def test_secondary_strength_is_bucketed() -> None:
-    hand = Hand.from_strings(
-        "2c",
-        "3d",
-        "4h",
-        "6s",
-        "9c",
-    )
-
-    bucket = made_hand_bucket(hand)
-
-    assert 0 <= bucket.secondary_strength <= 4
+    assert bucket.score == hand.score
 
 
 def test_made_hand_bucket_returns_same_result_repeatedly() -> None:
