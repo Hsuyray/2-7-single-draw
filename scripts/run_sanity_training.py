@@ -131,7 +131,7 @@ def run_spot(
     trainer = CFRTrainer(
         max_draw=3,
         raise_sizes=(),
-        abstraction="bucket",
+        abstraction="exact",
         traversal_mode="external_sampling",
         random_seed=42,
     )
@@ -156,7 +156,7 @@ def run_spot(
     state = InformationState.from_game(
         game,
         observer_seat=hero_seat,
-        abstraction="bucket",
+        abstraction="exact",
     )
 
     node = trainer.node_store.get(
