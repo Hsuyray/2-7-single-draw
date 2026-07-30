@@ -10,6 +10,7 @@ from solver.information_state import (
     AbstractionMode,
     InformationState,
 )
+from solver.strategy_index import StrategyIndex
 from solver.legal_actions import (
     DrawActionMode,
     SolverAction,
@@ -467,6 +468,13 @@ class CFRTrainer:
             self.node_store.average_strategies()
         )
 
+    def strategy_index(
+        self,
+    ) -> StrategyIndex:
+        return StrategyIndex.from_strategies(
+            self.average_strategies()
+        )
+
     def _validate_game(
         self,
         game: SingleDrawGame,
@@ -485,3 +493,6 @@ class CFRTrainer:
                 "Training games must begin during "
                 "pre-draw betting or the draw phase."
             )
+
+
+    
