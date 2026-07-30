@@ -134,9 +134,8 @@ def _legal_betting_actions(
 
     actions: list[BettingAction] = []
 
-    amount_to_call = (
-        state.current_bet
-        - player.committed_total
+    amount_to_call = state.amount_to_call(
+        acting_seat
     )
 
     if amount_to_call > 0:
@@ -196,8 +195,9 @@ def _raise_is_legal(
         return False
 
     maximum_raise_to = (
-        player.committed_total
-        + player.stack
+        state.maximum_raise_to(
+            acting_seat
+        )
     )
 
     if raise_to > maximum_raise_to:

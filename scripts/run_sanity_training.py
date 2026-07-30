@@ -60,6 +60,26 @@ SANITY_SPOTS = (
             "7c",
         ),
     ),
+    (
+        "24466",
+        Hand.from_strings(
+            "2c",
+            "4d",
+            "4h",
+            "6s",
+            "6c",
+        ),
+    ),
+    (
+        "TTJQK",
+        Hand.from_strings(
+            "Tc",
+            "Td",
+            "Jh",
+            "Qs",
+            "Kc",
+        ),
+    ),
 )
 
 
@@ -75,6 +95,15 @@ def main() -> None:
 
     print("Dedicated poker sanity training")
     print("-------------------------------")
+    print(
+        "Abstraction: bucket"
+    )
+    print(
+        "Draw actions: candidate"
+    )
+    print(
+        "Postdraw raise sizes: (2.0,)"
+    )
     print(
         f"Iterations per spot/context: "
         f"{iterations}"
@@ -130,9 +159,10 @@ def run_spot(
 
     trainer = CFRTrainer(
         max_draw=3,
-        raise_sizes=(),
-        abstraction="exact",
+        raise_sizes=(2.0,),
+        abstraction="bucket",
         traversal_mode="external_sampling",
+        draw_action_mode="candidate",
         random_seed=42,
     )
 
@@ -156,7 +186,7 @@ def run_spot(
     state = InformationState.from_game(
         game,
         observer_seat=hero_seat,
-        abstraction="exact",
+        abstraction="bucket",
     )
 
     node = trainer.node_store.get(
