@@ -179,3 +179,5 @@ def test_complete_game_has_no_legal_actions() -> None:
     game.phase = GamePhase.COMPLETE
 
     assert legal_actions(game) == ()
+
+

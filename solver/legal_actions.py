@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from typing import Literal, TypeAlias
 
 from solver.actions import DiscardAction
+from solver.bet_sizing import (
+    BetSizingPolicy,
+)
 from solver.discard_actions import (
     candidate_discard_actions,
     generate_discard_actions,
@@ -55,9 +58,25 @@ def legal_actions(
     game: SingleDrawGame,
     *,
     max_draw: int = 3,
-    raise_sizes: tuple[float, ...] = (),
+    raise_sizes: tuple[float, ...] | None = (),
+    bet_sizing_policy: BetSizingPolicy | None = None,
     draw_action_mode: DrawActionMode = "full",
 ) -> tuple[SolverAction, ...]:
+    """
+    Return legal solver actions.
+
+    Betting sizing semantics:
+
+    raise_sizes is None:
+        Use BetSizingPolicy.
+
+    raise_sizes == ():
+        Do not generate raise actions.
+
+    raise_sizes contains values:
+        Treat them as explicit absolute
+        raise-to amounts.
+    """
     if game.phase == GamePhase.COMPLETE:
         return ()
 
@@ -73,6 +92,9 @@ def legal_actions(
     return _legal_betting_actions(
         game,
         raise_sizes=raise_sizes,
+        bet_sizing_policy=(
+            bet_sizing_policy
+        ),
     )
 
 
@@ -87,7 +109,9 @@ def _legal_draw_actions(
     if acting_seat is None:
         return ()
 
-    hand = game.hands[acting_seat]
+    hand = game.hands[
+        acting_seat
+    ]
 
     if hand is None:
         raise RuntimeError(
@@ -97,7 +121,9 @@ def _legal_draw_actions(
 
     if draw_action_mode == "full":
         return generate_discard_actions(
-            hand_size=len(hand.cards),
+            hand_size=len(
+                hand.cards
+            ),
             max_draw=max_draw,
         )
 
@@ -116,7 +142,8 @@ def _legal_draw_actions(
 def _legal_betting_actions(
     game: SingleDrawGame,
     *,
-    raise_sizes: tuple[float, ...],
+    raise_sizes: tuple[float, ...] | None,
+    bet_sizing_policy: BetSizingPolicy | None,
 ) -> tuple[BettingAction, ...]:
     state = game.betting_state
     acting_seat = state.acting_seat
@@ -124,7 +151,9 @@ def _legal_betting_actions(
     if acting_seat is None:
         return ()
 
-    player = state.players[acting_seat]
+    player = state.players[
+        acting_seat
+    ]
 
     if (
         player.has_folded
@@ -132,10 +161,14 @@ def _legal_betting_actions(
     ):
         return ()
 
-    actions: list[BettingAction] = []
+    actions: list[
+        BettingAction
+    ] = []
 
-    amount_to_call = state.amount_to_call(
-        acting_seat
+    amount_to_call = (
+        state.amount_to_call(
+            acting_seat
+        )
     )
 
     if amount_to_call > 0:
@@ -150,6 +183,7 @@ def _legal_betting_actions(
                 ActionType.CALL
             )
         )
+
     else:
         actions.append(
             BettingAction(
@@ -157,19 +191,132 @@ def _legal_betting_actions(
             )
         )
 
-    for raise_to in raise_sizes:
-        if _raise_is_legal(
+    candidate_raise_sizes = (
+        _candidate_raise_sizes(
+            game,
+            raise_sizes=raise_sizes,
+            bet_sizing_policy=(
+                bet_sizing_policy
+            ),
+        )
+    )
+
+    for raise_to in candidate_raise_sizes:
+        if not _raise_is_legal(
             game,
             raise_to=raise_to,
         ):
-            actions.append(
-                BettingAction(
-                    ActionType.RAISE,
-                    raise_to=raise_to,
+            continue
+
+        actions.append(
+            BettingAction(
+                ActionType.RAISE,
+                raise_to=raise_to,
+            )
+        )
+
+    return tuple(
+        actions
+    )
+
+
+def _candidate_raise_sizes(
+    game: SingleDrawGame,
+    *,
+    raise_sizes: tuple[float, ...] | None,
+    bet_sizing_policy: BetSizingPolicy | None,
+) -> tuple[float, ...]:
+    """
+    Generate discrete absolute raise-to sizes.
+
+    None:
+        use pot-based BetSizingPolicy
+
+    ():
+        explicitly disable raises
+
+    non-empty tuple:
+        explicit raise-to override
+    """
+
+    # Explicit legacy/debug override.
+    if raise_sizes is not None:
+        return tuple(
+            sorted(
+                set(
+                    raise_sizes
                 )
             )
+        )
 
-    return tuple(actions)
+    policy = (
+        bet_sizing_policy
+        if bet_sizing_policy is not None
+        else BetSizingPolicy()
+    )
+
+    state = game.betting_state
+    acting_seat = state.acting_seat
+
+    if acting_seat is None:
+        return ()
+
+    player = state.players[
+        acting_seat
+    ]
+
+    if (
+        player.has_folded
+        or player.is_all_in
+    ):
+        return ()
+
+    amount_to_call = (
+        state.amount_to_call(
+            acting_seat
+        )
+    )
+
+    minimum_raise_to = (
+        state.minimum_raise_to()
+    )
+
+    maximum_raise_to = (
+        state.maximum_raise_to(
+            acting_seat
+        )
+    )
+
+    candidates = (
+        policy.raise_to_candidates(
+            pot=game.pot,
+            committed_this_round=(
+                player.committed_this_round
+            ),
+            stack=player.stack,
+            amount_to_call=(
+                amount_to_call
+            ),
+            minimum_raise_to=(
+                minimum_raise_to
+            ),
+            maximum_raise_to=(
+                maximum_raise_to
+            ),
+        )
+    )
+
+    # BetSizingPolicy generates the abstraction.
+    # The engine remains the final authority
+    # on whether each raise is legal.
+    return tuple(
+        raise_to
+        for raise_to in candidates
+        if _raise_is_legal(
+            game,
+            raise_to=raise_to,
+        )
+    )
 
 
 def _raise_is_legal(
@@ -183,7 +330,9 @@ def _raise_is_legal(
     if acting_seat is None:
         return False
 
-    player = state.players[acting_seat]
+    player = state.players[
+        acting_seat
+    ]
 
     if (
         player.has_folded
@@ -210,8 +359,8 @@ def _raise_is_legal(
     if raise_to >= minimum_raise_to:
         return True
 
-    # Allow an all-in raise below
-    # the normal minimum raise.
+    # A player may still move all-in for
+    # less than a normal minimum raise.
     return (
         raise_to
         == maximum_raise_to

@@ -17,6 +17,9 @@ from solver.single_draw_game import (
 from solver.strategy_index import (
     StrategyIndex,
 )
+from solver.starting_range import (
+    StartingRange,
+)
 
 
 def make_state(
@@ -303,3 +306,81 @@ def test_normalize_scales_weights() -> None:
         ]
         - 0.2
     ) < 1e-9
+
+
+def test_initialize_from_starting_range() -> None:
+    first = make_state(
+        seed=1
+    )
+
+    second = make_state(
+        seed=2
+    )
+
+    starting_range = (
+        StartingRange(
+            weights={
+                first.own_hand_key: 4.0,
+                second.own_hand_key: 1.0,
+            }
+        )
+    )
+
+    tracker = RangeTracker()
+
+    tracker.initialize_from_starting_range(
+        seat=0,
+        starting_range=starting_range,
+    )
+
+    result = tracker.range_for_seat(
+        0
+    )
+
+    assert (
+        result[
+            first.own_hand_key
+        ]
+        == 4.0
+    )
+
+    assert (
+        result[
+            second.own_hand_key
+        ]
+        == 1.0
+    )
+
+
+def test_starting_range_initialization_copies_weights() -> None:
+    first = make_state(
+        seed=1
+    )
+
+    starting_range = (
+        StartingRange(
+            weights={
+                first.own_hand_key: 4.0,
+            }
+        )
+    )
+
+    tracker = RangeTracker()
+
+    tracker.initialize_from_starting_range(
+        seat=0,
+        starting_range=starting_range,
+    )
+
+    tracker.weights[
+        0
+    ][
+        first.own_hand_key
+    ] = 99.0
+
+    assert (
+        starting_range.weight_for_hand(
+            first.own_hand_key
+        )
+        == 4.0
+    )

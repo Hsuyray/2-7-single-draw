@@ -12,6 +12,9 @@ from solver.strategy_index import (
 from solver.public_state import (
     PublicNodeKey,
 )
+from solver.starting_range import (
+    StartingRange,
+)
 
 
 @dataclass
@@ -181,3 +184,13 @@ class RangeTracker:
             for hand_key, weight
             in current_range.items()
         }
+
+    def initialize_from_starting_range(
+        self,
+        *,
+        seat: int,
+        starting_range: StartingRange,
+    ) -> None:
+        self.weights[seat] = (
+            starting_range.copy_weights()
+        )

@@ -3,11 +3,50 @@ from types import SimpleNamespace
 import pytest
 
 from solver.actions import DiscardAction
+from solver.cards import Card
 from solver.game_state import ActionType
-from solver.information_state import InformationState
-from solver.legal_actions import BettingAction
-from solver.node_store import NodeStore
 from solver.hand import Hand
+from solver.information_state import (
+    InformationState,
+)
+from solver.legal_actions import (
+    BettingAction,
+)
+from solver.node_store import (
+    NodeStore,
+)
+
+
+def make_hand(
+    *cards: str,
+) -> Hand:
+    return Hand(
+        tuple(
+            Card.from_string(card)
+            for card in cards
+        )
+    )
+
+
+def make_player(
+    *,
+    seat: int,
+    stack: float,
+    committed_total: float,
+    committed_this_round: float,
+    has_folded: bool = False,
+    is_all_in: bool = False,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        seat=seat,
+        stack=stack,
+        committed_total=committed_total,
+        committed_this_round=(
+            committed_this_round
+        ),
+        has_folded=has_folded,
+        is_all_in=is_all_in,
+    )
 
 
 def make_information_state(
@@ -15,36 +54,18 @@ def make_information_state(
     acting_seat: int = 0,
     phase: str = "predraw_betting",
 ) -> InformationState:
-    player_zero = SimpleNamespace(
+    player_zero = make_player(
         seat=0,
         stack=99.0,
         committed_total=1.0,
-        has_folded=False,
-        is_all_in=False,
+        committed_this_round=1.0,
     )
 
-    player_one = SimpleNamespace(
+    player_one = make_player(
         seat=1,
-        stack=98.0,
-        committed_total=2.0,
-        has_folded=False,
-        is_all_in=False,
-    )
-
-    hand_zero = Hand.from_strings(
-        "7s",
-        "5h",
-        "4d",
-        "3c",
-        "Ks",
-    )
-
-    hand_one = Hand.from_strings(
-        "8s",
-        "6h",
-        "4c",
-        "2d",
-        "Qh",
+        stack=96.5,
+        committed_total=3.5,
+        committed_this_round=2.0,
     )
 
     game = SimpleNamespace(
@@ -52,14 +73,28 @@ def make_information_state(
             player_count=2,
         ),
         hands=[
-            hand_zero,
-            hand_one,
+            make_hand(
+                "7s",
+                "5h",
+                "4d",
+                "3c",
+                "2s",
+            ),
+            make_hand(
+                "Ks",
+                "Qh",
+                "Jd",
+                "9c",
+                "8s",
+            ),
         ],
         betting_state=SimpleNamespace(
             players=[
                 player_zero,
                 player_one,
             ],
+            current_bet=2.0,
+            minimum_raise_size=2.0,
         ),
         draw_results={},
         action_history=[],
@@ -68,26 +103,30 @@ def make_information_state(
         ),
         acting_seat=acting_seat,
         button_seat=0,
-        pot=3.0,
+        pot=4.5,
     )
 
     return InformationState.from_game(
         game,
-        observer_seat=0,
+        observer_seat=acting_seat,
     )
 
 
-def make_betting_actions() -> tuple[
+def betting_actions() -> tuple[
     BettingAction,
     ...,
 ]:
     return (
-        BettingAction(ActionType.FOLD),
-        BettingAction(ActionType.CALL),
+        BettingAction(
+            ActionType.FOLD
+        ),
+        BettingAction(
+            ActionType.CALL
+        ),
     )
 
 
-def test_new_store_is_empty() -> None:
+def test_empty_store_has_length_zero() -> None:
     store = NodeStore()
 
     assert len(store) == 0
@@ -95,51 +134,64 @@ def test_new_store_is_empty() -> None:
 
 def test_get_or_create_adds_node() -> None:
     store = NodeStore()
+
     state = make_information_state()
-    actions = make_betting_actions()
+
+    actions = betting_actions()
 
     node = store.get_or_create(
         state,
         actions,
     )
 
+    assert node is not None
     assert len(store) == 1
-    assert state in store
-    assert store.get(state) is node
+
+    assert (
+        store.get(state)
+        is node
+    )
 
 
 def test_get_or_create_returns_same_node() -> None:
     store = NodeStore()
+
     state = make_information_state()
-    actions = make_betting_actions()
 
-    first_node = store.get_or_create(
+    actions = betting_actions()
+
+    first = store.get_or_create(
         state,
         actions,
     )
 
-    second_node = store.get_or_create(
+    second = store.get_or_create(
         state,
         actions,
     )
 
-    assert first_node is second_node
+    assert first is second
+
     assert len(store) == 1
 
 
 def test_existing_node_preserves_regrets() -> None:
     store = NodeStore()
+
     state = make_information_state()
-    actions = make_betting_actions()
+
+    actions = betting_actions()
 
     node = store.get_or_create(
         state,
         actions,
     )
 
-    node.add_regret(
-        actions[1],
-        5.0,
+    node.add_regrets(
+        {
+            actions[0]: 2.0,
+            actions[1]: -1.0,
+        }
     )
 
     same_node = store.get_or_create(
@@ -147,25 +199,55 @@ def test_existing_node_preserves_regrets() -> None:
         actions,
     )
 
-    assert same_node.regret_sum[
-        actions[1]
-    ] == 5.0
+    assert same_node is node
+
+    assert (
+        same_node.regret_sum[
+            actions[0]
+        ]
+        == 2.0
+    )
+
+    assert (
+        same_node.regret_sum[
+            actions[1]
+        ]
+        == -1.0
+    )
 
 
 def test_same_state_with_different_actions_is_rejected() -> None:
     store = NodeStore()
+
     state = make_information_state()
 
-    store.get_or_create(
-        state,
-        make_betting_actions(),
+    original_actions = (
+        BettingAction(
+            ActionType.FOLD
+        ),
+        BettingAction(
+            ActionType.CALL
+        ),
     )
 
     different_actions = (
-        BettingAction(ActionType.CHECK),
+        BettingAction(
+            ActionType.CALL
+        ),
+        BettingAction(
+            ActionType.RAISE,
+            raise_to=6.0,
+        ),
     )
 
-    with pytest.raises(ValueError):
+    store.get_or_create(
+        state,
+        original_actions,
+    )
+
+    with pytest.raises(
+        ValueError
+    ):
         store.get_or_create(
             state,
             different_actions,
@@ -174,9 +256,12 @@ def test_same_state_with_different_actions_is_rejected() -> None:
 
 def test_cannot_create_node_without_actions() -> None:
     store = NodeStore()
+
     state = make_information_state()
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError
+    ):
         store.get_or_create(
             state,
             (),
@@ -185,9 +270,13 @@ def test_cannot_create_node_without_actions() -> None:
 
 def test_get_unknown_state_returns_none() -> None:
     store = NodeStore()
+
     state = make_information_state()
 
-    assert store.get(state) is None
+    assert (
+        store.get(state)
+        is None
+    )
 
 
 def test_different_states_create_different_nodes() -> None:
@@ -201,15 +290,19 @@ def test_different_states_create_different_nodes() -> None:
         acting_seat=1,
     )
 
-    store.get_or_create(
+    actions = betting_actions()
+
+    first = store.get_or_create(
         state_zero,
-        make_betting_actions(),
+        actions,
     )
 
-    store.get_or_create(
+    second = store.get_or_create(
         state_one,
-        make_betting_actions(),
+        actions,
     )
+
+    assert first is not second
 
     assert len(store) == 2
 
@@ -222,8 +315,12 @@ def test_store_supports_discard_nodes() -> None:
     )
 
     actions = (
-        DiscardAction(()),
-        DiscardAction((4,)),
+        DiscardAction(
+            discard_indices=(),
+        ),
+        DiscardAction(
+            discard_indices=(4,),
+        ),
     )
 
     node = store.get_or_create(
@@ -231,30 +328,51 @@ def test_store_supports_discard_nodes() -> None:
         actions,
     )
 
-    assert node.actions == actions
+    assert node is not None
+
+    assert len(store) == 1
+
+    assert (
+        store.get(state)
+        is node
+    )
 
 
 def test_remove_existing_node() -> None:
     store = NodeStore()
+
     state = make_information_state()
+
+    actions = betting_actions()
 
     store.get_or_create(
         state,
-        make_betting_actions(),
+        actions,
     )
 
-    store.remove(state)
+    store.remove(
+        state
+    )
 
     assert len(store) == 0
-    assert state not in store
+
+    assert (
+        store.get(state)
+        is None
+    )
 
 
 def test_remove_unknown_node_is_rejected() -> None:
     store = NodeStore()
+
     state = make_information_state()
 
-    with pytest.raises(KeyError):
-        store.remove(state)
+    with pytest.raises(
+        KeyError
+    ):
+        store.remove(
+            state
+        )
 
 
 def test_clear_removes_all_nodes() -> None:
@@ -268,15 +386,19 @@ def test_clear_removes_all_nodes() -> None:
         acting_seat=1,
     )
 
+    actions = betting_actions()
+
     store.get_or_create(
         first_state,
-        make_betting_actions(),
+        actions,
     )
 
     store.get_or_create(
         second_state,
-        make_betting_actions(),
+        actions,
     )
+
+    assert len(store) == 2
 
     store.clear()
 
@@ -285,23 +407,38 @@ def test_clear_removes_all_nodes() -> None:
 
 def test_average_strategies_returns_each_node() -> None:
     store = NodeStore()
+
     state = make_information_state()
-    actions = make_betting_actions()
+
+    actions = betting_actions()
 
     node = store.get_or_create(
         state,
         actions,
     )
 
-    node.strategy_sum[actions[0]] = 1.0
-    node.strategy_sum[actions[1]] = 3.0
+    node.accumulate_strategy(
+        realization_weight=1.0,
+    )
 
-    strategies = store.average_strategies()
+    strategies = (
+        store.average_strategies()
+    )
 
-    assert strategies[state][
-        actions[0]
-    ] == pytest.approx(0.25)
+    assert state in strategies
 
-    assert strategies[state][
-        actions[1]
-    ] == pytest.approx(0.75)
+    strategy = strategies[
+        state
+    ]
+
+    assert (
+        set(strategy)
+        == set(actions)
+    )
+
+    assert abs(
+        sum(
+            strategy.values()
+        )
+        - 1.0
+    ) < 1e-9

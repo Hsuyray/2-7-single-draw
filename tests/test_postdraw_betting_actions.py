@@ -15,17 +15,24 @@ from solver.single_draw_game import (
 def _advance_to_postdraw(
     game: SingleDrawGame,
 ) -> None:
-    while game.phase == GamePhase.PREDRAW_BETTING:
+    while (
+        game.phase
+        == GamePhase.PREDRAW_BETTING
+    ):
         state = game.betting_state
-        acting_seat = state.acting_seat
+        acting_seat = (
+            state.acting_seat
+        )
 
         if acting_seat is None:
             raise RuntimeError(
                 "Expected a pre-draw actor."
             )
 
-        amount_to_call = state.amount_to_call(
-            acting_seat
+        amount_to_call = (
+            state.amount_to_call(
+                acting_seat
+            )
         )
 
         if amount_to_call > 0:
@@ -43,7 +50,9 @@ def _advance_to_postdraw(
         )
 
     while game.phase == GamePhase.DRAW:
-        acting_seat = game.draw_acting_seat
+        acting_seat = (
+            game.draw_acting_seat
+        )
 
         if acting_seat is None:
             raise RuntimeError(
@@ -55,16 +64,23 @@ def _advance_to_postdraw(
             [],
         )
 
-    if game.phase != GamePhase.POSTDRAW_BETTING:
+    if (
+        game.phase
+        != GamePhase.POSTDRAW_BETTING
+    ):
         raise RuntimeError(
-            "Expected post-draw betting phase."
+            "Expected post-draw "
+            "betting phase."
         )
 
 
-def test_postdraw_call_uses_current_round_commitment() -> None:
+def _make_postdraw_game(
+    *,
+    starting_stack: float = 100.0,
+) -> SingleDrawGame:
     config = GameConfig(
         player_count=2,
-        starting_stack=100.0,
+        starting_stack=starting_stack,
         small_blind=1.0,
         big_blind=2.0,
         big_blind_ante=0.0,
@@ -76,7 +92,42 @@ def test_postdraw_call_uses_current_round_commitment() -> None:
         deck_seed=42,
     )
 
-    _advance_to_postdraw(game)
+    _advance_to_postdraw(
+        game
+    )
+
+    return game
+
+
+def _raise_actions(
+    game: SingleDrawGame,
+    *,
+    raise_sizes: (
+        tuple[float, ...]
+        | None
+    ),
+) -> list[BettingAction]:
+    actions = legal_actions(
+        game,
+        raise_sizes=raise_sizes,
+    )
+
+    return [
+        action
+        for action in actions
+        if (
+            isinstance(
+                action,
+                BettingAction,
+            )
+            and action.action_type
+            == ActionType.RAISE
+        )
+    ]
+
+
+def test_postdraw_call_uses_current_round_commitment() -> None:
+    game = _make_postdraw_game()
 
     first_seat = game.acting_seat
 
@@ -132,21 +183,7 @@ def test_postdraw_call_uses_current_round_commitment() -> None:
 
 
 def test_postdraw_amount_to_call_is_round_specific() -> None:
-    config = GameConfig(
-        player_count=2,
-        starting_stack=100.0,
-        small_blind=1.0,
-        big_blind=2.0,
-        big_blind_ante=0.0,
-    )
-
-    game = SingleDrawGame(
-        config=config,
-        button_seat=0,
-        deck_seed=42,
-    )
-
-    _advance_to_postdraw(game)
+    game = _make_postdraw_game()
 
     first_seat = game.acting_seat
 
@@ -177,21 +214,9 @@ def test_postdraw_amount_to_call_is_round_specific() -> None:
 
 
 def test_postdraw_maximum_raise_to_uses_round_commitment() -> None:
-    config = GameConfig(
-        player_count=2,
+    game = _make_postdraw_game(
         starting_stack=10.0,
-        small_blind=1.0,
-        big_blind=2.0,
-        big_blind_ante=0.0,
     )
-
-    game = SingleDrawGame(
-        config=config,
-        button_seat=0,
-        deck_seed=42,
-    )
-
-    _advance_to_postdraw(game)
 
     acting_seat = game.acting_seat
 
@@ -212,25 +237,16 @@ def test_postdraw_maximum_raise_to_uses_round_commitment() -> None:
         )
     )
 
-    assert maximum_raise_to == player.stack
+    assert (
+        maximum_raise_to
+        == player.stack
+    )
 
 
 def test_postdraw_raise_action_respects_available_stack() -> None:
-    config = GameConfig(
-        player_count=2,
+    game = _make_postdraw_game(
         starting_stack=10.0,
-        small_blind=1.0,
-        big_blind=2.0,
-        big_blind_ante=0.0,
     )
-
-    game = SingleDrawGame(
-        config=config,
-        button_seat=0,
-        deck_seed=42,
-    )
-
-    _advance_to_postdraw(game)
 
     acting_seat = game.acting_seat
 
@@ -245,7 +261,9 @@ def test_postdraw_raise_action_respects_available_stack() -> None:
         ]
     )
 
-    legal_raise_to = player.stack
+    legal_raise_to = (
+        player.stack
+    )
 
     actions = legal_actions(
         game,
@@ -262,40 +280,124 @@ def test_postdraw_raise_action_respects_available_stack() -> None:
 
     assert BettingAction(
         ActionType.RAISE,
-        raise_to=legal_raise_to + 1.0,
+        raise_to=(
+            legal_raise_to + 1.0
+        ),
     ) not in actions
 
 
 def test_empty_raise_sizes_produces_no_raise_actions() -> None:
-    config = GameConfig(
-        player_count=2,
-        starting_stack=100.0,
-        small_blind=1.0,
-        big_blind=2.0,
-        big_blind_ante=0.0,
-    )
+    game = _make_postdraw_game()
 
-    game = SingleDrawGame(
-        config=config,
-        button_seat=0,
-        deck_seed=42,
-    )
-
-    _advance_to_postdraw(game)
-
-    actions = legal_actions(
+    raises = _raise_actions(
         game,
         raise_sizes=(),
     )
 
-    assert all(
-        not (
-            isinstance(
-                action,
-                BettingAction,
-            )
-            and action.action_type
-            == ActionType.RAISE
+    assert raises == []
+
+
+def test_none_raise_sizes_use_bet_sizing_policy() -> None:
+    game = _make_postdraw_game()
+
+    raises = _raise_actions(
+        game,
+        raise_sizes=None,
+    )
+
+    assert raises
+
+
+def test_default_policy_generates_multiple_raise_sizes() -> None:
+    game = _make_postdraw_game()
+
+    raises = _raise_actions(
+        game,
+        raise_sizes=None,
+    )
+
+    assert len(raises) > 1
+
+
+def test_default_policy_raise_sizes_are_legal() -> None:
+    game = _make_postdraw_game()
+
+    raises = _raise_actions(
+        game,
+        raise_sizes=None,
+    )
+
+    state = game.betting_state
+
+    acting_seat = (
+        state.acting_seat
+    )
+
+    if acting_seat is None:
+        raise RuntimeError(
+            "Expected post-draw actor."
         )
-        for action in actions
+
+    minimum_raise_to = (
+        state.minimum_raise_to()
+    )
+
+    maximum_raise_to = (
+        state.maximum_raise_to(
+            acting_seat
+        )
+    )
+
+    for action in raises:
+        assert action.raise_to is not None
+
+        assert (
+            action.raise_to
+            <= maximum_raise_to
+        )
+
+        assert (
+            action.raise_to
+            >= minimum_raise_to
+            or action.raise_to
+            == maximum_raise_to
+        )
+
+
+def test_explicit_raise_sizes_override_policy() -> None:
+    game = _make_postdraw_game()
+
+    raises = _raise_actions(
+        game,
+        raise_sizes=(
+            6.0,
+        ),
+    )
+
+    assert raises == [
+        BettingAction(
+            ActionType.RAISE,
+            raise_to=6.0,
+        )
+    ]
+
+
+def test_explicit_empty_tuple_does_not_use_policy() -> None:
+    game = _make_postdraw_game()
+
+    policy_raises = _raise_actions(
+        game,
+        raise_sizes=None,
+    )
+
+    disabled_raises = _raise_actions(
+        game,
+        raise_sizes=(),
+    )
+
+    assert policy_raises
+
+    assert (
+        disabled_raises
+        == []
     )
