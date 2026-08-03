@@ -5,12 +5,16 @@ from dataclasses import dataclass, field
 from math import prod
 from typing import Literal
 
-from solver.action_executor import apply_solver_action
+from solver.action_executor import (
+    apply_solver_action,
+)
+from solver.bet_sizing import (
+    BetSizingPolicy,
+)
 from solver.information_state import (
     AbstractionMode,
     InformationState,
 )
-from solver.strategy_index import StrategyIndex
 from solver.legal_actions import (
     DrawActionMode,
     SolverAction,
@@ -21,15 +25,25 @@ from solver.single_draw_game import (
     GamePhase,
     SingleDrawGame,
 )
-from solver.terminal_utility import terminal_utility
+from solver.strategy_index import (
+    StrategyIndex,
+)
+from solver.terminal_utility import (
+    terminal_utility,
+)
 
 
-GameFactory = Callable[[], SingleDrawGame]
+GameFactory = Callable[
+    [],
+    SingleDrawGame,
+]
+
 
 TraversalMode = Literal[
     "full",
     "external_sampling",
 ]
+
 
 DrawActionModeSetting = Literal[
     "auto",
@@ -41,14 +55,41 @@ DrawActionModeSetting = Literal[
 @dataclass
 class CFRTrainer:
     max_draw: int = 3
-    raise_sizes: tuple[float, ...] = ()
+
+    # Semantics:
+    #
+    # None:
+    #     use bet_sizing_policy
+    #
+    # ():
+    #     disable raises
+    #
+    # non-empty tuple:
+    #     explicit absolute raise-to sizes
+    raise_sizes: (
+        tuple[float, ...]
+        | None
+    ) = ()
+
+    bet_sizing_policy: (
+        BetSizingPolicy
+        | None
+    ) = None
+
     abstraction: AbstractionMode = "exact"
+
     traversal_mode: TraversalMode = "full"
-    draw_action_mode: DrawActionModeSetting = "auto"
+
+    draw_action_mode: (
+        DrawActionModeSetting
+    ) = "auto"
+
     random_seed: int | None = None
+
     node_store: NodeStore = field(
         default_factory=NodeStore,
     )
+
     completed_iterations: int = 0
 
     _random: random.Random = field(
@@ -56,7 +97,9 @@ class CFRTrainer:
         repr=False,
     )
 
-    _resolved_draw_action_mode: DrawActionMode = field(
+    _resolved_draw_action_mode: (
+        DrawActionMode
+    ) = field(
         init=False,
         repr=False,
     )
@@ -68,7 +111,8 @@ class CFRTrainer:
         }:
             raise ValueError(
                 "Traversal mode must be "
-                "'full' or 'external_sampling'."
+                "'full' or "
+                "'external_sampling'."
             )
 
         if self.draw_action_mode not in {
@@ -78,18 +122,33 @@ class CFRTrainer:
         }:
             raise ValueError(
                 "Draw action mode must be "
-                "'auto', 'full', or 'candidate'."
+                "'auto', 'full', or "
+                "'candidate'."
             )
 
         if self.max_draw < 0:
             raise ValueError(
-                "Maximum draw cannot be negative."
+                "Maximum draw cannot "
+                "be negative."
             )
 
         if self.max_draw > 5:
             raise ValueError(
-                "Maximum draw cannot exceed "
-                "five cards."
+                "Maximum draw cannot "
+                "exceed five cards."
+            )
+
+        if (
+            self.raise_sizes is not None
+            and any(
+                raise_to < 0
+                for raise_to
+                in self.raise_sizes
+            )
+        ):
+            raise ValueError(
+                "Raise sizes cannot "
+                "be negative."
             )
 
         self._resolved_draw_action_mode = (
@@ -104,7 +163,15 @@ class CFRTrainer:
     def resolved_draw_action_mode(
         self,
     ) -> DrawActionMode:
-        return self._resolved_draw_action_mode
+        return (
+            self._resolved_draw_action_mode
+        )
+
+    @property
+    def uses_bet_sizing_policy(
+        self,
+    ) -> bool:
+        return self.raise_sizes is None
 
     def _resolve_draw_action_mode(
         self,
@@ -112,7 +179,10 @@ class CFRTrainer:
         if self.draw_action_mode == "full":
             return "full"
 
-        if self.draw_action_mode == "candidate":
+        if (
+            self.draw_action_mode
+            == "candidate"
+        ):
             return "candidate"
 
         if self.abstraction == "exact":
@@ -134,14 +204,19 @@ class CFRTrainer:
         for _ in range(iterations):
             sampled_game = game_factory()
 
-            self._validate_game(sampled_game)
+            self._validate_game(
+                sampled_game
+            )
 
             for traversing_seat in range(2):
                 game_copy = deepcopy(
                     sampled_game
                 )
 
-                if self.traversal_mode == "full":
+                if (
+                    self.traversal_mode
+                    == "full"
+                ):
                     self._full_cfr(
                         game=game_copy,
                         traversing_seat=(
@@ -152,6 +227,7 @@ class CFRTrainer:
                             1.0,
                         ),
                     )
+
                 else:
                     self._external_sampling_cfr(
                         game=game_copy,
@@ -187,7 +263,9 @@ class CFRTrainer:
                 "acting player."
             )
 
-        actions = self._legal_actions(game)
+        actions = self._legal_actions(
+            game
+        )
 
         if not actions:
             raise RuntimeError(
@@ -201,9 +279,14 @@ class CFRTrainer:
             actions=actions,
         )
 
-        strategy = node.current_strategy()
+        strategy = (
+            node.current_strategy()
+        )
 
-        if acting_seat == traversing_seat:
+        if (
+            acting_seat
+            == traversing_seat
+        ):
             node.accumulate_strategy(
                 realization_weight=(
                     reach_probabilities[
@@ -220,18 +303,22 @@ class CFRTrainer:
         node_utility = 0.0
 
         for action in actions:
-            next_game = apply_solver_action(
-                game,
-                action,
+            next_game = (
+                apply_solver_action(
+                    game,
+                    action,
+                )
             )
 
             next_reach = list(
                 reach_probabilities
             )
 
-            next_reach[acting_seat] *= (
-                strategy[action]
-            )
+            next_reach[
+                acting_seat
+            ] *= strategy[
+                action
+            ]
 
             action_utility = self._full_cfr(
                 game=next_game,
@@ -244,37 +331,45 @@ class CFRTrainer:
                 ),
             )
 
-            action_utilities[action] = (
-                action_utility
-            )
+            action_utilities[
+                action
+            ] = action_utility
 
             node_utility += (
                 strategy[action]
                 * action_utility
             )
 
-        if acting_seat == traversing_seat:
+        if (
+            acting_seat
+            == traversing_seat
+        ):
             counterfactual_reach = prod(
                 probability
                 for seat, probability
                 in enumerate(
                     reach_probabilities
                 )
-                if seat != traversing_seat
+                if seat
+                != traversing_seat
             )
 
             regrets = {
                 action: (
                     counterfactual_reach
                     * (
-                        action_utilities[action]
+                        action_utilities[
+                            action
+                        ]
                         - node_utility
                     )
                 )
                 for action in actions
             }
 
-            node.add_regrets(regrets)
+            node.add_regrets(
+                regrets
+            )
 
         return node_utility
 
@@ -299,7 +394,9 @@ class CFRTrainer:
                 "acting player."
             )
 
-        actions = self._legal_actions(game)
+        actions = self._legal_actions(
+            game
+        )
 
         if not actions:
             raise RuntimeError(
@@ -313,9 +410,14 @@ class CFRTrainer:
             actions=actions,
         )
 
-        strategy = node.current_strategy()
+        strategy = (
+            node.current_strategy()
+        )
 
-        if acting_seat != traversing_seat:
+        if (
+            acting_seat
+            != traversing_seat
+        ):
             sampled_action = (
                 self._sample_action(
                     actions=actions,
@@ -323,19 +425,23 @@ class CFRTrainer:
                 )
             )
 
-            next_game = apply_solver_action(
-                game,
-                sampled_action,
+            next_game = (
+                apply_solver_action(
+                    game,
+                    sampled_action,
+                )
             )
 
-            return self._external_sampling_cfr(
-                game=next_game,
-                traversing_seat=(
-                    traversing_seat
-                ),
-                traverser_reach=(
-                    traverser_reach
-                ),
+            return (
+                self._external_sampling_cfr(
+                    game=next_game,
+                    traversing_seat=(
+                        traversing_seat
+                    ),
+                    traverser_reach=(
+                        traverser_reach
+                    ),
+                )
             )
 
         node.accumulate_strategy(
@@ -352,9 +458,11 @@ class CFRTrainer:
         node_utility = 0.0
 
         for action in actions:
-            next_game = apply_solver_action(
-                game,
-                action,
+            next_game = (
+                apply_solver_action(
+                    game,
+                    action,
+                )
             )
 
             action_utility = (
@@ -370,9 +478,9 @@ class CFRTrainer:
                 )
             )
 
-            action_utilities[action] = (
-                action_utility
-            )
+            action_utilities[
+                action
+            ] = action_utility
 
             node_utility += (
                 strategy[action]
@@ -387,18 +495,28 @@ class CFRTrainer:
             for action in actions
         }
 
-        node.add_regrets(regrets)
+        node.add_regrets(
+            regrets
+        )
 
         return node_utility
 
     def _legal_actions(
         self,
         game: SingleDrawGame,
-    ) -> tuple[SolverAction, ...]:
+    ) -> tuple[
+        SolverAction,
+        ...,
+    ]:
         return legal_actions(
             game,
             max_draw=self.max_draw,
-            raise_sizes=self.raise_sizes,
+            raise_sizes=(
+                self.raise_sizes
+            ),
+            bet_sizing_policy=(
+                self.bet_sizing_policy
+            ),
             draw_action_mode=(
                 self._resolved_draw_action_mode
             ),
@@ -418,13 +536,17 @@ class CFRTrainer:
             InformationState.from_game(
                 game,
                 observer_seat=acting_seat,
-                abstraction=self.abstraction,
+                abstraction=(
+                    self.abstraction
+                ),
             )
         )
 
-        node = self.node_store.get_or_create(
-            information_state,
-            actions,
+        node = (
+            self.node_store.get_or_create(
+                information_state,
+                actions,
+            )
         )
 
         node.record_visit()
@@ -443,7 +565,10 @@ class CFRTrainer:
             float,
         ],
     ) -> SolverAction:
-        threshold = self._random.random()
+        threshold = (
+            self._random.random()
+        )
+
         cumulative_probability = 0.0
 
         for action in actions:
@@ -457,22 +582,23 @@ class CFRTrainer:
             ):
                 return action
 
-        # Prevent floating-point sums such as
-        # 0.9999999999999999 from missing all actions.
         return actions[-1]
 
     def average_strategies(
         self,
     ) -> dict:
         return (
-            self.node_store.average_strategies()
+            self.node_store
+            .average_strategies()
         )
 
     def strategy_index(
         self,
     ) -> StrategyIndex:
-        return StrategyIndex.from_strategies(
-            self.average_strategies()
+        return (
+            StrategyIndex.from_strategies(
+                self.average_strategies()
+            )
         )
 
     def _validate_game(
@@ -481,8 +607,9 @@ class CFRTrainer:
     ) -> None:
         if game.config.player_count != 2:
             raise ValueError(
-                "This CFR prototype currently "
-                "supports heads-up games only."
+                "This CFR prototype "
+                "currently supports "
+                "heads-up games only."
             )
 
         if game.phase not in {
@@ -490,9 +617,7 @@ class CFRTrainer:
             GamePhase.DRAW,
         }:
             raise ValueError(
-                "Training games must begin during "
-                "pre-draw betting or the draw phase."
+                "Training games must begin "
+                "during pre-draw betting "
+                "or the draw phase."
             )
-
-
-    

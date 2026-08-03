@@ -1,6 +1,7 @@
 import pytest
 
 from solver.bet_sizing import (
+    BetSize,
     BetSizingPolicy,
 )
 
@@ -318,4 +319,188 @@ def test_invalid_all_in_threshold_is_rejected() -> None:
     ):
         BetSizingPolicy(
             all_in_threshold=1.1
+        )
+
+
+def test_bet_size_fraction_label() -> None:
+    size = BetSize(
+        raise_to=6.6,
+        pot_fraction=0.66,
+        is_all_in=False,
+    )
+
+    assert size.label == "66% Pot"
+
+
+def test_bet_size_all_in_label() -> None:
+    size = BetSize(
+        raise_to=10.0,
+        pot_fraction=None,
+        is_all_in=True,
+    )
+
+    assert size.label == "All-in"
+
+
+def test_bet_size_candidates_include_metadata() -> None:
+    policy = BetSizingPolicy(
+        pot_fractions=(
+            0.50,
+            1.00,
+        ),
+        include_all_in=True,
+    )
+
+    sizes = policy.bet_size_candidates(
+        pot=10.0,
+        committed_this_round=0.0,
+        stack=20.0,
+        amount_to_call=0.0,
+        minimum_raise_to=2.0,
+        maximum_raise_to=20.0,
+    )
+
+    assert sizes == (
+        BetSize(
+            raise_to=5.0,
+            pot_fraction=0.50,
+            is_all_in=False,
+        ),
+        BetSize(
+            raise_to=10.0,
+            pot_fraction=1.00,
+            is_all_in=False,
+        ),
+        BetSize(
+            raise_to=20.0,
+            pot_fraction=None,
+            is_all_in=True,
+        ),
+    )
+
+
+def test_near_all_in_fraction_becomes_all_in_metadata() -> None:
+    policy = BetSizingPolicy(
+        pot_fractions=(
+            0.50,
+            0.90,
+            1.00,
+        ),
+        include_all_in=True,
+        all_in_threshold=0.90,
+    )
+
+    sizes = policy.bet_size_candidates(
+        pot=10.0,
+        committed_this_round=0.0,
+        stack=10.0,
+        amount_to_call=0.0,
+        minimum_raise_to=2.0,
+        maximum_raise_to=10.0,
+    )
+
+    assert sizes == (
+        BetSize(
+            raise_to=5.0,
+            pot_fraction=0.50,
+            is_all_in=False,
+        ),
+        BetSize(
+            raise_to=10.0,
+            pot_fraction=None,
+            is_all_in=True,
+        ),
+    )
+
+
+def test_raise_to_candidates_remains_backward_compatible() -> None:
+    policy = BetSizingPolicy(
+        pot_fractions=(
+            0.50,
+            1.00,
+        ),
+        include_all_in=True,
+    )
+
+    raise_to_sizes = (
+        policy.raise_to_candidates(
+            pot=10.0,
+            committed_this_round=0.0,
+            stack=20.0,
+            amount_to_call=0.0,
+            minimum_raise_to=2.0,
+            maximum_raise_to=20.0,
+        )
+    )
+
+    assert raise_to_sizes == (
+        5.0,
+        10.0,
+        20.0,
+    )
+
+
+def test_duplicate_rounded_sizes_keep_first_fraction() -> None:
+    policy = BetSizingPolicy(
+        pot_fractions=(
+            0.33,
+            0.34,
+        ),
+        include_all_in=False,
+        chip_increment=1.0,
+    )
+
+    sizes = policy.bet_size_candidates(
+        pot=10.0,
+        committed_this_round=0.0,
+        stack=100.0,
+        amount_to_call=0.0,
+        minimum_raise_to=1.0,
+        maximum_raise_to=100.0,
+    )
+
+    assert sizes == (
+        BetSize(
+            raise_to=3.0,
+            pot_fraction=0.33,
+            is_all_in=False,
+        ),
+    )
+
+
+def test_all_in_replaces_fraction_with_same_raise_to() -> None:
+    policy = BetSizingPolicy(
+        pot_fractions=(
+            1.00,
+        ),
+        include_all_in=True,
+        all_in_threshold=0.90,
+    )
+
+    sizes = policy.bet_size_candidates(
+        pot=10.0,
+        committed_this_round=0.0,
+        stack=10.0,
+        amount_to_call=0.0,
+        minimum_raise_to=2.0,
+        maximum_raise_to=10.0,
+    )
+
+    assert sizes == (
+        BetSize(
+            raise_to=10.0,
+            pot_fraction=None,
+            is_all_in=True,
+        ),
+    )
+
+
+def test_all_in_cannot_have_pot_fraction() -> None:
+    with pytest.raises(
+        ValueError
+    ):
+        BetSize(
+            raise_to=10.0,
+            pot_fraction=1.00,
+            is_all_in=True,
         )

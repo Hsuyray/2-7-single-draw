@@ -7,6 +7,9 @@ from solver.training_factory import TrainingGameFactory
 from solver.hand_abstraction import ExactHandKey
 from solver.made_hand_bucket import MadeHandBucket
 from solver.draw_hand_bucket import DrawHandBucket
+from solver.bet_sizing_profiles import (
+    FAST_BET_SIZING,
+)
 
 
 def make_heads_up_game() -> SingleDrawGame:
@@ -477,3 +480,70 @@ def test_draw_action_mode_can_be_overridden() -> None:
         bucket_trainer.resolved_draw_action_mode
         == "full"
     )
+
+
+def test_trainer_disables_raises_with_empty_tuple() -> None:
+    trainer = CFRTrainer(
+        raise_sizes=(),
+    )
+
+    assert (
+        trainer.uses_bet_sizing_policy
+        is False
+    )
+
+
+def test_trainer_uses_policy_when_raise_sizes_is_none() -> None:
+    trainer = CFRTrainer(
+        raise_sizes=None,
+        bet_sizing_policy=(
+            FAST_BET_SIZING
+        ),
+    )
+
+    assert (
+        trainer.uses_bet_sizing_policy
+        is True
+    )
+
+    assert (
+        trainer.bet_sizing_policy
+        is FAST_BET_SIZING
+    )
+
+
+def test_trainer_supports_explicit_raise_sizes() -> None:
+    trainer = CFRTrainer(
+        raise_sizes=(
+            6.0,
+            10.0,
+        ),
+    )
+
+    assert (
+        trainer.raise_sizes
+        == (
+            6.0,
+            10.0,
+        )
+    )
+
+    assert (
+        trainer.uses_bet_sizing_policy
+        is False
+    )
+
+
+def test_trainer_rejects_negative_raise_size() -> None:
+    try:
+        CFRTrainer(
+            raise_sizes=(
+                -1.0,
+            ),
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(
+            "Expected ValueError."
+        )
