@@ -1,6 +1,3 @@
-from solver.actions import (
-    DiscardAction,
-)
 from solver.bet_sizing import (
     BetSizingPolicy,
 )
@@ -10,6 +7,7 @@ from solver.game_state import (
 )
 from solver.public_legal_actions import (
     PublicBettingAction,
+    PublicDrawAction,
     PublicLegalActionSnapshot,
     public_legal_actions,
 )
@@ -328,7 +326,7 @@ def test_explicit_all_in_uses_all_in_label() -> None:
     ]
 
 
-def test_draw_phase_returns_discard_actions() -> None:
+def test_draw_phase_returns_public_draw_actions() -> None:
     game = _make_game()
 
     _advance_to_draw(
@@ -342,13 +340,12 @@ def test_draw_phase_returns_discard_actions() -> None:
     )
 
     assert snapshot is not None
-
     assert snapshot.draw_actions
 
     assert all(
         isinstance(
             action,
-            DiscardAction,
+            PublicDrawAction,
         )
         for action
         in snapshot.draw_actions
@@ -426,3 +423,107 @@ def test_non_raise_rejects_raise_metadata() -> None:
         raise AssertionError(
             "Expected ValueError."
         )
+
+
+def test_private_discard_patterns_collapse_by_draw_count() -> None:
+    game = _make_game()
+
+    _advance_to_draw(
+        game
+    )
+
+    snapshot = public_legal_actions(
+        game,
+        max_draw=1,
+        draw_action_mode="full",
+    )
+
+    assert snapshot is not None
+
+    assert snapshot.draw_actions == (
+        PublicDrawAction(
+            draw_count=0
+        ),
+        PublicDrawAction(
+            draw_count=1
+        ),
+    )
+
+
+def test_public_draw_action_exposes_label() -> None:
+    assert (
+        PublicDrawAction(
+            draw_count=0
+        ).label
+        == "Stand Pat"
+    )
+
+    assert (
+        PublicDrawAction(
+            draw_count=1
+        ).label
+        == "Draw 1"
+    )
+
+    assert (
+        PublicDrawAction(
+            draw_count=3
+        ).label
+        == "Draw 3"
+    )
+
+
+def test_public_draw_action_does_not_expose_indices() -> None:
+    action = PublicDrawAction(
+        draw_count=2
+    )
+
+    assert not hasattr(
+        action,
+        "discard_indices",
+    )
+
+
+def test_public_draw_count_cannot_be_negative() -> None:
+    try:
+        PublicDrawAction(
+            draw_count=-1
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(
+            "Expected ValueError."
+        )
+
+
+def test_public_draw_count_cannot_exceed_five() -> None:
+    try:
+        PublicDrawAction(
+            draw_count=6
+        )
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(
+            "Expected ValueError."
+        )
+
+
+def test_snapshot_separates_public_draw_actions() -> None:
+    draw_action = PublicDrawAction(
+        draw_count=2
+    )
+
+    snapshot = PublicLegalActionSnapshot(
+        acting_seat=0,
+        actions=(
+            draw_action,
+        ),
+    )
+
+    assert snapshot.betting_actions == ()
+
+    assert snapshot.draw_actions == (
+        draw_action,
+    )

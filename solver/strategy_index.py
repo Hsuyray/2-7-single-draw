@@ -23,16 +23,20 @@ Strategy: TypeAlias = dict[
 @dataclass
 class StrategyIndex:
     """
-    Query layer over solved information-state strategies.
+    Query layer over information-state action
+    weights.
 
-    It supports two main product use cases:
+    Most solved CFR strategies are normalized
+    probability distributions.
 
-    Hand mode:
-        public node + private hand -> strategy
+    Some range-conditioning and view tests use
+    partial action weights or empty strategies.
+    StrategyIndex therefore validates only
+    structural correctness and non-negative
+    numeric weights.
 
-    Range mode:
-        public node -> all private-hand strategies
-        for the acting player.
+    Strict normalized-probability validation
+    belongs at checkpoint boundaries.
     """
 
     _strategies: dict[
@@ -59,7 +63,13 @@ class StrategyIndex:
     )
 
     def __post_init__(self) -> None:
+        self._validate_strategies()
         self._rebuild_index()
+
+    def __len__(self) -> int:
+        return len(
+            self._strategies
+        )
 
     @classmethod
     def from_strategies(
@@ -80,7 +90,9 @@ class StrategyIndex:
         for state, strategy in (
             strategies.items()
         ):
-            copied_strategies[state] = dict(
+            copied_strategies[
+                state
+            ] = dict(
                 strategy
             )
 
@@ -89,6 +101,24 @@ class StrategyIndex:
                 copied_strategies
             )
         )
+
+    def strategies(
+        self,
+    ) -> dict[
+        InformationState,
+        Strategy,
+    ]:
+        """
+        Return a defensive copy of all stored
+        information-state action weights.
+        """
+        return {
+            state: dict(
+                strategy
+            )
+            for state, strategy
+            in self._strategies.items()
+        }
 
     def strategy_for_state(
         self,
@@ -101,7 +131,9 @@ class StrategyIndex:
         if strategy is None:
             return None
 
-        return dict(strategy)
+        return dict(
+            strategy
+        )
 
     def strategy_for_hand(
         self,
@@ -129,7 +161,9 @@ class StrategyIndex:
         if strategy is None:
             return None
 
-        return dict(strategy)
+        return dict(
+            strategy
+        )
 
     def range_strategy(
         self,
@@ -151,7 +185,9 @@ class StrategyIndex:
         )
 
         return {
-            hand_key: dict(strategy)
+            hand_key: dict(
+                strategy
+            )
             for hand_key, strategy
             in strategies.items()
         }
@@ -176,7 +212,7 @@ class StrategyIndex:
         self,
     ) -> tuple[
         PublicNodeKey,
-        ...
+        ...,
     ]:
         nodes = {
             public_node
@@ -187,7 +223,80 @@ class StrategyIndex:
             in self._by_public_node
         }
 
-        return tuple(nodes)
+        return tuple(
+            nodes
+        )
+
+    def _validate_strategies(
+        self,
+    ) -> None:
+        """
+        Validate storage structure.
+
+        Empty strategies and partial action
+        weights are allowed.
+
+        Every stored value must still be a
+        finite, non-negative number.
+        """
+        for (
+            information_state,
+            strategy,
+        ) in self._strategies.items():
+            if not isinstance(
+                information_state,
+                InformationState,
+            ):
+                raise TypeError(
+                    "Strategy keys must be "
+                    "InformationState objects."
+                )
+
+            if not isinstance(
+                strategy,
+                dict,
+            ):
+                raise TypeError(
+                    "Stored strategies must "
+                    "be dictionaries."
+                )
+
+            for (
+                _action,
+                weight,
+            ) in strategy.items():
+                if not isinstance(
+                    weight,
+                    (
+                        int,
+                        float,
+                    ),
+                ):
+                    raise TypeError(
+                        "Strategy weights must "
+                        "be numeric."
+                    )
+
+                if weight < 0:
+                    raise ValueError(
+                        "Strategy weights cannot "
+                        "be negative."
+                    )
+
+                if weight != weight:
+                    raise ValueError(
+                        "Strategy weights cannot "
+                        "be NaN."
+                    )
+
+                if weight in {
+                    float("inf"),
+                    float("-inf"),
+                }:
+                    raise ValueError(
+                        "Strategy weights must "
+                        "be finite."
+                    )
 
     def _rebuild_index(self) -> None:
         self._by_public_node = {}
@@ -226,4 +335,6 @@ class StrategyIndex:
 
             range_strategy[
                 state.own_hand_key
-            ] = dict(strategy)
+            ] = dict(
+                strategy
+            )

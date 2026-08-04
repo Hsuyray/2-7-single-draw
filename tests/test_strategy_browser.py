@@ -14,11 +14,13 @@ from solver.legal_actions import (
 )
 from solver.public_legal_actions import (
     PublicBettingAction,
+    PublicDrawAction,
 )
 from solver.public_node_navigator import (
     PublicNodeNavigator,
 )
 from solver.single_draw_game import (
+    GamePhase,
     SingleDrawGame,
 )
 from solver.strategy_browser import (
@@ -33,6 +35,21 @@ from solver.strategy_index import (
 )
 from solver.range_tracker import (
     RangeTracker,
+)
+from solver.actions import (
+    DiscardAction,
+)
+from solver.hand_abstraction import (
+    ExactHandKey,
+)
+from solver.draw_range_sampling import (
+    DrawSamplingConfig,
+)
+from solver.draw_range_transition import (
+    DrawTransitionBudget,
+)
+from solver.draw_transition_policy import (
+    DrawTransitionConfig,
 )
 
 
@@ -1566,5 +1583,747 @@ def test_apply_public_action_updates_acting_range() -> None:
 
     assert (
         sum(updated_range.values())
+        == pytest.approx(1.0)
+    )
+
+
+def make_draw_browser() -> tuple[
+    StrategyBrowser,
+    InformationState,
+]:
+    game = make_game()
+
+    game.apply_betting_action(
+        ActionType.CALL
+    )
+
+    game.apply_betting_action(
+        ActionType.CHECK
+    )
+
+    acting_seat = game.acting_seat
+
+    assert acting_seat is not None
+
+    state = InformationState.from_game(
+        game,
+        observer_seat=acting_seat,
+        abstraction="exact",
+    )
+
+    stand_pat = DiscardAction(
+        ()
+    )
+
+    discard_zero = DiscardAction(
+        (0,)
+    )
+
+    discard_one = DiscardAction(
+        (1,)
+    )
+
+    discard_two_three = DiscardAction(
+        (2, 3)
+    )
+
+    index = StrategyIndex.from_strategies(
+        {
+            state: {
+                stand_pat: 0.10,
+                discard_zero: 0.20,
+                discard_one: 0.30,
+                discard_two_three: 0.40,
+            },
+        }
+    )
+
+    tracker = RangeTracker()
+
+    tracker.weights[
+        acting_seat
+    ] = {
+        state.own_hand_key: 1.0,
+    }
+
+    browser = StrategyBrowser(
+        navigator=(
+            PublicNodeNavigator.from_game(
+                game
+            )
+        ),
+        strategy_index=index,
+        range_tracker=tracker,
+        max_draw=2,
+        draw_action_mode="full",
+        raise_sizes=(),
+    )
+
+    return (
+        browser,
+        state,
+    )
+
+
+def test_hand_snapshot_aggregates_private_draw_patterns() -> None:
+    (
+        browser,
+        state,
+    ) = make_draw_browser()
+
+    snapshot = (
+        browser.current_hand_action_snapshot(
+            state.own_hand_key
+        )
+    )
+
+    assert snapshot is not None
+
+    probabilities = {
+        action.label: (
+            action.probability
+        )
+        for action in snapshot.actions
+    }
+
+    assert probabilities == {
+        "Stand Pat": pytest.approx(
+            0.10
+        ),
+        "Draw 1": pytest.approx(
+            0.50
+        ),
+        "Draw 2": pytest.approx(
+            0.40
+        ),
+    }
+
+
+def test_draw_snapshot_uses_public_draw_actions() -> None:
+    (
+        browser,
+        state,
+    ) = make_draw_browser()
+
+    snapshot = (
+        browser.current_hand_action_snapshot(
+            state.own_hand_key
+        )
+    )
+
+    assert snapshot is not None
+
+    assert all(
+        isinstance(
+            action.action,
+            PublicDrawAction,
+        )
+        for action in snapshot.actions
+    )
+
+
+def test_public_draw_requires_private_indices_for_execution() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "require private "
+            "discard_indices"
+        ),
+    ):
+        browser.apply_public_action(
+            draw_one
+        )
+
+
+def test_public_draw_rejects_wrong_private_count() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "does not match"
+        ),
+    ):
+        browser.apply_public_action(
+            draw_one,
+            discard_indices=(
+                0,
+                1,
+            ),
+        )
+
+
+def test_public_draw_executes_private_discard_indices() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    browser.apply_public_action(
+        draw_one,
+        discard_indices=(
+            0,
+        ),
+    )
+
+    draw_result = (
+        browser.game.draw_results[
+            acting_seat
+        ]
+    )
+
+    assert (
+        draw_result.action.draw_count
+        == 1
+    )
+
+
+def test_public_draw_updates_exact_range() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    browser.apply_public_action(
+        draw_one,
+        discard_indices=(
+            0,
+        ),
+    )
+
+    assert (
+        browser.range_tracker
+        is not None
+    )
+
+    post_draw_range = (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+    )
+
+    assert post_draw_range
+
+    assert (
+        sum(post_draw_range.values())
+        == pytest.approx(1.0)
+    )
+
+    assert all(
+        isinstance(
+            hand_key,
+            ExactHandKey,
+        )
+        for hand_key
+        in post_draw_range
+    )
+
+
+def test_stand_pat_preserves_exact_hand_range() -> None:
+    (
+        browser,
+        state,
+    ) = make_draw_browser()
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    stand_pat = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 0
+    )
+
+    browser.apply_public_action(
+        stand_pat,
+        discard_indices=(),
+    )
+
+    assert (
+        browser.range_tracker
+        is not None
+    )
+
+    post_draw_range = (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+    )
+
+    assert post_draw_range == {
+        state.own_hand_key: pytest.approx(
+            1.0
+        ),
+    }
+
+
+def test_draw_range_transition_is_not_committed_on_failed_draw() -> None:
+    (
+        browser,
+        state,
+    ) = make_draw_browser()
+
+    assert (
+        browser.range_tracker
+        is not None
+    )
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    original_range = (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Discard index is outside "
+            "the hand"
+        ),
+    ):
+        browser.apply_public_action(
+            draw_one,
+            discard_indices=(
+                99,
+            ),
+        )
+
+    assert (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+        == original_range
+    )
+
+    assert original_range == {
+        state.own_hand_key: 1.0,
+    }
+
+
+def test_browser_passes_draw_transition_budget() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    browser.draw_transition_config = (
+        DrawTransitionConfig(
+            mode="exact",
+            exact_budget=(
+                DrawTransitionBudget(
+                    max_replacement_combinations=10,
+                )
+            ),
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "requires 47 replacement "
+            "combinations"
+        ),
+    ):
+        browser.apply_public_action(
+            draw_one,
+            discard_indices=(
+                0,
+            ),
+        )
+
+
+def test_budget_failure_does_not_advance_game() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    original_node = (
+        browser.public_node
+    )
+
+    original_phase = (
+        browser.phase
+    )
+
+    browser.draw_transition_config = (
+        DrawTransitionConfig(
+            mode="exact",
+            exact_budget=(
+                DrawTransitionBudget(
+                    max_replacement_combinations=10,
+                )
+            ),
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    with pytest.raises(
+        RuntimeError
+    ):
+        browser.apply_public_action(
+            draw_one,
+            discard_indices=(
+                0,
+            ),
+        )
+
+    assert (
+        browser.public_node
+        == original_node
+    )
+
+    assert (
+        browser.phase
+        == original_phase
+    )
+
+
+def test_budget_failure_does_not_change_range() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    assert (
+        browser.range_tracker
+        is not None
+    )
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    original_range = (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+    )
+
+    browser.draw_transition_config = (
+        DrawTransitionConfig(
+            mode="exact",
+            exact_budget=(
+                DrawTransitionBudget(
+                    max_replacement_combinations=10,
+                )
+            ),
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    with pytest.raises(
+        RuntimeError
+    ):
+        browser.apply_public_action(
+            draw_one,
+            discard_indices=(
+                0,
+            ),
+        )
+
+    assert (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+        == original_range
+    )
+
+
+def test_browser_can_use_larger_draw_budget() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    browser.draw_transition_config = (
+        DrawTransitionConfig(
+            mode="exact",
+            exact_budget=(
+                DrawTransitionBudget(
+                    max_replacement_combinations=100,
+                )
+            ),
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action
+        in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    browser.apply_public_action(
+        draw_one,
+        discard_indices=(
+            0,
+        ),
+    )
+
+    assert (
+        browser.phase
+        in {
+            GamePhase.DRAW,
+            GamePhase.POSTDRAW_BETTING,
+        }
+    )
+
+
+def test_browser_auto_mode_falls_back_to_sampling() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    browser.draw_transition_config = (
+        DrawTransitionConfig(
+            mode="auto",
+            exact_budget=(
+                DrawTransitionBudget(
+                    max_replacement_combinations=10,
+                )
+            ),
+            sampling=DrawSamplingConfig(
+                samples_per_hand_action=200,
+                seed=42,
+            ),
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    browser.apply_public_action(
+        draw_one,
+        discard_indices=(
+            0,
+        ),
+    )
+
+    assert browser.range_tracker is not None
+
+    post_draw_range = (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+    )
+
+    assert post_draw_range
+
+    assert (
+        sum(post_draw_range.values())
+        == pytest.approx(1.0)
+    )
+
+
+def test_browser_can_force_sampling_mode() -> None:
+    (
+        browser,
+        _,
+    ) = make_draw_browser()
+
+    acting_seat = browser.acting_seat
+
+    assert acting_seat is not None
+
+    browser.draw_transition_config = (
+        DrawTransitionConfig(
+            mode="sample",
+            sampling=DrawSamplingConfig(
+                samples_per_hand_action=100,
+                seed=7,
+            ),
+        )
+    )
+
+    legal = (
+        browser.current_legal_actions()
+    )
+
+    assert legal is not None
+
+    draw_one = next(
+        action
+        for action in legal.draw_actions
+        if action.draw_count == 1
+    )
+
+    browser.apply_public_action(
+        draw_one,
+        discard_indices=(
+            0,
+        ),
+    )
+
+    assert browser.range_tracker is not None
+
+    post_draw_range = (
+        browser.range_tracker
+        .range_for_seat(
+            acting_seat
+        )
+    )
+
+    assert post_draw_range
+
+    assert (
+        sum(post_draw_range.values())
         == pytest.approx(1.0)
     )

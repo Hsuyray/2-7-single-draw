@@ -1,10 +1,27 @@
 from dataclasses import dataclass
 
+from solver.actions import (
+    DiscardAction,
+)
 from solver.bet_sizing import (
     BetSizingPolicy,
 )
-from solver.game_state import ActionType
-from solver.hand import Hand
+from solver.draw_transition_policy import (
+    DrawTransitionConfig,
+    transition_draw_range,
+)
+from solver.exact_hand_codec import (
+    actual_discard_action_for_hand,
+)
+from solver.game_state import (
+    ActionType,
+)
+from solver.hand import (
+    Hand,
+)
+from solver.hand_abstraction import (
+    ExactHandKey,
+)
 from solver.hand_strategy_resolver import (
     HandStrategyResolver,
 )
@@ -19,6 +36,7 @@ from solver.legal_actions import (
 )
 from solver.public_legal_actions import (
     PublicBettingAction,
+    PublicDrawAction,
     PublicLegalActionSnapshot,
     PublicSolverAction,
     public_legal_actions,
@@ -49,8 +67,8 @@ from solver.strategy_index import (
 @dataclass(frozen=True)
 class StrategyActionView:
     """
-    One UI-facing action and its solved
-    strategy probability for one hand.
+    One public action and its solved
+    probability for one private hand.
     """
 
     action: PublicSolverAction
@@ -76,16 +94,14 @@ class StrategyActionView:
 
     @property
     def label(self) -> str:
-        return _public_action_label(
-            self.action
-        )
+        return self.action.label
 
 
 @dataclass(frozen=True)
 class HandStrategySnapshot:
     """
-    Complete UI-facing strategy result for
-    one private hand at one public node.
+    Public-facing strategy for one private
+    hand at one public node.
     """
 
     public_node: PublicNodeKey
@@ -109,7 +125,7 @@ class HandStrategySnapshot:
 @dataclass(frozen=True)
 class RangeActionView:
     """
-    One UI-facing action and its aggregate
+    One public action and its aggregate
     probability across the current range.
     """
 
@@ -136,16 +152,14 @@ class RangeActionView:
 
     @property
     def label(self) -> str:
-        return _public_action_label(
-            self.action
-        )
+        return self.action.label
 
 
 @dataclass(frozen=True)
 class RangeStrategySnapshot:
     """
-    UI-facing aggregate strategy for the
-    currently acting player's entire range.
+    Public-facing aggregate strategy for
+    the currently acting player's range.
     """
 
     public_node: PublicNodeKey
@@ -198,6 +212,9 @@ class StrategyBrowser:
     - Range Mode
     - Public legal actions
     - Safe public action application
+    - Betting range conditioning
+    - Exact and sampled draw transitions
+    - Canonical discard-index translation
     """
 
     navigator: PublicNodeNavigator
@@ -229,6 +246,10 @@ class StrategyBrowser:
         DrawActionMode
     ) = "full"
 
+    draw_transition_config: (
+        DrawTransitionConfig
+    ) = DrawTransitionConfig()
+
     @property
     def phase(self) -> GamePhase:
         return self.navigator.phase
@@ -259,7 +280,7 @@ class StrategyBrowser:
         self,
     ) -> PublicLegalActionSnapshot | None:
         return public_legal_actions(
-            self.navigator.game,
+            self.game,
             max_draw=self.max_draw,
             raise_sizes=self.raise_sizes,
             bet_sizing_policy=(
@@ -328,8 +349,13 @@ class StrategyBrowser:
         hand_key: PrivateHandKey,
     ) -> HandStrategySnapshot | None:
         """
-        Combine one hand's solved strategy
-        with current UI-facing legal actions.
+        Aggregate private solver actions into
+        public UI actions.
+
+        Betting actions map one-to-one.
+
+        Private discard patterns with the same
+        draw count map to one PublicDrawAction.
         """
         acting_seat = self.acting_seat
 
@@ -352,28 +378,27 @@ class StrategyBrowser:
         if legal_snapshot is None:
             return None
 
+        covered_actions: set[
+            SolverAction
+        ] = set()
+
         views: list[
             StrategyActionView
         ] = []
 
-        legal_solver_actions: set[
-            SolverAction
-        ] = set()
-
         for public_action in (
             legal_snapshot.actions
         ):
-            solver_action = (
-                _public_to_solver_action(
-                    public_action
+            matching_actions = (
+                _private_actions_for_public_action(
+                    public_action,
+                    private_actions=tuple(
+                        strategy
+                    ),
                 )
             )
 
-            legal_solver_actions.add(
-                solver_action
-            )
-
-            if solver_action not in strategy:
+            if not matching_actions:
                 raise RuntimeError(
                     "Current legal actions do "
                     "not match the actions in "
@@ -382,20 +407,29 @@ class StrategyBrowser:
                     "and draw configuration."
                 )
 
+            covered_actions.update(
+                matching_actions
+            )
+
+            probability = sum(
+                strategy.get(
+                    private_action,
+                    0.0,
+                )
+                for private_action
+                in matching_actions
+            )
+
             views.append(
                 StrategyActionView(
                     action=public_action,
-                    probability=(
-                        strategy[
-                            solver_action
-                        ]
-                    ),
+                    probability=probability,
                 )
             )
 
         if (
             set(strategy)
-            != legal_solver_actions
+            != covered_actions
         ):
             raise RuntimeError(
                 "Solved strategy contains "
@@ -458,17 +492,11 @@ class StrategyBrowser:
         self,
     ) -> RangeStrategySnapshot | None:
         """
-        Return aggregate UI-facing action
-        frequencies across the entire current
-        range.
+        Aggregate private solver actions into
+        public frequencies across the range.
 
-        Example:
-
-            Fold       18%
-            Call       42%
-            33% Pot    17%
-            66% Pot    14%
-            All-in      9%
+        Multiple private discard patterns with
+        the same draw count are combined.
         """
         range_snapshot = (
             self.current_range_snapshot()
@@ -488,13 +516,13 @@ class StrategyBrowser:
             range_snapshot.strategy_summary()
         )
 
-        range_solver_actions = {
+        private_actions = tuple(
             frequency.action
             for frequency
             in range_summary.actions
-        }
+        )
 
-        legal_solver_actions: set[
+        covered_actions: set[
             SolverAction
         ] = set()
 
@@ -505,20 +533,16 @@ class StrategyBrowser:
         for public_action in (
             legal_snapshot.actions
         ):
-            solver_action = (
-                _public_to_solver_action(
-                    public_action
+            matching_actions = (
+                _private_actions_for_public_action(
+                    public_action,
+                    private_actions=(
+                        private_actions
+                    ),
                 )
             )
 
-            legal_solver_actions.add(
-                solver_action
-            )
-
-            if (
-                solver_action
-                not in range_solver_actions
-            ):
+            if not matching_actions:
                 raise RuntimeError(
                     "Current legal actions do "
                     "not match the actions in "
@@ -527,11 +551,17 @@ class StrategyBrowser:
                     "and draw configuration."
                 )
 
-            probability = (
+            covered_actions.update(
+                matching_actions
+            )
+
+            probability = sum(
                 range_summary
                 .frequency_for_action(
-                    solver_action
+                    private_action
                 )
+                for private_action
+                in matching_actions
             )
 
             views.append(
@@ -542,8 +572,8 @@ class StrategyBrowser:
             )
 
         if (
-            range_solver_actions
-            != legal_solver_actions
+            set(private_actions)
+            != covered_actions
         ):
             raise RuntimeError(
                 "Solved range strategy "
@@ -571,18 +601,24 @@ class StrategyBrowser:
     def apply_public_action(
         self,
         action: PublicSolverAction,
+        *,
+        discard_indices: (
+            tuple[int, ...]
+            | None
+        ) = None,
     ) -> PublicNodeKey:
         """
-        Apply one currently legal UI-facing
+        Apply one currently legal public
         action.
 
-        Betting actions also condition the
-        acting player's tracked range.
+        Betting actions condition the acting
+        player's existing range.
 
-        Draw actions currently advance the
-        game only. Exact draw-range transition
-        requires separate card-removal and
-        replacement-card modeling.
+        Public draw actions receive canonical
+        private discard indices. Before the
+        physical game draw is executed, those
+        canonical indices are translated into
+        the current Hand.cards ordering.
         """
         legal_snapshot = (
             self.current_legal_actions()
@@ -611,59 +647,91 @@ class StrategyBrowser:
                 "acting player."
             )
 
-        solver_action = (
-            _public_to_solver_action(
-                action
-            )
-        )
-
-        updated_range: (
-            dict[PrivateHandKey, float]
-            | None
-        ) = None
-
-        if (
-            isinstance(
-                action,
-                PublicBettingAction,
-            )
-            and self.range_tracker
-            is not None
-            and self.range_tracker.has_player(
-                acting_seat
-            )
-        ):
-            updated_range = (
-                self.range_tracker
-                .conditioned_range(
-                    public_node=(
-                        self.public_node
-                    ),
-                    acting_seat=(
-                        acting_seat
-                    ),
-                    action=solver_action,
-                    strategy_index=(
-                        self.strategy_index
-                    ),
-                    normalize=True,
-                )
-            )
-
         if isinstance(
             action,
             PublicBettingAction,
         ):
+            if discard_indices is not None:
+                raise ValueError(
+                    "Betting actions cannot "
+                    "include discard indices."
+                )
+
+            updated_range = (
+                self._conditioned_betting_range(
+                    acting_seat=acting_seat,
+                    action=action,
+                )
+            )
+
             next_node = self.apply_betting(
                 action.action_type,
                 raise_to=action.raise_to,
             )
-        else:
-            next_node = self.apply_draw(
-                discard_indices=(
-                    action.discard_indices
-                ),
+
+            if (
+                updated_range is not None
+                and self.range_tracker
+                is not None
+            ):
+                self.range_tracker.set_range(
+                    seat=acting_seat,
+                    weights=updated_range,
+                )
+
+            return next_node
+
+        if discard_indices is None:
+            raise ValueError(
+                "Public draw actions require "
+                "private discard_indices for "
+                "execution."
             )
+
+        canonical_action = DiscardAction(
+            discard_indices
+        )
+
+        if (
+            canonical_action.draw_count
+            != action.draw_count
+        ):
+            raise ValueError(
+                "Private discard count does "
+                "not match the selected public "
+                "draw action."
+            )
+
+        hand = self.game.hands[
+            acting_seat
+        ]
+
+        if hand is None:
+            raise RuntimeError(
+                "Acting player does not "
+                "have a hand."
+            )
+
+        actual_action = (
+            actual_discard_action_for_hand(
+                hand=hand,
+                action=canonical_action,
+            )
+        )
+
+        updated_range = (
+            self._conditioned_draw_range(
+                acting_seat=acting_seat,
+                action=action,
+            )
+        )
+
+        next_node = self.apply_draw(
+            discard_indices=(
+                actual_action
+                .discard_indices
+            ),
+        )
 
         if (
             updated_range is not None
@@ -676,6 +744,134 @@ class StrategyBrowser:
             )
 
         return next_node
+
+    def _conditioned_betting_range(
+        self,
+        *,
+        acting_seat: int,
+        action: PublicBettingAction,
+    ) -> (
+        dict[PrivateHandKey, float]
+        | None
+    ):
+        if (
+            self.range_tracker is None
+            or not self.range_tracker
+            .has_player(
+                acting_seat
+            )
+        ):
+            return None
+
+        solver_action = (
+            _betting_solver_action(
+                action
+            )
+        )
+
+        return (
+            self.range_tracker
+            .conditioned_range(
+                public_node=(
+                    self.public_node
+                ),
+                acting_seat=(
+                    acting_seat
+                ),
+                action=solver_action,
+                strategy_index=(
+                    self.strategy_index
+                ),
+                normalize=True,
+            )
+        )
+
+    def _conditioned_draw_range(
+        self,
+        *,
+        acting_seat: int,
+        action: PublicDrawAction,
+    ) -> (
+        dict[PrivateHandKey, float]
+        | None
+    ):
+        """
+        Transition one initialized exact-hand
+        range through a public draw action.
+
+        All private discard patterns matching
+        the selected draw count are included.
+        """
+        if (
+            self.range_tracker is None
+            or not self.range_tracker
+            .has_player(
+                acting_seat
+            )
+        ):
+            return None
+
+        current_range = (
+            self.range_tracker
+            .range_for_seat(
+                acting_seat
+            )
+        )
+
+        exact_weights: dict[
+            ExactHandKey,
+            float,
+        ] = {}
+
+        for (
+            hand_key,
+            weight,
+        ) in current_range.items():
+            if not isinstance(
+                hand_key,
+                ExactHandKey,
+            ):
+                raise NotImplementedError(
+                    "Draw range transition "
+                    "currently supports only "
+                    "exact hand abstraction."
+                )
+
+            exact_weights[
+                hand_key
+            ] = weight
+
+        strategies = (
+            self.strategy_index
+            .range_strategy(
+                public_node=(
+                    self.public_node
+                ),
+                observer_seat=(
+                    acting_seat
+                ),
+            )
+        )
+
+        transition_result = (
+            transition_draw_range(
+                pre_draw_weights=(
+                    exact_weights
+                ),
+                strategies=strategies,
+                public_draw_count=(
+                    action.draw_count
+                ),
+                config=(
+                    self.draw_transition_config
+                ),
+                normalize=True,
+            )
+        )
+
+        return dict(
+            transition_result.weights
+        )
 
     def apply_betting(
         self,
@@ -708,38 +904,55 @@ class StrategyBrowser:
         )
 
 
-def _public_to_solver_action(
-    action: PublicSolverAction,
-) -> SolverAction:
-    if not isinstance(
-        action,
+def _private_actions_for_public_action(
+    public_action: PublicSolverAction,
+    *,
+    private_actions: tuple[
+        SolverAction,
+        ...,
+    ],
+) -> tuple[
+    SolverAction,
+    ...,
+]:
+    """
+    Return all private solver actions
+    represented by one public action.
+    """
+    if isinstance(
+        public_action,
         PublicBettingAction,
     ):
-        return action
+        target = (
+            _betting_solver_action(
+                public_action
+            )
+        )
 
+        return tuple(
+            action
+            for action in private_actions
+            if action == target
+        )
+
+    return tuple(
+        action
+        for action in private_actions
+        if (
+            isinstance(
+                action,
+                DiscardAction,
+            )
+            and action.draw_count
+            == public_action.draw_count
+        )
+    )
+
+
+def _betting_solver_action(
+    action: PublicBettingAction,
+) -> BettingAction:
     return BettingAction(
         action_type=action.action_type,
         raise_to=action.raise_to,
     )
-
-
-def _public_action_label(
-    action: PublicSolverAction,
-) -> str:
-    if isinstance(
-        action,
-        PublicBettingAction,
-    ):
-        return action.label
-
-    draw_count = len(
-        action.discard_indices
-    )
-
-    if draw_count == 0:
-        return "Stand Pat"
-
-    if draw_count == 1:
-        return "Draw 1"
-
-    return f"Draw {draw_count}"

@@ -1,14 +1,18 @@
 from dataclasses import dataclass
 
-from solver.actions import DiscardAction
+from solver.actions import (
+    DiscardAction,
+)
 from solver.bet_sizing import (
     BetSize,
     BetSizingPolicy,
 )
-from solver.game_state import ActionType
+from solver.game_state import (
+    ActionType,
+)
 from solver.legal_actions import (
+    BettingAction,
     DrawActionMode,
-    SolverAction,
     legal_actions,
 )
 from solver.single_draw_game import (
@@ -21,27 +25,6 @@ class PublicBettingAction:
     """
     UI-facing representation of one legal
     betting action.
-
-    label:
-        Human-readable action text such as
-        "Fold", "Call", "66% Pot", or
-        "All-in".
-
-    raise_to:
-        Absolute raise-to value used by the
-        betting engine.
-
-    pot_fraction:
-        Pot-fraction abstraction associated
-        with this action.
-
-        None for non-raise actions, explicit
-        raise-to overrides, and dedicated
-        all-in actions.
-
-    is_all_in:
-        Whether this action commits the
-        acting player's remaining stack.
     """
 
     action_type: ActionType
@@ -51,7 +34,10 @@ class PublicBettingAction:
     is_all_in: bool = False
 
     def __post_init__(self) -> None:
-        if self.action_type == ActionType.RAISE:
+        if (
+            self.action_type
+            == ActionType.RAISE
+        ):
             if self.raise_to is None:
                 raise ValueError(
                     "Public raise action must "
@@ -79,9 +65,42 @@ class PublicBettingAction:
             )
 
 
+@dataclass(frozen=True)
+class PublicDrawAction:
+    """
+    Public representation of a draw action.
+
+    Only the number of cards drawn is public.
+    Exact discarded card indices remain
+    private information.
+    """
+
+    draw_count: int
+
+    def __post_init__(self) -> None:
+        if not (
+            0
+            <= self.draw_count
+            <= 5
+        ):
+            raise ValueError(
+                "Public draw count must be "
+                "between zero and five."
+            )
+
+    @property
+    def label(self) -> str:
+        if self.draw_count == 0:
+            return "Stand Pat"
+
+        return (
+            f"Draw {self.draw_count}"
+        )
+
+
 PublicSolverAction = (
     PublicBettingAction
-    | DiscardAction
+    | PublicDrawAction
 )
 
 
@@ -90,9 +109,6 @@ class PublicLegalActionSnapshot:
     """
     Public-facing legal actions available
     at the current decision node.
-
-    The UI/query layer should consume this
-    instead of reimplementing poker rules.
     """
 
     acting_seat: int
@@ -128,7 +144,7 @@ class PublicLegalActionSnapshot:
     def draw_actions(
         self,
     ) -> tuple[
-        DiscardAction,
+        PublicDrawAction,
         ...,
     ]:
         return tuple(
@@ -136,7 +152,7 @@ class PublicLegalActionSnapshot:
             for action in self.actions
             if isinstance(
                 action,
-                DiscardAction,
+                PublicDrawAction,
             )
         )
 
@@ -153,23 +169,16 @@ def public_legal_actions(
         BetSizingPolicy
         | None
     ) = None,
-    draw_action_mode: DrawActionMode = "full",
+    draw_action_mode: (
+        DrawActionMode
+    ) = "full",
 ) -> PublicLegalActionSnapshot | None:
     """
     Return one UI-facing snapshot of the
     current legal actions.
 
-    Betting sizing semantics:
-
-    raise_sizes is None:
-        Use BetSizingPolicy.
-
-    raise_sizes == ():
-        Disable raises.
-
-    non-empty raise_sizes:
-        Use explicit absolute raise-to
-        amounts.
+    Private discard combinations are grouped
+    by public draw count.
     """
     acting_seat = game.acting_seat
 
@@ -192,14 +201,13 @@ def public_legal_actions(
         ),
     )
 
-    public_actions = tuple(
-        _to_public_action(
+    public_actions = (
+        _to_public_actions(
             game,
-            action=action,
+            solver_actions=solver_actions,
             raise_sizes=raise_sizes,
             policy=policy,
         )
-        for action in solver_actions
     )
 
     return PublicLegalActionSnapshot(
@@ -208,22 +216,74 @@ def public_legal_actions(
     )
 
 
-def _to_public_action(
+def _to_public_actions(
     game: SingleDrawGame,
     *,
-    action: SolverAction,
+    solver_actions: tuple[
+        BettingAction | DiscardAction,
+        ...,
+    ],
     raise_sizes: (
         tuple[float, ...]
         | None
     ),
     policy: BetSizingPolicy,
-) -> PublicSolverAction:
-    if isinstance(
-        action,
-        DiscardAction,
-    ):
-        return action
+) -> tuple[
+    PublicSolverAction,
+    ...,
+]:
+    public_actions: list[
+        PublicSolverAction
+    ] = []
 
+    draw_counts: set[
+        int
+    ] = set()
+
+    for action in solver_actions:
+        if isinstance(
+            action,
+            DiscardAction,
+        ):
+            draw_counts.add(
+                len(
+                    action.discard_indices
+                )
+            )
+            continue
+
+        public_actions.append(
+            _to_public_betting_action(
+                game,
+                action=action,
+                raise_sizes=raise_sizes,
+                policy=policy,
+            )
+        )
+
+    public_actions.extend(
+        PublicDrawAction(
+            draw_count=draw_count
+        )
+        for draw_count
+        in sorted(draw_counts)
+    )
+
+    return tuple(
+        public_actions
+    )
+
+
+def _to_public_betting_action(
+    game: SingleDrawGame,
+    *,
+    action: BettingAction,
+    raise_sizes: (
+        tuple[float, ...]
+        | None
+    ),
+    policy: BetSizingPolicy,
+) -> PublicBettingAction:
     if (
         action.action_type
         != ActionType.RAISE
@@ -291,9 +351,6 @@ def _bet_size_metadata(
     """
     Return policy metadata only when the
     policy generated the raise sizes.
-
-    Explicit raise-to overrides receive
-    generic labels such as "Raise to 6".
     """
     if raise_sizes is not None:
         return {}
@@ -385,7 +442,9 @@ def _non_raise_label(
     }
 
     try:
-        return labels[action_type]
+        return labels[
+            action_type
+        ]
     except KeyError as error:
         raise ValueError(
             "Unsupported non-raise "

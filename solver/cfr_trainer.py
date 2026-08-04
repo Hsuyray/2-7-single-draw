@@ -11,6 +11,10 @@ from solver.action_executor import (
 from solver.bet_sizing import (
     BetSizingPolicy,
 )
+from solver.cfr_action_codec import (
+    canonical_solver_actions_for_game,
+    executable_solver_action_for_game,
+)
 from solver.information_state import (
     AbstractionMode,
     InformationState,
@@ -20,7 +24,9 @@ from solver.legal_actions import (
     SolverAction,
     legal_actions,
 )
-from solver.node_store import NodeStore
+from solver.node_store import (
+    NodeStore,
+)
 from solver.single_draw_game import (
     GamePhase,
     SingleDrawGame,
@@ -31,7 +37,13 @@ from solver.strategy_index import (
 from solver.terminal_utility import (
     terminal_utility,
 )
+from pathlib import Path
 
+from solver.strategy_checkpoint import (
+    StrategyCheckpointMetadata,
+    build_checkpoint_metadata,
+    save_strategy_checkpoint,
+)
 
 GameFactory = Callable[
     [],
@@ -56,8 +68,6 @@ DrawActionModeSetting = Literal[
 class CFRTrainer:
     max_draw: int = 3
 
-    # Semantics:
-    #
     # None:
     #     use bet_sizing_policy
     #
@@ -304,9 +314,9 @@ class CFRTrainer:
 
         for action in actions:
             next_game = (
-                apply_solver_action(
-                    game,
-                    action,
+                self._apply_node_action(
+                    game=game,
+                    action=action,
                 )
             )
 
@@ -426,9 +436,9 @@ class CFRTrainer:
             )
 
             next_game = (
-                apply_solver_action(
-                    game,
-                    sampled_action,
+                self._apply_node_action(
+                    game=game,
+                    action=sampled_action,
                 )
             )
 
@@ -459,9 +469,9 @@ class CFRTrainer:
 
         for action in actions:
             next_game = (
-                apply_solver_action(
-                    game,
-                    action,
+                self._apply_node_action(
+                    game=game,
+                    action=action,
                 )
             )
 
@@ -508,7 +518,7 @@ class CFRTrainer:
         SolverAction,
         ...,
     ]:
-        return legal_actions(
+        actual_actions = legal_actions(
             game,
             max_draw=self.max_draw,
             raise_sizes=(
@@ -520,6 +530,46 @@ class CFRTrainer:
             draw_action_mode=(
                 self._resolved_draw_action_mode
             ),
+        )
+
+        if (
+            self.abstraction
+            != "exact"
+        ):
+            return actual_actions
+
+        return canonical_solver_actions_for_game(
+            game=game,
+            actions=actual_actions,
+        )
+
+    def _apply_node_action(
+        self,
+        *,
+        game: SingleDrawGame,
+        action: SolverAction,
+    ) -> SingleDrawGame:
+        """
+        Execute one CFR node action.
+
+        Exact-mode draw actions are stored in
+        canonical index space and translated
+        back into the current physical hand
+        ordering before execution.
+        """
+        executable_action = action
+
+        if self.abstraction == "exact":
+            executable_action = (
+                executable_solver_action_for_game(
+                    game=game,
+                    action=action,
+                )
+            )
+
+        return apply_solver_action(
+            game,
+            executable_action,
         )
 
     def _get_node(
@@ -601,6 +651,52 @@ class CFRTrainer:
             )
         )
 
+    def checkpoint_metadata(
+        self,
+    ) -> StrategyCheckpointMetadata:
+        """
+        Build checkpoint metadata from the
+        trainer's current configuration.
+        """
+        return build_checkpoint_metadata(
+            abstraction=self.abstraction,
+            max_draw=self.max_draw,
+            draw_action_mode=(
+                self.resolved_draw_action_mode
+            ),
+            completed_iterations=(
+                self.completed_iterations
+            ),
+            raise_sizes=self.raise_sizes,
+        )
+
+    def save_checkpoint(
+        self,
+        path: str | Path,
+    ) -> Path:
+        """
+        Save the trainer's current average
+        strategy as a compressed checkpoint.
+        """
+        if len(self.node_store) == 0:
+            raise RuntimeError(
+                "Cannot save a checkpoint "
+                "before any CFR nodes have "
+                "been trained."
+            )
+
+        strategy_index = (
+            self.strategy_index()
+        )
+
+        return save_strategy_checkpoint(
+            path,
+            strategy_index=strategy_index,
+            metadata=(
+                self.checkpoint_metadata()
+            ),
+        )
+    
     def _validate_game(
         self,
         game: SingleDrawGame,
