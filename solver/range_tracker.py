@@ -6,14 +6,14 @@ from solver.information_state import (
 from solver.legal_actions import (
     SolverAction,
 )
-from solver.strategy_index import (
-    StrategyIndex,
-)
 from solver.public_state import (
     PublicNodeKey,
 )
 from solver.starting_range import (
     StartingRange,
+)
+from solver.strategy_index import (
+    StrategyIndex,
 )
 
 
@@ -60,6 +60,22 @@ class RangeTracker:
             in hand_keys
         }
 
+    def initialize_from_starting_range(
+        self,
+        *,
+        seat: int,
+        starting_range: StartingRange,
+    ) -> None:
+        self.weights[seat] = (
+            starting_range.copy_weights()
+        )
+
+    def has_player(
+        self,
+        seat: int,
+    ) -> bool:
+        return seat in self.weights
+
     def range_for_seat(
         self,
         seat: int,
@@ -90,14 +106,54 @@ class RangeTracker:
             )
         )
 
-    def apply_action(
+    def set_range(
+        self,
+        *,
+        seat: int,
+        weights: dict[
+            PrivateHandKey,
+            float,
+        ],
+    ) -> None:
+        if any(
+            weight < 0
+            for weight in weights.values()
+        ):
+            raise ValueError(
+                "Range weights cannot "
+                "be negative."
+            )
+
+        self.weights[seat] = dict(
+            weights
+        )
+
+    def conditioned_range(
         self,
         *,
         public_node: PublicNodeKey,
         acting_seat: int,
         action: SolverAction,
         strategy_index: StrategyIndex,
-    ) -> None:
+        normalize: bool = False,
+    ) -> dict[
+        PrivateHandKey,
+        float,
+    ]:
+        """
+        Calculate the acting player's range
+        after observing one public action.
+
+        This method does not mutate the
+        tracker.
+
+        For every private hand:
+
+            new weight
+            =
+            current weight
+            * action probability
+        """
         current_range = (
             self.weights.get(
                 acting_seat
@@ -126,10 +182,8 @@ class RangeTracker:
             hand_key,
             current_weight,
         ) in current_range.items():
-            strategy = (
-                strategies.get(
-                    hand_key
-                )
+            strategy = strategies.get(
+                hand_key
             )
 
             if strategy is None:
@@ -142,16 +196,43 @@ class RangeTracker:
                 )
             )
 
-            updated_range[
-                hand_key
-            ] = (
+            updated_range[hand_key] = (
                 current_weight
                 * action_probability
             )
 
-        self.weights[
-            acting_seat
-        ] = updated_range
+        if normalize:
+            return self._normalized_weights(
+                updated_range
+            )
+
+        return updated_range
+
+    def apply_action(
+        self,
+        *,
+        public_node: PublicNodeKey,
+        acting_seat: int,
+        action: SolverAction,
+        strategy_index: StrategyIndex,
+        normalize: bool = False,
+    ) -> None:
+        updated_range = (
+            self.conditioned_range(
+                public_node=public_node,
+                acting_seat=acting_seat,
+                action=action,
+                strategy_index=(
+                    strategy_index
+                ),
+                normalize=normalize,
+            )
+        )
+
+        self.set_range(
+            seat=acting_seat,
+            weights=updated_range,
+        )
 
     def normalize(
         self,
@@ -170,27 +251,35 @@ class RangeTracker:
                 "been initialized."
             )
 
+        self.weights[seat] = (
+            self._normalized_weights(
+                current_range
+            )
+        )
+
+    @staticmethod
+    def _normalized_weights(
+        weights: dict[
+            PrivateHandKey,
+            float,
+        ],
+    ) -> dict[
+        PrivateHandKey,
+        float,
+    ]:
         total_weight = sum(
-            current_range.values()
+            weights.values()
         )
 
         if total_weight <= 0:
-            return
+            return dict(
+                weights
+            )
 
-        self.weights[seat] = {
+        return {
             hand_key: (
                 weight / total_weight
             )
             for hand_key, weight
-            in current_range.items()
+            in weights.items()
         }
-
-    def initialize_from_starting_range(
-        self,
-        *,
-        seat: int,
-        starting_range: StartingRange,
-    ) -> None:
-        self.weights[seat] = (
-            starting_range.copy_weights()
-        )

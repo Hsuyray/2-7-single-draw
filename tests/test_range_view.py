@@ -1,3 +1,5 @@
+import pytest
+
 from solver.game_state import (
     ActionType,
     GameConfig,
@@ -12,9 +14,12 @@ from solver.range_tracker import (
     RangeTracker,
 )
 from solver.range_view import (
+    RangeActionFrequency,
     RangeEntry,
     RangeSnapshot,
+    RangeStrategySummary,
     build_range_snapshot,
+    build_range_strategy_summary,
 )
 from solver.single_draw_game import (
     SingleDrawGame,
@@ -131,10 +136,7 @@ def test_build_range_snapshot_contains_hands() -> None:
         RangeSnapshot,
     )
 
-    assert (
-        snapshot.hand_count
-        == 2
-    )
+    assert snapshot.hand_count == 2
 
 
 def test_range_snapshot_tracks_weights() -> None:
@@ -186,12 +188,12 @@ def test_range_snapshot_tracks_weights() -> None:
 
     assert (
         first_entry.weight
-        == 0.8
+        == pytest.approx(0.8)
     )
 
     assert (
         second_entry.weight
-        == 0.2
+        == pytest.approx(0.2)
     )
 
 
@@ -229,7 +231,7 @@ def test_total_weight() -> None:
 
     assert (
         snapshot.total_weight
-        == 5.0
+        == pytest.approx(5.0)
     )
 
 
@@ -285,9 +287,9 @@ def test_aggregate_action_frequency_is_weighted() -> None:
         )
     )
 
-    assert abs(
-        result - 0.8
-    ) < 1e-9
+    assert result == pytest.approx(
+        0.8
+    )
 
 
 def test_unknown_hand_returns_none() -> None:
@@ -325,4 +327,388 @@ def test_unknown_hand_returns_none() -> None:
             second.own_hand_key
         )
         is None
+    )
+
+
+def test_range_snapshot_lists_unique_actions() -> None:
+    first = make_state(
+        seed=1
+    )
+
+    second = make_state(
+        seed=2
+    )
+
+    fold = BettingAction(
+        ActionType.FOLD
+    )
+
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=first.public_node,
+        acting_seat=0,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    first.own_hand_key
+                ),
+                weight=1.0,
+                strategy={
+                    fold: 0.25,
+                    call: 0.75,
+                },
+            ),
+            RangeEntry(
+                hand_key=(
+                    second.own_hand_key
+                ),
+                weight=1.0,
+                strategy={
+                    fold: 0.50,
+                    call: 0.50,
+                },
+            ),
+        ),
+    )
+
+    assert snapshot.actions == (
+        fold,
+        call,
+    )
+
+
+def test_range_summary_uses_weighted_frequencies() -> None:
+    first = make_state(
+        seed=1
+    )
+
+    second = make_state(
+        seed=2
+    )
+
+    fold = BettingAction(
+        ActionType.FOLD
+    )
+
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=first.public_node,
+        acting_seat=0,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    first.own_hand_key
+                ),
+                weight=2.0,
+                strategy={
+                    fold: 0.0,
+                    call: 1.0,
+                },
+            ),
+            RangeEntry(
+                hand_key=(
+                    second.own_hand_key
+                ),
+                weight=1.0,
+                strategy={
+                    fold: 0.75,
+                    call: 0.25,
+                },
+            ),
+        ),
+    )
+
+    summary = (
+        build_range_strategy_summary(
+            snapshot
+        )
+    )
+
+    assert isinstance(
+        summary,
+        RangeStrategySummary,
+    )
+
+    assert (
+        summary.frequency_for_action(
+            call
+        )
+        == pytest.approx(0.75)
+    )
+
+    assert (
+        summary.frequency_for_action(
+            fold
+        )
+        == pytest.approx(0.25)
+    )
+
+
+def test_range_summary_probabilities_sum_to_one() -> None:
+    state = make_state(
+        seed=1
+    )
+
+    fold = BettingAction(
+        ActionType.FOLD
+    )
+
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=state.public_node,
+        acting_seat=0,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    state.own_hand_key
+                ),
+                weight=1.0,
+                strategy={
+                    fold: 0.30,
+                    call: 0.70,
+                },
+            ),
+        ),
+    )
+
+    summary = (
+        snapshot.strategy_summary()
+    )
+
+    assert (
+        summary.total_probability
+        == pytest.approx(1.0)
+    )
+
+
+def test_range_summary_preserves_range_metadata() -> None:
+    state = make_state(
+        seed=1
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=state.public_node,
+        acting_seat=1,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    state.own_hand_key
+                ),
+                weight=2.5,
+                strategy={},
+            ),
+        ),
+    )
+
+    summary = (
+        snapshot.strategy_summary()
+    )
+
+    assert (
+        summary.public_node
+        == snapshot.public_node
+    )
+
+    assert summary.acting_seat == 1
+
+    assert (
+        summary.total_weight
+        == pytest.approx(2.5)
+    )
+
+    assert summary.hand_count == 1
+
+
+def test_zero_weight_range_has_zero_frequencies() -> None:
+    state = make_state(
+        seed=1
+    )
+
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=state.public_node,
+        acting_seat=0,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    state.own_hand_key
+                ),
+                weight=0.0,
+                strategy={
+                    call: 1.0,
+                },
+            ),
+        ),
+    )
+
+    summary = (
+        snapshot.strategy_summary()
+    )
+
+    assert (
+        summary.frequency_for_action(
+            call
+        )
+        == 0.0
+    )
+
+    assert (
+        summary.total_probability
+        == 0.0
+    )
+
+
+def test_range_action_frequency_exposes_percentage() -> None:
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    frequency = RangeActionFrequency(
+        action=call,
+        probability=0.375,
+    )
+
+    assert (
+        frequency.percentage
+        == pytest.approx(37.5)
+    )
+
+
+def test_range_action_frequency_rejects_negative_probability() -> None:
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    with pytest.raises(
+        ValueError
+    ):
+        RangeActionFrequency(
+            action=call,
+            probability=-0.1,
+        )
+
+
+def test_range_action_frequency_rejects_probability_above_one() -> None:
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    with pytest.raises(
+        ValueError
+    ):
+        RangeActionFrequency(
+            action=call,
+            probability=1.1,
+        )
+
+
+def test_negative_range_weight_is_rejected() -> None:
+    state = make_state(
+        seed=1
+    )
+
+    with pytest.raises(
+        ValueError
+    ):
+        RangeEntry(
+            hand_key=(
+                state.own_hand_key
+            ),
+            weight=-1.0,
+            strategy={},
+        )
+
+
+def test_summary_returns_zero_for_unknown_action() -> None:
+    state = make_state(
+        seed=1
+    )
+
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    fold = BettingAction(
+        ActionType.FOLD
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=state.public_node,
+        acting_seat=0,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    state.own_hand_key
+                ),
+                weight=1.0,
+                strategy={
+                    call: 1.0,
+                },
+            ),
+        ),
+    )
+
+    summary = (
+        snapshot.strategy_summary()
+    )
+
+    assert (
+        summary.frequency_for_action(
+            fold
+        )
+        == 0.0
+    )
+
+
+def test_summary_action_count_matches_actions() -> None:
+    state = make_state(
+        seed=1
+    )
+
+    call = BettingAction(
+        ActionType.CALL
+    )
+
+    fold = BettingAction(
+        ActionType.FOLD
+    )
+
+    snapshot = RangeSnapshot(
+        public_node=state.public_node,
+        acting_seat=0,
+        entries=(
+            RangeEntry(
+                hand_key=(
+                    state.own_hand_key
+                ),
+                weight=1.0,
+                strategy={
+                    call: 0.75,
+                    fold: 0.25,
+                },
+            ),
+        ),
+    )
+
+    summary = (
+        snapshot.strategy_summary()
+    )
+
+    assert summary.action_count == 2
+
+    assert (
+        summary.action_count
+        == len(summary.actions)
     )
