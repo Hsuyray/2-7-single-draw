@@ -1,13 +1,26 @@
 import argparse
 from pathlib import Path
+import sys
 
-from solver.cfr_trainer import (
+
+PROJECT_ROOT = Path(
+    __file__
+).resolve().parents[1]
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(
+        0,
+        str(PROJECT_ROOT),
+    )
+
+
+from solver.cfr_trainer import (  # noqa: E402
     CFRTrainer,
 )
-from solver.game_state import (
+from solver.game_state import (  # noqa: E402
     GameConfig,
 )
-from solver.single_draw_game import (
+from solver.single_draw_game import (  # noqa: E402
     SingleDrawGame,
 )
 
@@ -34,10 +47,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(
-            "checkpoints"
-        )
-        / "strategy.chk.gz",
+        default=(
+            Path("checkpoints")
+            / "strategy.chk.gz"
+        ),
         help=(
             "Checkpoint output path."
         ),
@@ -73,6 +86,9 @@ def parse_args() -> argparse.Namespace:
             "external_sampling",
         ),
         default="external_sampling",
+        help=(
+            "CFR traversal algorithm."
+        ),
     )
 
     parser.add_argument(
@@ -82,20 +98,26 @@ def parse_args() -> argparse.Namespace:
             "candidate",
         ),
         default="candidate",
+        help=(
+            "Draw action generation mode."
+        ),
     )
 
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
+        help=(
+            "Base random seed."
+        ),
     )
 
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-
+def validate_args(
+    args: argparse.Namespace,
+) -> None:
     if args.iterations <= 0:
         raise ValueError(
             "Iterations must be positive."
@@ -107,15 +129,30 @@ def main() -> None:
             "positive."
         )
 
+    if args.max_draw < 0:
+        raise ValueError(
+            "Max draw cannot be negative."
+        )
+
+    if args.max_draw > 5:
+        raise ValueError(
+            "Max draw cannot exceed five."
+        )
+
+
+def main() -> None:
+    args = parse_args()
+
+    validate_args(
+        args
+    )
+
     game_counter = 0
 
     def game_factory() -> SingleDrawGame:
         nonlocal game_counter
 
-        game_seed = (
-            args.seed
-            + game_counter
-        )
+        game_seed = args.seed
 
         game_counter += 1
 
@@ -154,6 +191,11 @@ def main() -> None:
     )
 
     print(
+        f"  stack: "
+        f"{args.stack}"
+    )
+
+    print(
         f"  traversal: "
         f"{args.traversal_mode}"
     )
@@ -161,6 +203,16 @@ def main() -> None:
     print(
         f"  draw actions: "
         f"{args.draw_action_mode}"
+    )
+
+    print(
+        f"  max draw: "
+        f"{args.max_draw}"
+    )
+
+    print(
+        f"  seed: "
+        f"{args.seed}"
     )
 
     trainer.train(
