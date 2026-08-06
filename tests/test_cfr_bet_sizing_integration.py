@@ -39,7 +39,7 @@ def _make_trainer() -> CFRTrainer:
             "external_sampling"
         ),
         abstraction="bucket",
-        draw_action_mode="candidate",
+        draw_action_mode="auto",
         random_seed=42,
     )
 
@@ -193,7 +193,7 @@ def test_empty_raise_sizes_still_disable_raises() -> None:
             "external_sampling"
         ),
         abstraction="bucket",
-        draw_action_mode="candidate",
+        draw_action_mode="auto",
         random_seed=42,
     )
 
@@ -208,3 +208,4 @@ def test_empty_raise_sizes_still_disable_raises() -> None:
         )
         == set()
     )
+

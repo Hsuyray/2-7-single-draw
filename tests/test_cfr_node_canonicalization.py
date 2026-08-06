@@ -49,8 +49,11 @@ def make_draw_game(
     assert acting_seat is not None
 
     # These tests inspect information-state
-    # and node identity only. They do not
-    # execute a physical draw.
+    # and CFR node identity only.
+    #
+    # They do not physically execute a draw,
+    # so replacing the hand does not require
+    # rebuilding the deck.
     game.hands[
         acting_seat
     ] = hand
@@ -69,13 +72,13 @@ def make_full_trainer() -> CFRTrainer:
     )
 
 
-def make_candidate_trainer() -> CFRTrainer:
+def make_full_draw_trainer() -> CFRTrainer:
     return CFRTrainer(
         max_draw=3,
         raise_sizes=(),
         abstraction="exact",
         traversal_mode="full",
-        draw_action_mode="candidate",
+        draw_action_mode="full",
         random_seed=1,
     )
 
@@ -205,6 +208,10 @@ def test_full_mode_reuses_same_cfr_node() -> None:
         is second_node
     )
 
+    assert len(
+        trainer.node_store
+    ) == 1
+
 
 def test_reused_node_has_one_canonical_action_set() -> None:
     (
@@ -250,18 +257,31 @@ def test_reused_node_has_one_canonical_action_set() -> None:
     )
 
     assert (
-        tuple(first_node.actions)
+        first_node
+        is second_node
+    )
+
+    assert (
+        tuple(
+            first_node.actions
+        )
         == first_actions
     )
 
     assert (
-        tuple(second_node.actions)
+        tuple(
+            second_node.actions
+        )
         == second_actions
     )
 
     assert (
-        tuple(first_node.actions)
-        == tuple(second_node.actions)
+        tuple(
+            first_node.actions
+        )
+        == tuple(
+            second_node.actions
+        )
     )
 
 
@@ -307,8 +327,12 @@ def test_reused_node_strategy_uses_canonical_actions() -> None:
     )
 
     assert (
-        set(strategy)
-        == set(first_actions)
+        set(
+            strategy
+        )
+        == set(
+            first_actions
+        )
     )
 
     assert all(
@@ -319,19 +343,20 @@ def test_reused_node_strategy_uses_canonical_actions() -> None:
         for action in strategy
     )
 
-    assert (
-        sum(strategy.values())
-        == 1.0
-    )
+    assert sum(
+        strategy.values()
+    ) == 1.0
 
 
-def test_candidate_mode_actions_are_suit_isomorphic() -> None:
+def test_full_draw_actions_are_suit_isomorphic() -> None:
     (
         first_game,
         second_game,
     ) = make_suit_isomorphic_games()
 
-    trainer = make_candidate_trainer()
+    trainer = (
+        make_full_draw_trainer()
+    )
 
     first_actions = (
         trainer._legal_actions(
@@ -353,13 +378,15 @@ def test_candidate_mode_actions_are_suit_isomorphic() -> None:
     )
 
 
-def test_candidate_mode_reuses_same_node() -> None:
+def test_full_draw_mode_reuses_same_node() -> None:
     (
         first_game,
         second_game,
     ) = make_suit_isomorphic_games()
 
-    trainer = make_candidate_trainer()
+    trainer = (
+        make_full_draw_trainer()
+    )
 
     first_seat = (
         first_game.acting_seat
@@ -406,6 +433,10 @@ def test_candidate_mode_reuses_same_node() -> None:
         is second_node
     )
 
+    assert len(
+        trainer.node_store
+    ) == 1
+
 
 def test_full_mode_action_order_is_deterministic() -> None:
     (
@@ -439,5 +470,115 @@ def test_full_mode_action_order_is_deterministic() -> None:
                 action.draw_count,
                 action.discard_indices,
             ),
+        )
+    )
+
+
+def test_full_mode_actions_are_unique() -> None:
+    (
+        first_game,
+        _,
+    ) = make_suit_isomorphic_games()
+
+    trainer = make_full_trainer()
+
+    actions = (
+        trainer._legal_actions(
+            first_game
+        )
+    )
+
+    assert len(
+        actions
+    ) == len(
+        set(
+            actions
+        )
+    )
+
+
+def test_full_mode_contains_stand_pat() -> None:
+    (
+        first_game,
+        _,
+    ) = make_suit_isomorphic_games()
+
+    trainer = make_full_trainer()
+
+    actions = (
+        trainer._legal_actions(
+            first_game
+        )
+    )
+
+    assert (
+        DiscardAction(
+            ()
+        )
+        in actions
+    )
+
+
+def test_full_mode_contains_all_single_card_discards() -> None:
+    (
+        first_game,
+        _,
+    ) = make_suit_isomorphic_games()
+
+    trainer = make_full_trainer()
+
+    actions = (
+        trainer._legal_actions(
+            first_game
+        )
+    )
+
+    expected_single_discards = {
+        DiscardAction(
+            (
+                index,
+            )
+        )
+        for index in range(5)
+    }
+
+    assert expected_single_discards.issubset(
+        set(
+            actions
+        )
+    )
+
+
+def test_full_mode_contains_all_two_card_discards() -> None:
+    (
+        first_game,
+        _,
+    ) = make_suit_isomorphic_games()
+
+    trainer = make_full_trainer()
+
+    actions = (
+        trainer._legal_actions(
+            first_game
+        )
+    )
+
+    expected_two_card_discards = {
+        DiscardAction(
+            (
+                first_index,
+                second_index,
+            )
+        )
+        for first_index in range(5)
+        for second_index in range(
+            first_index + 1,
+            5,
+        )
+    }
+
+    assert expected_two_card_discards.issubset(
+        set(
+            actions
         )
     )

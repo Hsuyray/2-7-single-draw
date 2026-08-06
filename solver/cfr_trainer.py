@@ -15,6 +15,10 @@ from solver.cfr_action_codec import (
     canonical_solver_actions_for_game,
     executable_solver_action_for_game,
 )
+from solver.bucket_action_codec import (
+    bucket_solver_actions_for_game,
+    executable_bucket_action_for_game,
+)
 from solver.information_state import (
     AbstractionMode,
     InformationState,
@@ -542,15 +546,24 @@ class CFRTrainer:
             ),
         )
 
-        if (
-            self.abstraction
-            != "exact"
-        ):
-            return actual_actions
+        if self.abstraction == "exact":
+            return (
+                canonical_solver_actions_for_game(
+                    game=game,
+                    actions=actual_actions,
+                )
+            )
 
-        return canonical_solver_actions_for_game(
-            game=game,
-            actions=actual_actions,
+        if self.abstraction == "bucket":
+            return (
+                bucket_solver_actions_for_game(
+                    game=game,
+                    actions=actual_actions,
+                )
+            )
+
+        raise ValueError(
+            "Unknown CFR abstraction."
         )
 
     def _apply_node_action(
@@ -559,14 +572,6 @@ class CFRTrainer:
         game: SingleDrawGame,
         action: SolverAction,
     ) -> SingleDrawGame:
-        """
-        Execute one CFR node action.
-
-        Exact-mode draw actions are stored in
-        canonical index space and translated
-        back into the current physical hand
-        ordering before execution.
-        """
         executable_action = action
 
         if self.abstraction == "exact":
@@ -575,6 +580,19 @@ class CFRTrainer:
                     game=game,
                     action=action,
                 )
+            )
+
+        elif self.abstraction == "bucket":
+            executable_action = (
+                executable_bucket_action_for_game(
+                    game=game,
+                    action=action,
+                )
+            )
+
+        else:
+            raise ValueError(
+                "Unknown CFR abstraction."
             )
 
         return apply_solver_action(

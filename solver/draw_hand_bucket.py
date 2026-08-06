@@ -18,19 +18,20 @@ class DrawHandBucket:
     is_flush: bool
 
 
-def draw_hand_bucket(
+def draw_bucket_card_ordering(
     hand: Hand,
-) -> DrawHandBucket:
+) -> tuple[int, ...]:
     """
-    Build a positional draw-hand abstraction.
+    Return original Hand.cards indices in the
+    deterministic ordering used by the draw
+    bucket abstraction.
 
-    Cards are ordered deterministically before
-    positional features are generated.
+    Example:
 
-    The ordering keeps cards belonging to a
-    four-card or five-card dominant suit together
-    within equal ranks, without storing the
-    physical suit name in the bucket.
+        bucket_to_original[0]
+
+    gives the original Hand.cards index of the
+    first bucket-canonical card.
     """
     if len(hand.cards) != 5:
         raise ValueError(
@@ -55,25 +56,52 @@ def draw_hand_bucket(
         dominant_count >= 4
     )
 
-    ordered_cards = tuple(
+    return tuple(
         sorted(
-            hand.cards,
-            key=lambda card: (
+            range(
+                len(hand.cards)
+            ),
+            key=lambda index: (
                 RANK_ORDER[
-                    card.rank
+                    hand.cards[index].rank
                 ],
                 (
                     0
                     if (
                         flush_relevant
-                        and card.suit
+                        and hand.cards[index].suit
                         == dominant_suit
                     )
                     else 1
                 ),
-                card.suit,
+                hand.cards[index].suit,
+                index,
             ),
         )
+    )
+
+
+def draw_hand_bucket(
+    hand: Hand,
+) -> DrawHandBucket:
+    if len(hand.cards) != 5:
+        raise ValueError(
+            "Draw-hand abstraction requires "
+            "exactly five cards."
+        )
+
+    bucket_to_original = (
+        draw_bucket_card_ordering(
+            hand
+        )
+    )
+
+    ordered_cards = tuple(
+        hand.cards[
+            original_index
+        ]
+        for original_index
+        in bucket_to_original
     )
 
     rank_values = tuple(
@@ -92,6 +120,23 @@ def draw_hand_bucket(
 
     exact_rank_counts = Counter(
         rank_values
+    )
+
+    suit_counts = Counter(
+        card.suit
+        for card in hand.cards
+    )
+
+    dominant_suit, dominant_count = max(
+        suit_counts.items(),
+        key=lambda item: (
+            item[1],
+            item[0],
+        ),
+    )
+
+    flush_relevant = (
+        dominant_count >= 4
     )
 
     return DrawHandBucket(
@@ -156,8 +201,6 @@ def _rank_class(
     rank: int,
 ) -> int:
     """
-    Intermediate draw abstraction.
-
     Classes:
         2-3   -> 0
         4-5   -> 1

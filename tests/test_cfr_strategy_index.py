@@ -25,7 +25,7 @@ def test_trainer_builds_strategy_index() -> None:
         raise_sizes=(),
         abstraction="bucket",
         traversal_mode="external_sampling",
-        draw_action_mode="candidate",
+        draw_action_mode="auto",
         random_seed=42,
     )
 
@@ -65,7 +65,7 @@ def test_strategy_index_contains_trained_states() -> None:
         raise_sizes=(),
         abstraction="bucket",
         traversal_mode="external_sampling",
-        draw_action_mode="candidate",
+        draw_action_mode="auto",
         random_seed=42,
     )
 
@@ -116,7 +116,7 @@ def test_range_query_works_from_trainer_output() -> None:
         raise_sizes=(),
         abstraction="bucket",
         traversal_mode="external_sampling",
-        draw_action_mode="candidate",
+        draw_action_mode="auto",
         random_seed=42,
     )
 
@@ -157,3 +157,4 @@ def test_range_query_works_from_trainer_output() -> None:
         ]
         == strategies[state]
     )
+
