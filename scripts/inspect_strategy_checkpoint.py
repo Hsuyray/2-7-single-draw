@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 from solver.strategy_checkpoint import (  # noqa: E402
+    LoadedStrategyCheckpoint,
     load_strategy_checkpoint,
 )
 
@@ -39,13 +40,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-
-    loaded = load_strategy_checkpoint(
-        args.checkpoint
-    )
-
+def print_checkpoint_summary(
+    loaded: LoadedStrategyCheckpoint,
+    *,
+    checkpoint_path: Path,
+) -> None:
     metadata = loaded.metadata
     strategy_index = (
         loaded.strategy_index
@@ -55,13 +54,26 @@ def main() -> None:
         strategy_index.public_nodes()
     )
 
+    file_size_bytes = (
+        checkpoint_path.stat().st_size
+    )
+
+    file_size_kb = (
+        file_size_bytes / 1024
+    )
+
     print(
         "Strategy checkpoint"
     )
 
     print(
         f"  file: "
-        f"{args.checkpoint.resolve()}"
+        f"{checkpoint_path.resolve()}"
+    )
+
+    print(
+        f"  file size: "
+        f"{file_size_kb:,.2f} KB"
     )
 
     print(
@@ -86,7 +98,7 @@ def main() -> None:
 
     print(
         f"  iterations: "
-        f"{metadata.completed_iterations}"
+        f"{metadata.completed_iterations:,}"
     )
 
     print(
@@ -106,12 +118,33 @@ def main() -> None:
 
     print(
         f"  information states: "
-        f"{loaded.strategy_count}"
+        f"{loaded.strategy_count:,}"
     )
 
     print(
         f"  public nodes: "
-        f"{len(public_nodes)}"
+        f"{len(public_nodes):,}"
+    )
+
+
+def main() -> None:
+    args = parse_args()
+
+    checkpoint_path = (
+        args.checkpoint
+    )
+
+    loaded = (
+        load_strategy_checkpoint(
+            checkpoint_path
+        )
+    )
+
+    print_checkpoint_summary(
+        loaded,
+        checkpoint_path=(
+            checkpoint_path
+        ),
     )
 
 

@@ -20,6 +20,9 @@ from solver.cfr_trainer import (  # noqa: E402
 from solver.game_state import (  # noqa: E402
     GameConfig,
 )
+from solver.information_state import (  # noqa: E402
+    AbstractionMode,
+)
 from solver.single_draw_game import (  # noqa: E402
     SingleDrawGame,
 )
@@ -80,6 +83,19 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--abstraction",
+        choices=(
+            "exact",
+            "bucket",
+        ),
+        default="exact",
+        help=(
+            "Private-hand information-state "
+            "abstraction."
+        ),
+    )
+
+    parser.add_argument(
         "--traversal-mode",
         choices=(
             "full",
@@ -94,12 +110,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--draw-action-mode",
         choices=(
+            "auto",
             "full",
             "candidate",
         ),
-        default="candidate",
+        default="auto",
         help=(
-            "Draw action generation mode."
+            "Draw action generation mode. "
+            "Bucket abstraction currently "
+            "requires auto or full."
         ),
     )
 
@@ -109,6 +128,20 @@ def parse_args() -> argparse.Namespace:
         default=42,
         help=(
             "Base random seed."
+        ),
+    )
+
+    parser.add_argument(
+        "--seed-mode",
+        choices=(
+            "fixed",
+            "sequential",
+        ),
+        default="sequential",
+        help=(
+            "fixed repeats one complete deal; "
+            "sequential uses seed, seed + 1, "
+            "seed + 2, and so on."
         ),
     )
 
@@ -129,14 +162,25 @@ def validate_args(
             "positive."
         )
 
-    if args.max_draw < 0:
+    if not (
+        0
+        <= args.max_draw
+        <= 5
+    ):
         raise ValueError(
-            "Max draw cannot be negative."
+            "Max draw must be between "
+            "zero and five."
         )
 
-    if args.max_draw > 5:
+    if (
+        args.abstraction == "bucket"
+        and args.draw_action_mode
+        == "candidate"
+    ):
         raise ValueError(
-            "Max draw cannot exceed five."
+            "Bucket abstraction currently "
+            "requires --draw-action-mode "
+            "auto or full."
         )
 
 
@@ -152,7 +196,13 @@ def main() -> None:
     def game_factory() -> SingleDrawGame:
         nonlocal game_counter
 
-        game_seed = args.seed
+        if args.seed_mode == "fixed":
+            game_seed = args.seed
+        else:
+            game_seed = (
+                args.seed
+                + game_counter
+            )
 
         game_counter += 1
 
@@ -168,10 +218,14 @@ def main() -> None:
             deck_seed=game_seed,
         )
 
+    abstraction: AbstractionMode = (
+        args.abstraction
+    )
+
     trainer = CFRTrainer(
         max_draw=args.max_draw,
         raise_sizes=(),
-        abstraction="exact",
+        abstraction=abstraction,
         traversal_mode=(
             args.traversal_mode
         ),
@@ -196,13 +250,23 @@ def main() -> None:
     )
 
     print(
+        f"  abstraction: "
+        f"{args.abstraction}"
+    )
+
+    print(
         f"  traversal: "
         f"{args.traversal_mode}"
     )
 
     print(
-        f"  draw actions: "
+        f"  draw action setting: "
         f"{args.draw_action_mode}"
+    )
+
+    print(
+        f"  resolved draw actions: "
+        f"{trainer.resolved_draw_action_mode}"
     )
 
     print(
@@ -213,6 +277,11 @@ def main() -> None:
     print(
         f"  seed: "
         f"{args.seed}"
+    )
+
+    print(
+        f"  seed mode: "
+        f"{args.seed_mode}"
     )
 
     trainer.train(
