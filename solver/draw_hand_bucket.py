@@ -21,25 +21,22 @@ class DrawHandBucket:
 def draw_hand_bucket(
     hand: Hand,
 ) -> DrawHandBucket:
+    """
+    Build a positional draw-hand abstraction.
+
+    Cards are ordered deterministically before
+    positional features are generated.
+
+    The ordering keeps cards belonging to a
+    four-card or five-card dominant suit together
+    within equal ranks, without storing the
+    physical suit name in the bucket.
+    """
     if len(hand.cards) != 5:
         raise ValueError(
             "Draw-hand abstraction requires "
             "exactly five cards."
         )
-
-    rank_values = tuple(
-        RANK_ORDER[card.rank]
-        for card in hand.cards
-    )
-
-    rank_classes = tuple(
-        _rank_class(rank)
-        for rank in rank_values
-    )
-
-    exact_rank_counts = Counter(
-        rank_values
-    )
 
     suit_counts = Counter(
         card.suit
@@ -48,18 +45,68 @@ def draw_hand_bucket(
 
     dominant_suit, dominant_count = max(
         suit_counts.items(),
-        key=lambda item: item[1],
+        key=lambda item: (
+            item[1],
+            item[0],
+        ),
+    )
+
+    flush_relevant = (
+        dominant_count >= 4
+    )
+
+    ordered_cards = tuple(
+        sorted(
+            hand.cards,
+            key=lambda card: (
+                RANK_ORDER[
+                    card.rank
+                ],
+                (
+                    0
+                    if (
+                        flush_relevant
+                        and card.suit
+                        == dominant_suit
+                    )
+                    else 1
+                ),
+                card.suit,
+            ),
+        )
+    )
+
+    rank_values = tuple(
+        RANK_ORDER[
+            card.rank
+        ]
+        for card in ordered_cards
+    )
+
+    rank_classes = tuple(
+        _rank_class(
+            rank
+        )
+        for rank in rank_values
+    )
+
+    exact_rank_counts = Counter(
+        rank_values
     )
 
     return DrawHandBucket(
         rank_classes=rank_classes,
         rank_multiplicities=tuple(
-            exact_rank_counts[rank]
+            exact_rank_counts[
+                rank
+            ]
             for rank in rank_values
         ),
         pair_classes=tuple(
             sorted(
-                _rank_class(rank)
+                _rank_class(
+                    rank
+                )
                 for rank, count
                 in exact_rank_counts.items()
                 if count == 2
@@ -67,7 +114,9 @@ def draw_hand_bucket(
         ),
         trip_classes=tuple(
             sorted(
-                _rank_class(rank)
+                _rank_class(
+                    rank
+                )
                 for rank, count
                 in exact_rank_counts.items()
                 if count == 3
@@ -75,7 +124,9 @@ def draw_hand_bucket(
         ),
         quad_classes=tuple(
             sorted(
-                _rank_class(rank)
+                _rank_class(
+                    rank
+                )
                 for rank, count
                 in exact_rank_counts.items()
                 if count == 4
@@ -86,11 +137,11 @@ def draw_hand_bucket(
         ),
         flush_risk_positions=tuple(
             (
-                dominant_count >= 4
+                flush_relevant
                 and card.suit
                 == dominant_suit
             )
-            for card in hand.cards
+            for card in ordered_cards
         ),
         is_straight=_is_straight(
             rank_values
@@ -114,10 +165,6 @@ def _rank_class(
         8-9   -> 3
         T-J   -> 4
         Q-K-A -> 5
-
-    This keeps the general lowball structure while
-    allowing substantially more information-state
-    sharing than preserving ranks 2 through 9 exactly.
     """
     if rank <= 3:
         return 0
@@ -138,10 +185,15 @@ def _rank_class(
 
 
 def _is_straight(
-    rank_values: tuple[int, ...],
+    rank_values: tuple[
+        int,
+        ...,
+    ],
 ) -> bool:
     unique_ranks = sorted(
-        set(rank_values)
+        set(
+            rank_values
+        )
     )
 
     if len(unique_ranks) != 5:
@@ -149,8 +201,12 @@ def _is_straight(
 
     return all(
         (
-            unique_ranks[index + 1]
-            - unique_ranks[index]
+            unique_ranks[
+                index + 1
+            ]
+            - unique_ranks[
+                index
+            ]
             == 1
         )
         for index in range(4)

@@ -161,10 +161,23 @@ class CFRTrainer:
                 "be negative."
             )
 
+        if (
+            self.abstraction == "bucket"
+            and self.draw_action_mode
+            == "candidate"
+        ):
+            raise ValueError(
+                "Bucket abstraction currently "
+                "requires full draw actions. "
+                "Candidate actions may differ "
+                "between hands sharing the "
+                "same bucket."
+            )
+
         self._resolved_draw_action_mode = (
             self._resolve_draw_action_mode()
         )
-
+    
         self._random = random.Random(
             self.random_seed
         )
@@ -195,10 +208,7 @@ class CFRTrainer:
         ):
             return "candidate"
 
-        if self.abstraction == "exact":
-            return "full"
-
-        return "candidate"
+        return "full"
 
     def train(
         self,

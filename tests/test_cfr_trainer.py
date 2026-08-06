@@ -438,25 +438,14 @@ def test_external_sampling_average_strategies_are_valid() -> None:
             )
 
 
-def test_exact_abstraction_uses_full_draw_actions() -> None:
-    trainer = CFRTrainer(
-        abstraction="exact",
-    )
-
-    assert (
-        trainer.resolved_draw_action_mode
-        == "full"
-    )
-
-
-def test_bucket_abstraction_uses_candidate_draw_actions() -> None:
+def test_bucket_abstraction_uses_full_draw_actions() -> None:
     trainer = CFRTrainer(
         abstraction="bucket",
     )
 
     assert (
         trainer.resolved_draw_action_mode
-        == "candidate"
+        == "full"
     )
 
 
@@ -546,4 +535,17 @@ def test_trainer_rejects_negative_raise_size() -> None:
     else:
         raise AssertionError(
             "Expected ValueError."
+        )
+
+
+def test_bucket_candidate_draw_actions_are_rejected() -> None:
+    with pytest.raises(
+        ValueError,
+        match=(
+            "requires full draw actions"
+        ),
+    ):
+        CFRTrainer(
+            abstraction="bucket",
+            draw_action_mode="candidate",
         )
