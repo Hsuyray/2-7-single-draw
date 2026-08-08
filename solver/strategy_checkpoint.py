@@ -8,6 +8,9 @@ from pathlib import Path
 import pickle
 from typing import Any
 
+from solver.bet_sizing import (
+    BetSizingPolicy,
+)
 from solver.information_state import (
     AbstractionMode,
     InformationState,
@@ -20,34 +23,61 @@ from solver.strategy_index import (
 )
 
 
-CHECKPOINT_FORMAT_VERSION = 1
+CHECKPOINT_FORMAT_VERSION = 2
+SUPPORTED_CHECKPOINT_VERSIONS = {
+    1,
+    2,
+}
+
 CHECKPOINT_GAME = "2-7-single-draw"
 
 
 @dataclass(frozen=True)
 class StrategyCheckpointMetadata:
-    """
-    Describes the training configuration
-    associated with one saved strategy.
-    """
-
     format_version: int
     game: str
     created_at_utc: str
+
     abstraction: AbstractionMode
     max_draw: int
     draw_action_mode: str
+
     completed_iterations: int
+
     raise_sizes: (
         tuple[float, ...]
         | None
     )
 
+    bet_sizing_mode: str = "none"
+
+    bet_pot_fractions: (
+        tuple[float, ...]
+        | None
+    ) = None
+
+    bet_include_all_in: (
+        bool
+        | None
+    ) = None
+
+    bet_all_in_threshold: (
+        float
+        | None
+    ) = None
+
+    bet_chip_increment: (
+        float
+        | None
+    ) = None
+
     def __post_init__(self) -> None:
-        if self.format_version < 1:
+        if self.format_version not in (
+            SUPPORTED_CHECKPOINT_VERSIONS
+        ):
             raise ValueError(
-                "Checkpoint format version "
-                "must be positive."
+                "Unsupported checkpoint "
+                "format version."
             )
 
         if not self.game:
@@ -85,14 +115,33 @@ class StrategyCheckpointMetadata:
                 "be negative."
             )
 
+        if self.bet_sizing_mode not in {
+            "none",
+            "fixed",
+            "policy",
+        }:
+            raise ValueError(
+                "Unknown checkpoint betting "
+                "sizing mode."
+            )
+
+        if (
+            self.bet_pot_fractions
+            is not None
+            and any(
+                fraction <= 0
+                for fraction
+                in self.bet_pot_fractions
+            )
+        ):
+            raise ValueError(
+                "Checkpoint pot fractions "
+                "must be positive."
+            )
+
 
 @dataclass(frozen=True)
 class LoadedStrategyCheckpoint:
-    """
-    Fully validated checkpoint returned by
-    load_strategy_checkpoint().
-    """
-
     metadata: StrategyCheckpointMetadata
     strategy_index: StrategyIndex
 
@@ -113,7 +162,24 @@ def build_checkpoint_metadata(
         tuple[float, ...]
         | None
     ),
+    bet_sizing_policy: (
+        BetSizingPolicy
+        | None
+    ) = None,
 ) -> StrategyCheckpointMetadata:
+    (
+        bet_sizing_mode,
+        pot_fractions,
+        include_all_in,
+        all_in_threshold,
+        chip_increment,
+    ) = _betting_metadata(
+        raise_sizes=raise_sizes,
+        bet_sizing_policy=(
+            bet_sizing_policy
+        ),
+    )
+
     return StrategyCheckpointMetadata(
         format_version=(
             CHECKPOINT_FORMAT_VERSION
@@ -133,6 +199,21 @@ def build_checkpoint_metadata(
             completed_iterations
         ),
         raise_sizes=raise_sizes,
+        bet_sizing_mode=(
+            bet_sizing_mode
+        ),
+        bet_pot_fractions=(
+            pot_fractions
+        ),
+        bet_include_all_in=(
+            include_all_in
+        ),
+        bet_all_in_threshold=(
+            all_in_threshold
+        ),
+        bet_chip_increment=(
+            chip_increment
+        ),
     )
 
 
@@ -142,14 +223,6 @@ def save_strategy_checkpoint(
     strategy_index: StrategyIndex,
     metadata: StrategyCheckpointMetadata,
 ) -> Path:
-    """
-    Save metadata and solved average
-    strategies to a compressed checkpoint.
-
-    Only load checkpoint files produced by a
-    trusted source, because pickle is not safe
-    for untrusted input.
-    """
     _validate_metadata_compatibility(
         metadata
     )
@@ -164,7 +237,7 @@ def save_strategy_checkpoint(
 
     payload = {
         "format_version": (
-            metadata.format_version
+            CHECKPOINT_FORMAT_VERSION
         ),
         "metadata": metadata,
         "strategies": strategies,
@@ -213,10 +286,6 @@ def save_strategy_checkpoint(
 def load_strategy_checkpoint(
     path: str | Path,
 ) -> LoadedStrategyCheckpoint:
-    """
-    Load and validate a trusted strategy
-    checkpoint.
-    """
     checkpoint_path = Path(
         path
     )
@@ -265,27 +334,31 @@ def load_strategy_checkpoint(
         "format_version"
     )
 
-    if (
-        format_version
-        != CHECKPOINT_FORMAT_VERSION
+    if format_version not in (
+        SUPPORTED_CHECKPOINT_VERSIONS
     ):
         raise ValueError(
             "Unsupported checkpoint format "
             f"version: {format_version}"
         )
 
-    metadata = payload.get(
+    raw_metadata = payload.get(
         "metadata"
     )
 
     if not isinstance(
-        metadata,
+        raw_metadata,
         StrategyCheckpointMetadata,
     ):
         raise ValueError(
             "Checkpoint metadata is missing "
             "or invalid."
         )
+
+    metadata = _upgrade_metadata(
+        raw_metadata,
+        payload_version=format_version,
+    )
 
     _validate_metadata_compatibility(
         metadata
@@ -322,12 +395,125 @@ def load_strategy_checkpoint(
     )
 
 
+def _betting_metadata(
+    *,
+    raise_sizes: (
+        tuple[float, ...]
+        | None
+    ),
+    bet_sizing_policy: (
+        BetSizingPolicy
+        | None
+    ),
+) -> tuple[
+    str,
+    tuple[float, ...] | None,
+    bool | None,
+    float | None,
+    float | None,
+]:
+    if raise_sizes == ():
+        return (
+            "none",
+            None,
+            None,
+            None,
+            None,
+        )
+
+    if raise_sizes is not None:
+        return (
+            "fixed",
+            None,
+            None,
+            None,
+            None,
+        )
+
+    policy = (
+        bet_sizing_policy
+        if bet_sizing_policy is not None
+        else BetSizingPolicy()
+    )
+
+    return (
+        "policy",
+        policy.pot_fractions,
+        policy.include_all_in,
+        policy.all_in_threshold,
+        policy.chip_increment,
+    )
+
+
+def _upgrade_metadata(
+    metadata: StrategyCheckpointMetadata,
+    *,
+    payload_version: int,
+) -> StrategyCheckpointMetadata:
+    if payload_version == 2:
+        return metadata
+
+    raise_sizes = getattr(
+        metadata,
+        "raise_sizes",
+        (),
+    )
+
+    if raise_sizes == ():
+        bet_sizing_mode = "none"
+    elif raise_sizes is None:
+        bet_sizing_mode = "policy"
+    else:
+        bet_sizing_mode = "fixed"
+
+    return StrategyCheckpointMetadata(
+        format_version=1,
+        game=getattr(
+            metadata,
+            "game",
+            CHECKPOINT_GAME,
+        ),
+        created_at_utc=getattr(
+            metadata,
+            "created_at_utc",
+            "",
+        ),
+        abstraction=getattr(
+            metadata,
+            "abstraction",
+            "exact",
+        ),
+        max_draw=getattr(
+            metadata,
+            "max_draw",
+            3,
+        ),
+        draw_action_mode=getattr(
+            metadata,
+            "draw_action_mode",
+            "full",
+        ),
+        completed_iterations=getattr(
+            metadata,
+            "completed_iterations",
+            0,
+        ),
+        raise_sizes=raise_sizes,
+        bet_sizing_mode=(
+            bet_sizing_mode
+        ),
+        bet_pot_fractions=None,
+        bet_include_all_in=None,
+        bet_all_in_threshold=None,
+        bet_chip_increment=None,
+    )
+
+
 def _validate_metadata_compatibility(
     metadata: StrategyCheckpointMetadata,
 ) -> None:
-    if (
-        metadata.format_version
-        != CHECKPOINT_FORMAT_VERSION
+    if metadata.format_version not in (
+        SUPPORTED_CHECKPOINT_VERSIONS
     ):
         raise ValueError(
             "Unsupported checkpoint format "

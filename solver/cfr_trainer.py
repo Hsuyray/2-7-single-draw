@@ -682,10 +682,6 @@ class CFRTrainer:
     def checkpoint_metadata(
         self,
     ) -> StrategyCheckpointMetadata:
-        """
-        Build checkpoint metadata from the
-        trainer's current configuration.
-        """
         return build_checkpoint_metadata(
             abstraction=self.abstraction,
             max_draw=self.max_draw,
@@ -696,6 +692,9 @@ class CFRTrainer:
                 self.completed_iterations
             ),
             raise_sizes=self.raise_sizes,
+            bet_sizing_policy=(
+                self.bet_sizing_policy
+            ),
         )
 
     def save_checkpoint(

@@ -22,6 +22,11 @@ if str(PROJECT_ROOT) not in sys.path:
     )
 
 
+from solver.bet_sizing import (  # noqa: E402
+    FAST_BET_SIZING,
+    FULL_BET_SIZING,
+    BetSizingPolicy,
+)
 from solver.cfr_trainer import (  # noqa: E402
     CFRTrainer,
 )
@@ -74,6 +79,10 @@ class PhaseStatistics:
     one_action_nodes: int
     one_action_ratio: float
 
+    strategic_nodes: int
+    strategic_near_uniform_nodes: int
+    strategic_near_uniform_ratio: float
+
     action_count_distribution: tuple[
         tuple[
             int,
@@ -95,11 +104,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--iterations",
         type=int,
-        default=10000,
-        help=(
-            "Number of CFR training "
-            "iterations."
-        ),
+        default=1000,
     )
 
     parser.add_argument(
@@ -109,19 +114,12 @@ def parse_args() -> argparse.Namespace:
             "bucket",
         ),
         default="bucket",
-        help=(
-            "Private-hand abstraction used "
-            "during training."
-        ),
     )
 
     parser.add_argument(
         "--stack",
         type=float,
         default=20.0,
-        help=(
-            "Starting stack in chips."
-        ),
     )
 
     parser.add_argument(
@@ -132,10 +130,6 @@ def parse_args() -> argparse.Namespace:
             6,
         ),
         default=1,
-        help=(
-            "Maximum number of cards that "
-            "may be discarded."
-        ),
     )
 
     parser.add_argument(
@@ -145,18 +139,22 @@ def parse_args() -> argparse.Namespace:
             "external_sampling",
         ),
         default="external_sampling",
-        help=(
-            "CFR traversal algorithm."
+    )
+
+    parser.add_argument(
+        "--bet-sizing",
+        choices=(
+            "none",
+            "fast",
+            "full",
         ),
+        default="fast",
     )
 
     parser.add_argument(
         "--seed",
         type=int,
         default=42,
-        help=(
-            "Base deck and trainer seed."
-        ),
     )
 
     parser.add_argument(
@@ -166,22 +164,12 @@ def parse_args() -> argparse.Namespace:
             "sequential",
         ),
         default="sequential",
-        help=(
-            "fixed repeats one complete deal; "
-            "sequential changes the deck seed "
-            "for each iteration."
-        ),
     )
 
     parser.add_argument(
         "--uniform-tolerance",
         type=float,
         default=1e-9,
-        help=(
-            "Maximum probability difference "
-            "from a uniform strategy for a "
-            "node to be counted as uniform."
-        ),
     )
 
     return parser.parse_args()
@@ -205,6 +193,35 @@ def validate_args(
             "Uniform tolerance cannot be "
             "negative."
         )
+
+
+def resolve_bet_sizing(
+    mode: str,
+) -> tuple[
+    tuple[float, ...] | None,
+    BetSizingPolicy | None,
+]:
+    if mode == "none":
+        return (
+            (),
+            None,
+        )
+
+    if mode == "fast":
+        return (
+            None,
+            FAST_BET_SIZING,
+        )
+
+    if mode == "full":
+        return (
+            None,
+            FULL_BET_SIZING,
+        )
+
+    raise ValueError(
+        "Unknown bet sizing mode."
+    )
 
 
 def make_game_factory(
@@ -377,18 +394,45 @@ def collect_phase_statistics(
             for count in action_counts
         )
 
-        near_uniform_nodes = sum(
-            is_near_uniform(
-                tuple(
-                    node.average_strategy()
-                    .values()
-                ),
-                tolerance=(
-                    uniform_tolerance
-                ),
+        near_uniform_nodes = 0
+        strategic_near_uniform_nodes = 0
+
+        for node in nodes:
+            near_uniform = (
+                is_near_uniform(
+                    tuple(
+                        node.average_strategy()
+                        .values()
+                    ),
+                    tolerance=(
+                        uniform_tolerance
+                    ),
+                )
             )
-            for node in nodes
+
+            if near_uniform:
+                near_uniform_nodes += 1
+
+            if (
+                len(node.actions) > 1
+                and near_uniform
+            ):
+                strategic_near_uniform_nodes += 1
+
+        strategic_nodes = (
+            node_count
+            - one_action_nodes
         )
+
+        if strategic_nodes > 0:
+            strategic_near_uniform_ratio = (
+                strategic_near_uniform_nodes
+                / strategic_nodes
+            )
+        else:
+            strategic_near_uniform_ratio = (
+                0.0
+            )
 
         action_distribution = tuple(
             sorted(
@@ -460,6 +504,15 @@ def collect_phase_statistics(
                 one_action_ratio=(
                     one_action_nodes
                     / node_count
+                ),
+                strategic_nodes=(
+                    strategic_nodes
+                ),
+                strategic_near_uniform_nodes=(
+                    strategic_near_uniform_nodes
+                ),
+                strategic_near_uniform_ratio=(
+                    strategic_near_uniform_ratio
                 ),
                 action_count_distribution=(
                     action_distribution
@@ -560,7 +613,7 @@ def print_phase_statistics(
     )
 
     print(
-        f"  average strategy updates/node: "
+        f"  avg strategy updates/node: "
         f"{statistics.average_strategy_updates:.3f}"
     )
 
@@ -570,7 +623,7 @@ def print_phase_statistics(
     )
 
     print(
-        f"  average regret updates/node: "
+        f"  avg regret updates/node: "
         f"{statistics.average_regret_updates:.3f}"
     )
 
@@ -584,6 +637,19 @@ def print_phase_statistics(
         f"  one-action nodes: "
         f"{statistics.one_action_nodes:,} "
         f"({statistics.one_action_ratio:.2%})"
+    )
+
+    print(
+        f"  strategic nodes: "
+        f"{statistics.strategic_nodes:,}"
+    )
+
+    print(
+        "  strategic near-uniform: "
+        f"{statistics.strategic_near_uniform_nodes:,} "
+        f"("
+        f"{statistics.strategic_near_uniform_ratio:.2%}"
+        f")"
     )
 
     print_action_distribution(
@@ -610,24 +676,19 @@ def print_overall_summary(
         for phase in statistics
     )
 
-    total_near_uniform = sum(
-        phase.near_uniform_nodes
+    total_strategic_nodes = sum(
+        phase.strategic_nodes
         for phase in statistics
     )
 
-    total_single_visit = sum(
-        phase.single_visit_nodes
+    total_strategic_uniform = sum(
+        phase.strategic_near_uniform_nodes
         for phase in statistics
     )
 
     print()
     print(
         "OVERALL"
-    )
-
-    print(
-        f"  phases: "
-        f"{len(statistics)}"
     )
 
     print(
@@ -646,16 +707,18 @@ def print_overall_summary(
     )
 
     print(
-        f"  single-visit nodes: "
-        f"{total_single_visit:,} "
-        f"({total_single_visit / total_nodes:.2%})"
+        f"  strategic nodes: "
+        f"{total_strategic_nodes:,}"
     )
 
-    print(
-        f"  near-uniform nodes: "
-        f"{total_near_uniform:,} "
-        f"({total_near_uniform / total_nodes:.2%})"
-    )
+    if total_strategic_nodes > 0:
+        print(
+            "  strategic near-uniform: "
+            f"{total_strategic_uniform:,} "
+            f"("
+            f"{total_strategic_uniform / total_strategic_nodes:.2%}"
+            f")"
+        )
 
 
 def main() -> None:
@@ -663,6 +726,13 @@ def main() -> None:
 
     validate_args(
         args
+    )
+
+    (
+        raise_sizes,
+        bet_sizing_policy,
+    ) = resolve_bet_sizing(
+        args.bet_sizing
     )
 
     abstraction: AbstractionMode = (
@@ -681,7 +751,10 @@ def main() -> None:
 
     trainer = CFRTrainer(
         max_draw=args.max_draw,
-        raise_sizes=(),
+        raise_sizes=raise_sizes,
+        bet_sizing_policy=(
+            bet_sizing_policy
+        ),
         abstraction=abstraction,
         traversal_mode=(
             args.traversal_mode
@@ -720,6 +793,17 @@ def main() -> None:
     )
 
     print(
+        f"  bet sizing: "
+        f"{args.bet_sizing}"
+    )
+
+    if bet_sizing_policy is not None:
+        print(
+            f"  pot fractions: "
+            f"{bet_sizing_policy.pot_fractions}"
+        )
+
+    print(
         f"  draw actions: "
         f"{trainer.resolved_draw_action_mode}"
     )
@@ -732,11 +816,6 @@ def main() -> None:
     print(
         f"  seed mode: "
         f"{args.seed_mode}"
-    )
-
-    print(
-        f"  uniform tolerance: "
-        f"{args.uniform_tolerance:g}"
     )
 
     started_at = perf_counter()
@@ -764,12 +843,6 @@ def main() -> None:
             ),
         )
     )
-
-    if not statistics:
-        raise RuntimeError(
-            "Training produced no phase "
-            "statistics."
-        )
 
     for phase_statistics in (
         statistics

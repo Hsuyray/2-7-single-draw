@@ -11,6 +11,12 @@ DEFAULT_POT_FRACTIONS = (
     1.25,
 )
 
+FAST_POT_FRACTIONS = (
+    0.33,
+    0.66,
+    1.00,
+)
+
 
 @dataclass(frozen=True)
 class BetSize:
@@ -166,19 +172,6 @@ class BetSizingPolicy:
         minimum_raise_to: float,
         maximum_raise_to: float,
     ) -> tuple[BetSize, ...]:
-        """
-        Generate discrete betting sizes with
-        metadata for solver and UI use.
-
-        Returned sizes contain:
-
-            raise_to
-            pot_fraction
-            is_all_in
-            label
-
-        Sizes are sorted by raise_to.
-        """
         self._validate_candidate_inputs(
             pot=pot,
             committed_this_round=(
@@ -307,16 +300,6 @@ class BetSizingPolicy:
         minimum_raise_to: float,
         maximum_raise_to: float,
     ) -> tuple[float, ...]:
-        """
-        Backward-compatible API.
-
-        Return only absolute raise-to values.
-
-        Existing CFR and legal-action code can
-        continue using this method while UI
-        and strategy presentation code can use
-        bet_size_candidates().
-        """
         sizes = self.bet_size_candidates(
             pot=pot,
             committed_this_round=(
@@ -387,29 +370,6 @@ class BetSizingPolicy:
         committed_this_round: float,
         amount_to_call: float,
     ) -> float:
-        """
-        Convert a pot fraction into an
-        absolute raise-to amount.
-
-        No bet facing us:
-
-            raise_to
-            =
-            committed
-            + fraction * pot
-
-        Facing a bet:
-
-            pot_after_call
-            =
-            pot + amount_to_call
-
-            raise_to
-            =
-            committed
-            + amount_to_call
-            + fraction * pot_after_call
-        """
         pot_after_call = (
             pot
             + amount_to_call
@@ -436,3 +396,23 @@ class BetSizingPolicy:
             * self.chip_increment,
             10,
         )
+
+
+FAST_BET_SIZING = BetSizingPolicy(
+    pot_fractions=(
+        FAST_POT_FRACTIONS
+    ),
+    include_all_in=True,
+    all_in_threshold=0.90,
+    chip_increment=0.1,
+)
+
+
+FULL_BET_SIZING = BetSizingPolicy(
+    pot_fractions=(
+        DEFAULT_POT_FRACTIONS
+    ),
+    include_all_in=True,
+    all_in_threshold=0.90,
+    chip_increment=0.1,
+)

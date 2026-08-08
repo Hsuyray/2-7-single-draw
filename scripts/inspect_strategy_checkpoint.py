@@ -40,12 +40,53 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def print_betting_metadata(
+    loaded: LoadedStrategyCheckpoint,
+) -> None:
+    metadata = loaded.metadata
+
+    print(
+        f"  bet sizing mode: "
+        f"{metadata.bet_sizing_mode}"
+    )
+
+    print(
+        f"  raise sizes: "
+        f"{metadata.raise_sizes}"
+    )
+
+    if (
+        metadata.bet_sizing_mode
+        == "policy"
+    ):
+        print(
+            f"  pot fractions: "
+            f"{metadata.bet_pot_fractions}"
+        )
+
+        print(
+            f"  include all-in: "
+            f"{metadata.bet_include_all_in}"
+        )
+
+        print(
+            f"  all-in threshold: "
+            f"{metadata.bet_all_in_threshold}"
+        )
+
+        print(
+            f"  chip increment: "
+            f"{metadata.bet_chip_increment}"
+        )
+
+
 def print_checkpoint_summary(
     loaded: LoadedStrategyCheckpoint,
     *,
     checkpoint_path: Path,
 ) -> None:
     metadata = loaded.metadata
+
     strategy_index = (
         loaded.strategy_index
     )
@@ -59,7 +100,8 @@ def print_checkpoint_summary(
     )
 
     file_size_kb = (
-        file_size_bytes / 1024
+        file_size_bytes
+        / 1024
     )
 
     print(
@@ -111,9 +153,8 @@ def print_checkpoint_summary(
         f"{metadata.draw_action_mode}"
     )
 
-    print(
-        f"  raise sizes: "
-        f"{metadata.raise_sizes}"
+    print_betting_metadata(
+        loaded
     )
 
     print(

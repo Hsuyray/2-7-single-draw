@@ -14,6 +14,11 @@ if str(PROJECT_ROOT) not in sys.path:
     )
 
 
+from solver.bet_sizing import (  # noqa: E402
+    FAST_BET_SIZING,
+    FULL_BET_SIZING,
+    BetSizingPolicy,
+)
 from solver.cfr_trainer import (  # noqa: E402
     CFRTrainer,
 )
@@ -41,10 +46,6 @@ def parse_args() -> argparse.Namespace:
         "--iterations",
         type=int,
         default=10,
-        help=(
-            "Number of CFR training "
-            "iterations."
-        ),
     )
 
     parser.add_argument(
@@ -54,18 +55,12 @@ def parse_args() -> argparse.Namespace:
             Path("checkpoints")
             / "strategy.chk.gz"
         ),
-        help=(
-            "Checkpoint output path."
-        ),
     )
 
     parser.add_argument(
         "--stack",
         type=float,
         default=20.0,
-        help=(
-            "Starting stack in chips."
-        ),
     )
 
     parser.add_argument(
@@ -76,10 +71,6 @@ def parse_args() -> argparse.Namespace:
             0,
             6,
         ),
-        help=(
-            "Maximum number of cards that "
-            "may be discarded."
-        ),
     )
 
     parser.add_argument(
@@ -89,10 +80,6 @@ def parse_args() -> argparse.Namespace:
             "bucket",
         ),
         default="exact",
-        help=(
-            "Private-hand information-state "
-            "abstraction."
-        ),
     )
 
     parser.add_argument(
@@ -102,9 +89,6 @@ def parse_args() -> argparse.Namespace:
             "external_sampling",
         ),
         default="external_sampling",
-        help=(
-            "CFR traversal algorithm."
-        ),
     )
 
     parser.add_argument(
@@ -115,10 +99,21 @@ def parse_args() -> argparse.Namespace:
             "candidate",
         ),
         default="auto",
+    )
+
+    parser.add_argument(
+        "--bet-sizing",
+        choices=(
+            "none",
+            "fast",
+            "full",
+        ),
+        default="fast",
         help=(
-            "Draw action generation mode. "
-            "Bucket abstraction currently "
-            "requires auto or full."
+            "none disables betting raises; "
+            "fast uses 33/66/100/all-in; "
+            "full uses the complete sizing "
+            "abstraction."
         ),
     )
 
@@ -126,9 +121,6 @@ def parse_args() -> argparse.Namespace:
         "--seed",
         type=int,
         default=42,
-        help=(
-            "Base random seed."
-        ),
     )
 
     parser.add_argument(
@@ -138,11 +130,6 @@ def parse_args() -> argparse.Namespace:
             "sequential",
         ),
         default="sequential",
-        help=(
-            "fixed repeats one complete deal; "
-            "sequential uses seed, seed + 1, "
-            "seed + 2, and so on."
-        ),
     )
 
     return parser.parse_args()
@@ -158,8 +145,7 @@ def validate_args(
 
     if args.stack <= 0:
         raise ValueError(
-            "Starting stack must be "
-            "positive."
+            "Starting stack must be positive."
         )
 
     if not (
@@ -184,11 +170,47 @@ def validate_args(
         )
 
 
+def resolve_bet_sizing(
+    mode: str,
+) -> tuple[
+    tuple[float, ...] | None,
+    BetSizingPolicy | None,
+]:
+    if mode == "none":
+        return (
+            (),
+            None,
+        )
+
+    if mode == "fast":
+        return (
+            None,
+            FAST_BET_SIZING,
+        )
+
+    if mode == "full":
+        return (
+            None,
+            FULL_BET_SIZING,
+        )
+
+    raise ValueError(
+        "Unknown bet sizing mode."
+    )
+
+
 def main() -> None:
     args = parse_args()
 
     validate_args(
         args
+    )
+
+    (
+        raise_sizes,
+        bet_sizing_policy,
+    ) = resolve_bet_sizing(
+        args.bet_sizing
     )
 
     game_counter = 0
@@ -224,7 +246,10 @@ def main() -> None:
 
     trainer = CFRTrainer(
         max_draw=args.max_draw,
-        raise_sizes=(),
+        raise_sizes=raise_sizes,
+        bet_sizing_policy=(
+            bet_sizing_policy
+        ),
         abstraction=abstraction,
         traversal_mode=(
             args.traversal_mode
@@ -241,7 +266,7 @@ def main() -> None:
 
     print(
         f"  iterations: "
-        f"{args.iterations}"
+        f"{args.iterations:,}"
     )
 
     print(
@@ -258,6 +283,22 @@ def main() -> None:
         f"  traversal: "
         f"{args.traversal_mode}"
     )
+
+    print(
+        f"  bet sizing: "
+        f"{args.bet_sizing}"
+    )
+
+    if bet_sizing_policy is not None:
+        print(
+            f"  pot fractions: "
+            f"{bet_sizing_policy.pot_fractions}"
+        )
+
+        print(
+            f"  include all-in: "
+            f"{bet_sizing_policy.include_all_in}"
+        )
 
     print(
         f"  draw action setting: "
@@ -301,12 +342,12 @@ def main() -> None:
 
     print(
         f"  iterations: "
-        f"{trainer.completed_iterations}"
+        f"{trainer.completed_iterations:,}"
     )
 
     print(
         f"  CFR nodes: "
-        f"{len(trainer.node_store)}"
+        f"{len(trainer.node_store):,}"
     )
 
     print(
