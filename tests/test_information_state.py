@@ -16,8 +16,8 @@ from solver.hand_abstraction import (
 from solver.information_state import (
     InformationState,
 )
-from solver.made_hand_bucket import (
-    MadeHandBucket,
+from solver.postdraw_strength_bucket import (
+    PostdrawStrengthBucket,
 )
 from solver.public_state import (
     PublicNodeKey,
@@ -594,7 +594,7 @@ def test_bucket_abstraction_uses_made_hand_postdraw() -> None:
 
     assert isinstance(
         state.own_hand_key,
-        MadeHandBucket,
+        PostdrawStrengthBucket,
     )
 
 

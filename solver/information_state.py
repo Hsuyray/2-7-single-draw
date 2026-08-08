@@ -13,9 +13,9 @@ from solver.hand_abstraction import (
     ExactHandKey,
     exact_hand_key,
 )
-from solver.made_hand_bucket import (
-    MadeHandBucket,
-    made_hand_bucket,
+from solver.postdraw_strength_bucket import (
+    PostdrawStrengthBucket,
+    postdraw_strength_bucket,
 )
 from solver.public_state import (
     PublicNodeKey,
@@ -36,7 +36,7 @@ AbstractionMode = Literal[
 PrivateHandKey: TypeAlias = (
     ExactHandKey
     | DrawHandBucket
-    | MadeHandBucket
+    | PostdrawStrengthBucket
 )
 
 
@@ -54,23 +54,46 @@ class InformationState:
     def acting_seat(
         self,
     ) -> int | None:
-        return self.public_node.acting_seat
+        return (
+            self.public_node
+            .acting_seat
+        )
 
     @property
-    def button_seat(self) -> int:
-        return self.public_node.button_seat
+    def button_seat(
+        self,
+    ) -> int:
+        return (
+            self.public_node
+            .button_seat
+        )
 
     @property
-    def pot(self) -> float:
-        return self.public_node.pot
+    def pot(
+        self,
+    ) -> float:
+        return (
+            self.public_node
+            .pot
+        )
 
     @property
-    def players(self):
-        return self.public_node.players
+    def players(
+        self,
+    ):
+        return (
+            self.public_node
+            .players
+        )
 
     @property
-    def action_history(self):
-        return self.public_node.action_history
+    def action_history(
+        self,
+    ):
+        return (
+            self.public_node
+            .action_history
+        )
 
     @classmethod
     def from_game(
@@ -106,7 +129,9 @@ class InformationState:
                 observer_seat=(
                     observer_seat
                 ),
-                abstraction=abstraction,
+                abstraction=(
+                    abstraction
+                ),
             )
         )
 
@@ -117,9 +142,15 @@ class InformationState:
         )
 
         return cls(
-            observer_seat=observer_seat,
-            public_node=public_node,
-            own_hand_key=own_hand_key,
+            observer_seat=(
+                observer_seat
+            ),
+            public_node=(
+                public_node
+            ),
+            own_hand_key=(
+                own_hand_key
+            ),
         )
 
 
@@ -149,8 +180,10 @@ def _private_hand_key(
             game.phase.value
             == "postdraw_betting"
         ):
-            return made_hand_bucket(
-                own_hand
+            return (
+                postdraw_strength_bucket(
+                    own_hand
+                )
             )
 
         return draw_hand_bucket(

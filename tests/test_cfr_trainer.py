@@ -5,7 +5,9 @@ from solver.game_state import GameConfig
 from solver.single_draw_game import SingleDrawGame
 from solver.training_factory import TrainingGameFactory
 from solver.hand_abstraction import ExactHandKey
-from solver.made_hand_bucket import MadeHandBucket
+from solver.postdraw_strength_bucket import (
+    PostdrawStrengthBucket,
+)
 from solver.draw_hand_bucket import DrawHandBucket
 from solver.bet_sizing_profiles import (
     FAST_BET_SIZING,
@@ -260,7 +262,7 @@ def test_trainer_can_use_bucket_abstraction() -> None:
         if state.phase == "postdraw_betting":
             assert isinstance(
                 state.own_hand_key,
-                MadeHandBucket,
+                PostdrawStrengthBucket,
             )
         else:
             assert isinstance(
