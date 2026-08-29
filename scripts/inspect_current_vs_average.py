@@ -763,6 +763,60 @@ def print_summary(
         f")"
     )
 
+    # Weighted view: down-weights near-zero-reach
+    # off-path nodes so we can see whether the
+    # branches that actually carry strategy
+    # weight are converging.
+    nonzero_candidates = [
+        candidate
+        for candidate in candidates
+        if candidate["strategy_weight"] > 1e-12
+    ]
+
+    total_weight = sum(
+        candidate["strategy_weight"]
+        for candidate in nonzero_candidates
+    )
+
+    print(
+        f"  nonzero-weight nodes: "
+        f"{len(nonzero_candidates):,}"
+    )
+
+    if total_weight > 0:
+        weighted_l1 = sum(
+            candidate["l1"]
+            * candidate["strategy_weight"]
+            for candidate in nonzero_candidates
+        ) / total_weight
+
+        print(
+            f"  weight-weighted avg L1: "
+            f"{weighted_l1:.6f}"
+        )
+
+        top_weight_candidates = sorted(
+            nonzero_candidates,
+            key=lambda item: item["strategy_weight"],
+            reverse=True,
+        )[: max(1, len(nonzero_candidates) // 4)]
+
+        top_weight_avg_l1 = sum(
+            candidate["l1"]
+            for candidate in top_weight_candidates
+        ) / len(top_weight_candidates)
+
+        print(
+            f"  top-quartile-by-weight "
+            f"avg L1 ({len(top_weight_candidates)} nodes): "
+            f"{top_weight_avg_l1:.6f}"
+        )
+    else:
+        print(
+            "  weight-weighted avg L1: "
+            "n/a (no nonzero-weight nodes)"
+        )
+
 
 def main() -> None:
     args = parse_args()
