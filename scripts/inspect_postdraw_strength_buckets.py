@@ -27,8 +27,9 @@ from solver.cfr_trainer import (  # noqa: E402
 from solver.game_state import (  # noqa: E402
     GameConfig,
 )
-from solver.made_hand_bucket import (  # noqa: E402
-    MadeHandBucket,
+from solver.postdraw_strength_bucket import (  # noqa: E402
+    PostdrawStrengthBucket,
+    score_frequencies_snapshot,
 )
 from solver.single_draw_game import (  # noqa: E402
     SingleDrawGame,
@@ -270,7 +271,7 @@ def collect_postdraw_states(
 
         if not isinstance(
             private_key,
-            MadeHandBucket,
+            PostdrawStrengthBucket,
         ):
             continue
 
@@ -287,22 +288,13 @@ def collect_postdraw_states(
     )
 
 
-def ordered_scores(
-    postdraw_states,
-) -> tuple[
+def ordered_scores() -> tuple[
     tuple[int, ...],
     ...,
 ]:
     return tuple(
         sorted(
-            {
-                bucket.score
-                for (
-                    _state,
-                    _node,
-                    bucket,
-                ) in postdraw_states
-            }
+            score_frequencies_snapshot().keys()
         )
     )
 
@@ -745,9 +737,7 @@ def main() -> None:
         )
     )
 
-    scores = ordered_scores(
-        postdraw_states
-    )
+    scores = ordered_scores()
 
     score_ranks = (
         build_score_ranks(

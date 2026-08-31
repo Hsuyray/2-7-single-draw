@@ -360,3 +360,17 @@ def postdraw_bucket_count() -> int:
             in _score_to_bucket().values()
         }
     )
+
+
+def score_frequencies_snapshot() -> dict[
+    tuple[int, ...],
+    int,
+]:
+    """
+    Public accessor for the cached full-resolution
+    score -> exact-hand-count mapping, for use by
+    diagnostics that need the true exact-hand universe.
+    """
+    return dict(
+        _score_frequencies()
+    )
