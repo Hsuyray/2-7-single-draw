@@ -28,6 +28,7 @@ from solver.game_state import (  # noqa: E402
     GameConfig,
 )
 from solver.postdraw_strength_bucket import (  # noqa: E402
+    POSTDRAW_BUCKET_COUNT,
     PostdrawStrengthBucket,
     score_frequencies_snapshot,
 )
@@ -348,14 +349,27 @@ def strength_bucket_id(
     )
 
 
+def rescaled_bucket_id(
+    *,
+    original_bucket_id: int,
+    original_bucket_count: int,
+    target_bucket_count: int,
+) -> int:
+    bucket = (
+        original_bucket_id
+        * target_bucket_count
+        // original_bucket_count
+    )
+
+    return min(
+        bucket,
+        target_bucket_count - 1,
+    )
+
+
 def hypothetical_state_count(
     postdraw_states,
     *,
-    score_ranks: dict[
-        tuple[int, ...],
-        int,
-    ],
-    unique_score_count: int,
     bucket_count: int,
 ) -> tuple[
     int,
@@ -370,13 +384,14 @@ def hypothetical_state_count(
         made_bucket,
     ) in postdraw_states:
         bucket_id = (
-            strength_bucket_id(
-                score=made_bucket.score,
-                score_ranks=score_ranks,
-                unique_score_count=(
-                    unique_score_count
+            rescaled_bucket_id(
+                original_bucket_id=(
+                    made_bucket.bucket_id
                 ),
-                bucket_count=(
+                original_bucket_count=(
+                    POSTDRAW_BUCKET_COUNT
+                ),
+                target_bucket_count=(
                     bucket_count
                 ),
             )
@@ -504,10 +519,6 @@ def print_bucket_analysis(
             used_buckets,
         ) = hypothetical_state_count(
             postdraw_states,
-            score_ranks=score_ranks,
-            unique_score_count=(
-                original_scores
-            ),
             bucket_count=(
                 bucket_count
             ),

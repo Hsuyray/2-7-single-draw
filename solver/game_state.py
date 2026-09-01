@@ -4,6 +4,7 @@ from enum import Enum
 
 MIN_PLAYERS = 2
 MAX_PLAYERS = 6
+CHIP_EPSILON = 1e-9
 
 
 class ActionType(str, Enum):
@@ -328,16 +329,19 @@ class GameState:
             )
 
         raise_size = raise_to - self.current_bet
-        is_all_in = raise_to == maximum_raise_to
+        is_all_in = (
+            abs(raise_to - maximum_raise_to)
+            <= CHIP_EPSILON
+        )
 
         if (
-            raise_size < self.minimum_raise_size
+            raise_size
+            < self.minimum_raise_size - CHIP_EPSILON
             and not is_all_in
         ):
             raise ValueError(
                 "Raise is smaller than the minimum raise."
             )
-
         amount_needed = (
             raise_to - player.committed_this_round
         )

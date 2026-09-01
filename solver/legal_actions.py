@@ -20,6 +20,7 @@ DrawActionMode = Literal[
     "full",
     "candidate",
 ]
+CHIP_EPSILON = 1e-9
 
 
 @dataclass(frozen=True)
@@ -356,12 +357,12 @@ def _raise_is_legal(
         state.minimum_raise_to()
     )
 
-    if raise_to >= minimum_raise_to:
+    if raise_to >= minimum_raise_to - CHIP_EPSILON:
         return True
 
     # A player may still move all-in for
     # less than a normal minimum raise.
     return (
-        raise_to
-        == maximum_raise_to
+        abs(raise_to - maximum_raise_to)
+        <= CHIP_EPSILON
     )
