@@ -408,8 +408,11 @@ class GameState:
                 return False
 
             if (
-                player.committed_this_round
-                != self.current_bet
+                abs(
+                    player.committed_this_round
+                    - self.current_bet
+                )
+                > CHIP_EPSILON
             ):
                 return False
 
@@ -471,3 +474,5 @@ class GameState:
         self.minimum_raise_size = self.config.big_blind
         self.betting_round_complete = False
         self.acting_seat = first_acting_seat
+
+
