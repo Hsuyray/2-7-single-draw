@@ -23,10 +23,11 @@ from solver.strategy_index import (
 )
 
 
-CHECKPOINT_FORMAT_VERSION = 2
+CHECKPOINT_FORMAT_VERSION = 3
 SUPPORTED_CHECKPOINT_VERSIONS = {
     1,
     2,
+    3,
 }
 
 CHECKPOINT_GAME = "2-7-single-draw"
@@ -68,6 +69,48 @@ class StrategyCheckpointMetadata:
 
     bet_chip_increment: (
         float
+        | None
+    ) = None
+
+    # --- v3 additions ---
+
+    traversal_mode: (
+        str
+        | None
+    ) = None
+
+    player_count: (
+        int
+        | None
+    ) = None
+
+    starting_stack: (
+        float
+        | None
+    ) = None
+
+    starting_stacks: (
+        tuple[float, ...]
+        | None
+    ) = None
+
+    small_blind: (
+        float
+        | None
+    ) = None
+
+    big_blind: (
+        float
+        | None
+    ) = None
+
+    big_blind_ante: (
+        float
+        | None
+    ) = None
+
+    postdraw_bucket_count: (
+        int
         | None
     ) = None
 
@@ -139,6 +182,43 @@ class StrategyCheckpointMetadata:
                 "must be positive."
             )
 
+        if (
+            self.traversal_mode is not None
+            and self.traversal_mode
+            not in {
+                "full",
+                "external_sampling",
+            }
+        ):
+            raise ValueError(
+                "Unknown checkpoint traversal "
+                "mode."
+            )
+
+        if (
+            self.player_count is not None
+            and not (
+                2
+                <= self.player_count
+                <= 6
+            )
+        ):
+            raise ValueError(
+                "Checkpoint player_count must "
+                "be between two and six."
+            )
+
+        if (
+            self.postdraw_bucket_count
+            is not None
+            and self.postdraw_bucket_count
+            <= 0
+        ):
+            raise ValueError(
+                "Checkpoint postdraw bucket "
+                "count must be positive."
+            )
+
 
 @dataclass(frozen=True)
 class LoadedStrategyCheckpoint:
@@ -164,6 +244,38 @@ def build_checkpoint_metadata(
     ),
     bet_sizing_policy: (
         BetSizingPolicy
+        | None
+    ) = None,
+    traversal_mode: (
+        str
+        | None
+    ) = None,
+    player_count: (
+        int
+        | None
+    ) = None,
+    starting_stack: (
+        float
+        | None
+    ) = None,
+    starting_stacks: (
+        tuple[float, ...]
+        | None
+    ) = None,
+    small_blind: (
+        float
+        | None
+    ) = None,
+    big_blind: (
+        float
+        | None
+    ) = None,
+    big_blind_ante: (
+        float
+        | None
+    ) = None,
+    postdraw_bucket_count: (
+        int
         | None
     ) = None,
 ) -> StrategyCheckpointMetadata:
@@ -213,6 +325,30 @@ def build_checkpoint_metadata(
         ),
         bet_chip_increment=(
             chip_increment
+        ),
+        traversal_mode=(
+            traversal_mode
+        ),
+        player_count=(
+            player_count
+        ),
+        starting_stack=(
+            starting_stack
+        ),
+        starting_stacks=(
+            starting_stacks
+        ),
+        small_blind=(
+            small_blind
+        ),
+        big_blind=(
+            big_blind
+        ),
+        big_blind_ante=(
+            big_blind_ante
+        ),
+        postdraw_bucket_count=(
+            postdraw_bucket_count
         ),
     )
 
@@ -450,7 +586,9 @@ def _upgrade_metadata(
     *,
     payload_version: int,
 ) -> StrategyCheckpointMetadata:
-    if payload_version == 2:
+    if payload_version == (
+        CHECKPOINT_FORMAT_VERSION
+    ):
         return metadata
 
     raise_sizes = getattr(
@@ -466,46 +604,92 @@ def _upgrade_metadata(
     else:
         bet_sizing_mode = "fixed"
 
+    if payload_version == 1:
+        return StrategyCheckpointMetadata(
+            format_version=1,
+            game=getattr(
+                metadata,
+                "game",
+                CHECKPOINT_GAME,
+            ),
+            created_at_utc=getattr(
+                metadata,
+                "created_at_utc",
+                "",
+            ),
+            abstraction=getattr(
+                metadata,
+                "abstraction",
+                "exact",
+            ),
+            max_draw=getattr(
+                metadata,
+                "max_draw",
+                3,
+            ),
+            draw_action_mode=getattr(
+                metadata,
+                "draw_action_mode",
+                "full",
+            ),
+            completed_iterations=getattr(
+                metadata,
+                "completed_iterations",
+                0,
+            ),
+            raise_sizes=raise_sizes,
+            bet_sizing_mode=(
+                bet_sizing_mode
+            ),
+            bet_pot_fractions=None,
+            bet_include_all_in=None,
+            bet_all_in_threshold=None,
+            bet_chip_increment=None,
+        )
+
+    # payload_version == 2
     return StrategyCheckpointMetadata(
-        format_version=1,
-        game=getattr(
-            metadata,
-            "game",
-            CHECKPOINT_GAME,
+        format_version=2,
+        game=metadata.game,
+        created_at_utc=(
+            metadata.created_at_utc
         ),
-        created_at_utc=getattr(
-            metadata,
-            "created_at_utc",
-            "",
+        abstraction=(
+            metadata.abstraction
         ),
-        abstraction=getattr(
-            metadata,
-            "abstraction",
-            "exact",
+        max_draw=metadata.max_draw,
+        draw_action_mode=(
+            metadata.draw_action_mode
         ),
-        max_draw=getattr(
-            metadata,
-            "max_draw",
-            3,
+        completed_iterations=(
+            metadata.completed_iterations
         ),
-        draw_action_mode=getattr(
-            metadata,
-            "draw_action_mode",
-            "full",
+        raise_sizes=(
+            metadata.raise_sizes
         ),
-        completed_iterations=getattr(
-            metadata,
-            "completed_iterations",
-            0,
-        ),
-        raise_sizes=raise_sizes,
         bet_sizing_mode=(
-            bet_sizing_mode
+            metadata.bet_sizing_mode
         ),
-        bet_pot_fractions=None,
-        bet_include_all_in=None,
-        bet_all_in_threshold=None,
-        bet_chip_increment=None,
+        bet_pot_fractions=(
+            metadata.bet_pot_fractions
+        ),
+        bet_include_all_in=(
+            metadata.bet_include_all_in
+        ),
+        bet_all_in_threshold=(
+            metadata.bet_all_in_threshold
+        ),
+        bet_chip_increment=(
+            metadata.bet_chip_increment
+        ),
+        traversal_mode=None,
+        player_count=None,
+        starting_stack=None,
+        starting_stacks=None,
+        small_blind=None,
+        big_blind=None,
+        big_blind_ante=None,
+        postdraw_bucket_count=None,
     )
 
 

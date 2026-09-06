@@ -49,6 +49,13 @@ from solver.strategy_checkpoint import (
     save_strategy_checkpoint,
 )
 
+from solver.game_state import (
+    GameConfig,
+)
+from solver.postdraw_strength_bucket import (
+    POSTDRAW_BUCKET_COUNT,
+)
+
 GameFactory = Callable[
     [],
     SingleDrawGame,
@@ -99,6 +106,11 @@ class CFRTrainer:
     ) = "auto"
 
     random_seed: int | None = None
+
+    game_config: (
+        GameConfig
+        | None
+    ) = None
 
     node_store: NodeStore = field(
         default_factory=NodeStore,
@@ -682,6 +694,51 @@ class CFRTrainer:
     def checkpoint_metadata(
         self,
     ) -> StrategyCheckpointMetadata:
+        player_count = None
+        starting_stack = None
+        starting_stacks = None
+        small_blind = None
+        big_blind = None
+        big_blind_ante = None
+
+        if self.game_config is not None:
+            player_count = (
+                self.game_config
+                .player_count
+            )
+
+            starting_stack = (
+                self.game_config
+                .starting_stack
+            )
+
+            starting_stacks = (
+                self.game_config
+                .starting_stacks
+            )
+
+            small_blind = (
+                self.game_config
+                .small_blind
+            )
+
+            big_blind = (
+                self.game_config
+                .big_blind
+            )
+
+            big_blind_ante = (
+                self.game_config
+                .big_blind_ante
+            )
+
+        postdraw_bucket_count = None
+
+        if self.abstraction == "bucket":
+            postdraw_bucket_count = (
+                POSTDRAW_BUCKET_COUNT
+            )
+
         return build_checkpoint_metadata(
             abstraction=self.abstraction,
             max_draw=self.max_draw,
@@ -694,6 +751,24 @@ class CFRTrainer:
             raise_sizes=self.raise_sizes,
             bet_sizing_policy=(
                 self.bet_sizing_policy
+            ),
+            traversal_mode=(
+                self.traversal_mode
+            ),
+            player_count=player_count,
+            starting_stack=(
+                starting_stack
+            ),
+            starting_stacks=(
+                starting_stacks
+            ),
+            small_blind=small_blind,
+            big_blind=big_blind,
+            big_blind_ante=(
+                big_blind_ante
+            ),
+            postdraw_bucket_count=(
+                postdraw_bucket_count
             ),
         )
 

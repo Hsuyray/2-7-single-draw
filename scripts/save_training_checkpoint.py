@@ -213,6 +213,14 @@ def main() -> None:
         args.bet_sizing
     )
 
+    shared_game_config = GameConfig(
+        player_count=2,
+        starting_stack=args.stack,
+        small_blind=1.0,
+        big_blind=2.0,
+        big_blind_ante=1.5,
+    )
+
     game_counter = 0
 
     def game_factory() -> SingleDrawGame:
@@ -229,13 +237,7 @@ def main() -> None:
         game_counter += 1
 
         return SingleDrawGame(
-            config=GameConfig(
-                player_count=2,
-                starting_stack=args.stack,
-                small_blind=1.0,
-                big_blind=2.0,
-                big_blind_ante=1.5,
-            ),
+            config=shared_game_config,
             button_seat=0,
             deck_seed=game_seed,
         )
@@ -258,6 +260,7 @@ def main() -> None:
             args.draw_action_mode
         ),
         random_seed=args.seed,
+        game_config=shared_game_config,
     )
 
     print(
