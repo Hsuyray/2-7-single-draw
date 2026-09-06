@@ -244,34 +244,38 @@ class SampledBestResponse:
 
         completed_sweeps = 0
 
+        # Accumulated across ALL sweeps so that
+        # later sweeps improve estimate precision
+        # instead of re-estimating from scratch
+        # with fresh noise each time.
+        action_sums: dict[
+            InformationState,
+            dict[
+                SolverAction,
+                float,
+            ],
+        ] = {}
+
+        action_counts: dict[
+            InformationState,
+            dict[
+                SolverAction,
+                int,
+            ],
+        ] = {}
+
+        legal_actions_by_state: dict[
+            InformationState,
+            tuple[
+                SolverAction,
+                ...,
+            ],
+        ] = {}
+
         for _ in range(
             max_sweeps
         ):
             completed_sweeps += 1
-
-            action_sums: dict[
-                InformationState,
-                dict[
-                    SolverAction,
-                    float,
-                ],
-            ] = {}
-
-            action_counts: dict[
-                InformationState,
-                dict[
-                    SolverAction,
-                    int,
-                ],
-            ] = {}
-
-            legal_actions_by_state: dict[
-                InformationState,
-                tuple[
-                    SolverAction,
-                    ...,
-                ],
-            ] = {}
 
             for _deal in range(
                 deals

@@ -91,7 +91,6 @@ def dfs(game, depth, history, deck_seed):
 
 
 def search(deck_seeds):
-
     for deck_seed in deck_seeds:
         if found_deep_path:
             return
