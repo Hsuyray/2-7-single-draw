@@ -11,8 +11,8 @@ from solver.information_state import (
     AbstractionMode,
     PrivateHandKey,
 )
-from solver.made_hand_bucket import (
-    made_hand_bucket,
+from solver.postdraw_strength_bucket import (
+    postdraw_strength_bucket,
 )
 from solver.single_draw_game import (
     GamePhase,
@@ -39,7 +39,7 @@ class HandStrategyResolver:
                 phase
                 == GamePhase.POSTDRAW_BETTING
             ):
-                return made_hand_bucket(
+                return postdraw_strength_bucket(
                     hand
                 )
 
