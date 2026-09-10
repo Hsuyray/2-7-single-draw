@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 import sys
-
+import time
 
 PROJECT_ROOT = Path(
     __file__
@@ -13,6 +13,8 @@ if str(PROJECT_ROOT) not in sys.path:
         str(PROJECT_ROOT),
     )
 
+
+import psutil  # noqa: E402
 
 from solver.bet_sizing import (  # noqa: E402
     FAST_BET_SIZING,
@@ -31,6 +33,11 @@ from solver.information_state import (  # noqa: E402
 from solver.single_draw_game import (  # noqa: E402
     SingleDrawGame,
 )
+
+
+DEFAULT_BATCH_SIZE = 500
+
+DEFAULT_MIN_FREE_MEMORY_GB = 2.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -132,6 +139,42 @@ def parse_args() -> argparse.Namespace:
         default="sequential",
     )
 
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=DEFAULT_BATCH_SIZE,
+        help=(
+            "Number of iterations to run "
+            "between memory checks and "
+            "checkpoint saves."
+        ),
+    )
+
+    parser.add_argument(
+        "--min-free-memory-gb",
+        type=float,
+        default=(
+            DEFAULT_MIN_FREE_MEMORY_GB
+        ),
+        help=(
+            "Stop training and save if "
+            "available system memory drops "
+            "below this threshold, in GB."
+        ),
+    )
+
+    parser.add_argument(
+        "--checkpoint-every-batches",
+        type=int,
+        default=1,
+        help=(
+            "Save an intermediate checkpoint "
+            "every N batches, in addition to "
+            "the final save. Set to 0 to "
+            "disable intermediate saves."
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -169,6 +212,23 @@ def validate_args(
             "auto or full."
         )
 
+    if args.batch_size <= 0:
+        raise ValueError(
+            "Batch size must be positive."
+        )
+
+    if args.min_free_memory_gb <= 0:
+        raise ValueError(
+            "Minimum free memory must be "
+            "positive."
+        )
+
+    if args.checkpoint_every_batches < 0:
+        raise ValueError(
+            "Checkpoint-every-batches cannot "
+            "be negative."
+        )
+
 
 def resolve_bet_sizing(
     mode: str,
@@ -196,6 +256,13 @@ def resolve_bet_sizing(
 
     raise ValueError(
         "Unknown bet sizing mode."
+    )
+
+
+def available_memory_gb() -> float:
+    return (
+        psutil.virtual_memory().available
+        / (1024 ** 3)
     )
 
 
@@ -328,19 +395,147 @@ def main() -> None:
         f"{args.seed_mode}"
     )
 
-    trainer.train(
-        game_factory,
-        iterations=args.iterations,
+    print(
+        f"  batch size: "
+        f"{args.batch_size:,}"
     )
 
-    checkpoint_path = (
+    print(
+        f"  min free memory (GB): "
+        f"{args.min_free_memory_gb}"
+    )
+
+    print(
+        f"  checkpoint every N batches: "
+        f"{args.checkpoint_every_batches}"
+    )
+
+    print()
+
+    print(
+        f"  starting free memory: "
+        f"{available_memory_gb():.2f} GB"
+    )
+
+    print()
+
+    remaining_iterations = args.iterations
+
+    batch_number = 0
+
+    stopped_early = False
+
+    overall_start = time.perf_counter()
+
+    while remaining_iterations > 0:
+        batch_number += 1
+
+        this_batch_size = min(
+            args.batch_size,
+            remaining_iterations,
+        )
+
+        batch_start = time.perf_counter()
+
+        trainer.train(
+            game_factory,
+            iterations=this_batch_size,
+        )
+
+        batch_seconds = (
+            time.perf_counter()
+            - batch_start
+        )
+
+        remaining_iterations -= (
+            this_batch_size
+        )
+
+        free_memory = (
+            available_memory_gb()
+        )
+
+        elapsed_total = (
+            time.perf_counter()
+            - overall_start
+        )
+
+        print(
+            f"Batch {batch_number}: "
+            f"completed_iterations="
+            f"{trainer.completed_iterations:,}, "
+            f"CFR_nodes="
+            f"{len(trainer.node_store):,}, "
+            f"batch_seconds="
+            f"{batch_seconds:.1f}, "
+            f"elapsed_total="
+            f"{elapsed_total:.1f}s, "
+            f"free_memory="
+            f"{free_memory:.2f}GB"
+        )
+
+        should_checkpoint = (
+            args.checkpoint_every_batches
+            > 0
+            and batch_number
+            % args.checkpoint_every_batches
+            == 0
+        )
+
+        low_memory = (
+            free_memory
+            < args.min_free_memory_gb
+        )
+
+        if low_memory:
+            print()
+
+            print(
+                "WARNING: free memory "
+                f"({free_memory:.2f} GB) "
+                "is below the safety "
+                "threshold "
+                f"({args.min_free_memory_gb} "
+                "GB). Stopping training "
+                "and saving now."
+            )
+
+            stopped_early = True
+
+        if should_checkpoint or low_memory:
+            checkpoint_path = (
+                trainer.save_checkpoint(
+                    args.output
+                )
+            )
+
+            print(
+                f"  Saved checkpoint "
+                f"({trainer.completed_iterations:,} "
+                f"iterations) to "
+                f"{checkpoint_path.resolve()}"
+            )
+
+        if low_memory:
+            break
+
+    final_checkpoint_path = (
         trainer.save_checkpoint(
             args.output
         )
     )
 
+    print()
+
     print(
-        "Training completed:"
+        "Training completed"
+        if not stopped_early
+        else "Training stopped early "
+        "(low memory)"
+    )
+
+    print(
+        ":"
     )
 
     print(
@@ -354,8 +549,13 @@ def main() -> None:
     )
 
     print(
+        f"  final free memory: "
+        f"{available_memory_gb():.2f} GB"
+    )
+
+    print(
         f"  checkpoint: "
-        f"{checkpoint_path.resolve()}"
+        f"{final_checkpoint_path.resolve()}"
     )
 
 
