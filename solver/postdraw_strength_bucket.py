@@ -2,7 +2,8 @@ from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import combinations
-
+import json
+from pathlib import Path
 from solver.cards import Card
 from solver.hand import Hand
 from solver.made_hand_bucket import (
@@ -209,15 +210,104 @@ def _category_offsets() -> dict[
     return offsets
 
 
+_PRECOMPUTED_MAPPING_PATH = (
+    Path(__file__).resolve().parent
+    / "postdraw_bucket_mapping.json"
+)
+
+
+def _load_precomputed_mapping() -> (
+    dict[
+        tuple[int, ...],
+        PostdrawStrengthBucket,
+    ]
+    | None
+):
+    """
+    Attempt to load the precomputed
+    score-to-bucket mapping from disk.
+
+    Returns None if the file is missing or
+    invalid, so callers can fall back to the
+    full enumeration path.
+    """
+    if not _PRECOMPUTED_MAPPING_PATH.exists():
+        return None
+
+    try:
+        raw_entries = json.loads(
+            _PRECOMPUTED_MAPPING_PATH
+            .read_text(
+                encoding="utf-8",
+            )
+        )
+
+    except (
+        OSError,
+        json.JSONDecodeError,
+    ):
+        return None
+
+    mapping: dict[
+        tuple[int, ...],
+        PostdrawStrengthBucket,
+    ] = {}
+
+    try:
+        for entry in raw_entries:
+            score = tuple(
+                entry["score"]
+            )
+
+            mapping[score] = (
+                PostdrawStrengthBucket(
+                    category=(
+                        entry["category"]
+                    ),
+                    bucket_id=(
+                        entry["bucket_id"]
+                    ),
+                    category_bucket=(
+                        entry[
+                            "category_bucket"
+                        ]
+                    ),
+                )
+            )
+
+    except (
+        KeyError,
+        TypeError,
+        ValueError,
+    ):
+        return None
+
+    if not mapping:
+        return None
+
+    return mapping
+
+
 @lru_cache(maxsize=1)
 def _score_to_bucket() -> dict[
     tuple[int, ...],
     PostdrawStrengthBucket,
 ]:
     """
-    Build the deterministic 128-bucket
+    Return the deterministic 128-bucket
     category-preserving equal-mass mapping.
+
+    Loads a precomputed mapping from disk
+    when available. Falls back to full
+    five-card enumeration otherwise.
     """
+    precomputed = (
+        _load_precomputed_mapping()
+    )
+
+    if precomputed is not None:
+        return precomputed
+
     frequencies_by_category = (
         _frequencies_by_category()
     )
