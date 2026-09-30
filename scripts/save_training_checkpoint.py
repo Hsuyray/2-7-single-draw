@@ -30,6 +30,12 @@ from solver.game_state import (  # noqa: E402
 from solver.information_state import (  # noqa: E402
     AbstractionMode,
 )
+from solver.memory_guard import (  # noqa: E402
+    DEFAULT_MAX_RSS_GB,
+    DEFAULT_RSS_CHECK_EVERY,
+    RSSGuard,
+    iteration_chunks,
+)
 from solver.single_draw_game import (  # noqa: E402
     SingleDrawGame,
 )
@@ -164,6 +170,29 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--max-rss-gb",
+        type=float,
+        default=DEFAULT_MAX_RSS_GB,
+        help=(
+            "Stop training and save if this "
+            "process's resident memory (RSS) "
+            "exceeds this limit, in GB. Set "
+            "to 0 to disable the RSS guard."
+        ),
+    )
+
+    parser.add_argument(
+        "--rss-check-every",
+        type=int,
+        default=DEFAULT_RSS_CHECK_EVERY,
+        help=(
+            "Number of iterations between "
+            "RSS checks when the RSS guard "
+            "is enabled."
+        ),
+    )
+
+    parser.add_argument(
         "--checkpoint-every-batches",
         type=int,
         default=1,
@@ -227,6 +256,18 @@ def validate_args(
         raise ValueError(
             "Checkpoint-every-batches cannot "
             "be negative."
+        )
+
+    if args.max_rss_gb < 0:
+        raise ValueError(
+            "Max RSS cannot be negative. "
+            "Use 0 to disable the guard."
+        )
+
+    if args.rss_check_every <= 0:
+        raise ValueError(
+            "RSS check interval must be "
+            "positive."
         )
 
 
@@ -410,6 +451,26 @@ def main() -> None:
         f"{args.checkpoint_every_batches}"
     )
 
+    rss_guard = RSSGuard(
+        max_rss_gb=args.max_rss_gb,
+    )
+
+    if rss_guard.enabled:
+        print(
+            f"  max RSS (GB): "
+            f"{args.max_rss_gb}"
+        )
+
+        print(
+            f"  RSS check every N iterations: "
+            f"{args.rss_check_every:,}"
+        )
+
+    else:
+        print(
+            "  max RSS (GB): disabled"
+        )
+
     print()
 
     print(
@@ -425,6 +486,8 @@ def main() -> None:
 
     stopped_early = False
 
+    stop_reason = "low memory"
+
     overall_start = time.perf_counter()
 
     while remaining_iterations > 0:
@@ -437,10 +500,44 @@ def main() -> None:
 
         batch_start = time.perf_counter()
 
-        trainer.train(
-            game_factory,
-            iterations=this_batch_size,
+        # With the guard disabled the whole batch
+        # is one train() call, exactly as before.
+        # Splitting train() into chunks does not
+        # change results: trainer RNG and the game
+        # counter persist across calls.
+        check_every = (
+            args.rss_check_every
+            if rss_guard.enabled
+            else this_batch_size
         )
+
+        batch_iterations_run = 0
+
+        rss_limit_check = None
+
+        rss_check = None
+
+        for chunk_size in iteration_chunks(
+            this_batch_size,
+            check_every,
+        ):
+            trainer.train(
+                game_factory,
+                iterations=chunk_size,
+            )
+
+            batch_iterations_run += (
+                chunk_size
+            )
+
+            rss_check = rss_guard.check()
+
+            if (
+                rss_check is not None
+                and rss_check.exceeded
+            ):
+                rss_limit_check = rss_check
+                break
 
         batch_seconds = (
             time.perf_counter()
@@ -448,7 +545,7 @@ def main() -> None:
         )
 
         remaining_iterations -= (
-            this_batch_size
+            batch_iterations_run
         )
 
         free_memory = (
@@ -473,6 +570,34 @@ def main() -> None:
             f"free_memory="
             f"{free_memory:.2f}GB"
         )
+
+        if rss_check is not None:
+            print(
+                f"  process_rss="
+                f"{rss_check.rss_gb:.2f}GB "
+                f"(limit {rss_check.limit_gb:.2f}GB)"
+            )
+
+        if rss_limit_check is not None:
+            print()
+
+            print(
+                "WARNING: process RSS "
+                f"({rss_limit_check.rss_gb:.2f} GB) "
+                "exceeded the limit "
+                f"({args.max_rss_gb} GB). "
+                "Stopping training and "
+                "saving now."
+            )
+
+            stopped_early = True
+
+            stop_reason = "RSS limit"
+
+            # The final save below writes the
+            # checkpoint; skip the intermediate
+            # save so only one save runs.
+            break
 
         should_checkpoint = (
             args.checkpoint_every_batches
@@ -531,7 +656,7 @@ def main() -> None:
         "Training completed"
         if not stopped_early
         else "Training stopped early "
-        "(low memory)"
+        f"({stop_reason})"
     )
 
     print(
