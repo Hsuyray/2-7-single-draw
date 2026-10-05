@@ -1,0 +1,79 @@
+Memory profile summary
+  completed iterations: 300
+  CFR nodes: 52,287
+  training seconds: 1065.8
+  peak sampled RSS: 0.569 GB
+  tracemalloc: True
+
+CFR nodes by phase:
+  draw: 6,376
+  postdraw_betting: 44,434
+  predraw_betting: 1,477
+
+CFR nodes by action count:
+  1 actions: 2,884
+  2 actions: 15,245
+  3 actions: 11,383
+  4 actions: 11,912
+  5 actions: 4,487
+  32 actions: 6,376
+
+lru_cache sizes:
+  postdraw_strength_bucket._score_frequencies: currsize=0, maxsize=1, hits=0, misses=0
+  postdraw_strength_bucket._score_to_bucket: currsize=1, maxsize=1, hits=94,738, misses=1
+  draw_range_transition._cached_transition_exact_key: currsize=0, maxsize=100000, hits=0, misses=0
+
+tracemalloc top 25 by filename (total traced 0.1836 GB):
+    1.      42.00 MiB    495,660 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\copy.py
+    2.      40.67 MiB    508,552 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py
+    3.      26.41 MiB    418,076 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\public_state.py
+    4.      25.44 MiB    605,723 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bucket_hand_codec.py
+    5.      13.30 MiB    321,122 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\legal_actions.py
+    6.      10.09 MiB    220,357 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\copyreg.py
+    7.       8.88 MiB    104,575 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\node_store.py
+    8.       5.17 MiB    104,199 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\single_draw_game.py
+    9.       4.39 MiB    104,574 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\information_state.py
+   10.       3.18 MiB     44,847 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\draw_hand_bucket.py
+   11.       3.11 MiB    135,670 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\game_state.py
+   12.       1.86 MiB      7,485 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bucket_action_codec.py
+   13.       1.81 MiB     78,983 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bet_sizing.py
+   14.       1.48 MiB     22,375 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\postdraw_strength_bucket.py
+   15.       0.13 MiB          4 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\csv.py
+   16.       0.01 MiB        162 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\draw_range_transition.py
+   17.       0.01 MiB        132 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\dataclasses.py
+   18.       0.01 MiB        170 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\canonical_hand.py
+   19.       0.01 MiB        127 blocks  <string>
+   20.       0.01 MiB        109 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\hand_evaluator.py
+   21.       0.01 MiB         86 blocks  <frozen abc>
+   22.       0.01 MiB         65 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\scripts\profile_memory.py
+   23.       0.00 MiB         75 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\discard_actions.py
+   24.       0.00 MiB         34 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_trainer.py
+   25.       0.00 MiB         31 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\draw.py
+
+tracemalloc top 25 by lineno (total traced 0.1836 GB):
+    1.      38.75 MiB    442,541 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\copy.py:268
+    2.      14.01 MiB    408,064 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bucket_hand_codec.py:98
+    3.      13.72 MiB     52,287 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py:39
+    4.      13.72 MiB     52,287 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py:34
+    5.      12.77 MiB    209,148 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\public_state.py:65
+    6.      11.43 MiB    197,646 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bucket_hand_codec.py:99
+    7.      10.09 MiB    220,352 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\copyreg.py:99
+    8.       6.78 MiB    104,574 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\public_state.py:84
+    9.       6.38 MiB    104,574 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\node_store.py:52
+   10.       5.18 MiB    135,686 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\legal_actions.py:213
+   11.       4.39 MiB    104,574 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\information_state.py:144
+   12.       4.06 MiB     52,070 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\public_state.py:98
+   13.       3.61 MiB     72,848 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\single_draw_game.py:170
+   14.       3.19 MiB     52,287 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py:38
+   15.       3.19 MiB     52,287 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py:33
+   16.       3.19 MiB     52,225 blocks  C:\Users\hsuyr\AppData\Local\Programs\Python\Python312\Lib\copy.py:151
+   17.       3.12 MiB    136,243 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py:145
+   18.       3.12 MiB    136,243 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\cfr_node.py:112
+   19.       2.80 MiB     45,910 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\legal_actions.py:219
+   20.       2.79 MiB     52,284 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\public_state.py:95
+   21.       2.50 MiB          1 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\node_store.py:56
+   22.       1.82 MiB     47,704 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\legal_actions.py:177
+   23.       1.82 MiB     47,704 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\legal_actions.py:183
+   24.       1.81 MiB     78,983 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bet_sizing.py:394
+   25.       1.80 MiB      6,376 blocks  C:\Users\hsuyr\OneDrive\桌面\2-7-single-draw\solver\bucket_action_codec.py:73
+

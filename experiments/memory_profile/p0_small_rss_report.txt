@@ -1,0 +1,25 @@
+Memory profile summary
+  completed iterations: 1,000
+  CFR nodes: 114,110
+  training seconds: 590.8
+  peak sampled RSS: 0.550 GB
+  tracemalloc: False
+
+CFR nodes by phase:
+  draw: 16,069
+  postdraw_betting: 94,702
+  predraw_betting: 3,339
+
+CFR nodes by action count:
+  1 actions: 6,543
+  2 actions: 35,054
+  3 actions: 23,517
+  4 actions: 23,911
+  5 actions: 9,016
+  32 actions: 16,069
+
+lru_cache sizes:
+  postdraw_strength_bucket._score_frequencies: currsize=0, maxsize=1, hits=0, misses=0
+  postdraw_strength_bucket._score_to_bucket: currsize=1, maxsize=1, hits=311,755, misses=1
+  draw_range_transition._cached_transition_exact_key: currsize=0, maxsize=100000, hits=0, misses=0
+
