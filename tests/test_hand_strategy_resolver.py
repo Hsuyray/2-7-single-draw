@@ -8,8 +8,8 @@ from solver.hand_abstraction import (
 from solver.hand_strategy_resolver import (
     HandStrategyResolver,
 )
-from solver.made_hand_bucket import (
-    MadeHandBucket,
+from solver.postdraw_strength_bucket import (
+    PostdrawStrengthBucket,
 )
 from solver.single_draw_game import (
     GamePhase,
@@ -74,7 +74,7 @@ def test_bucket_draw_phase_returns_draw_bucket() -> None:
     )
 
 
-def test_bucket_postdraw_returns_made_hand_bucket() -> None:
+def test_bucket_postdraw_returns_postdraw_strength_bucket() -> None:
     resolver = HandStrategyResolver(
         abstraction="bucket"
     )
@@ -86,7 +86,7 @@ def test_bucket_postdraw_returns_made_hand_bucket() -> None:
 
     assert isinstance(
         result,
-        MadeHandBucket,
+        PostdrawStrengthBucket,
     )
 
 
