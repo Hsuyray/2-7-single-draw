@@ -63,7 +63,7 @@
 | ID | 名稱 | 類型 | 前置條件 | 可平行? |
 |---|---|---|---|---|
 | A0 | Repo 整理與共用規則 | 基礎 | 無 | 最先做，很短 |
-| A1 | 診斷完成,待核准 interning 提案(`docs/A1_REPORT.md` 第 5 節) | day35 | `ws-a1-memory` | Q1–Q4 已回答;下一步需動 `node_store.py` |
+| A1 | interning 已實作,容器內驗證通過;待你在 3.12 跑 `docs/A1_REPORT.md` 9.3 的指紋與 2k 驗收 | day38 | `ws-a1-memory` | 改了 `solver/node_store.py`(`intern=True`);下一步候選:存檔峰值、dict 改陣列 |
 | A2 | 評估工具(收斂 / 可剝削度 / 覆蓋率) | 基礎 | A0 | 和 A1 平行 |
 | B1 | Predraw 策略品質 | 抽象 / phase | A2 | 分析可平行;改 code 要排隊 |
 | B2 | Draw(換牌)策略品質 | 抽象 / phase | A2 | 同上 |

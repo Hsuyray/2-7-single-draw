@@ -154,3 +154,119 @@ python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizi
 - 窮舉公開節點樹時,draw 節點每種張數只取了一個代表棄牌,假設公開 key 只取決於張數。`fast` 的觀察值(133 個 draw 節點、1,999 個 postdraw 節點)與窮舉值一致,支持這個假設。
 - 沒有直接用 tracemalloc 堆疊證明 `copy.py` 的來源(第 2 節是由物件普查與區塊數推出來的)。
 - 存檔的暫時峰值還沒量到(只有存檔後 RSS +0.085 GB,在 114k 節點時)。
+
+---
+
+## 8. Windows / Python 3.12.9 實測(day37,使用者提供)
+
+### 8.1 物件普查(100 次迭代,seed 42,stack 20)
+
+| 下注抽象 | 節點數 | 耗時 | B/節點 | 可共用比例 | 共用後 B/節點 |
+|---|---:|---:|---:|---:|---:|
+| `fast` | 21,487 | 60.2 s | 3,881 | 74% | 1,026 |
+| `full` | 51,514 | 130.3 s | 3,788 | 73% | 1,024 |
+
+- 與 3.11 的 3,997 B/節點(`fast`)很接近,結論不依賴 Python 版本。
+- `full` 在 100 次迭代時節點數是 `fast` 的 2.4 倍,每次迭代慢約 2.2 倍(1.3 s vs 0.6 s)。
+- `full` 的最大幾項(MiB,共 186.1):`PublicAction` 59.9(51.5 萬個引用中 286,839 個物件,只有 **174 種值**)、`action objects` 35.8(283,460 個物件,**125 種值**)、`PublicPlayerState` 17.3(1,450 種值)、兩個 dict 合計 31.0(無法共用)。
+- 三個互相獨立的檢查(`fast`/`full` 的碎片化測試)都再次重現:四捨五入後節點數不變。
+
+### 8.2 `full` 跑 2,000 次(含存檔)
+
+| 指標 | 數值 |
+|---|---|
+| 節點數 | 562,244(draw 53,181、postdraw 495,860、predraw 13,203) |
+| 耗時 | 訓練 2,534 s(約 1.27 s/次,與前 100 次一致) |
+| 存檔後 RSS | 2.447 GB(約 4.7 KB/節點,含存檔殘留) |
+| **進程峰值(含存檔)** | **3.666 GB** |
+| 存檔造成的暫時增量 | 至少 1.22 GB(約 2.3 KB/節點);「至少」是因為存檔前的 RSS 不會比存檔後的高 |
+| lru_cache | 全部很小(`_score_to_bucket` 1 筆,其他 0 筆),**再次排除快取洩漏** |
+
+### 8.3 `full` 的成長與上限
+
+| 迭代 | 節點數 | 占上限 2,031,912 | 來源 |
+|---:|---:|---:|---|
+| 100 | 51,514 | 2.5% | 普查 |
+| 2,000 | 562,244 | 27.7% | 2k 實測 |
+| 8,000 | 1,068,645 | 52.6% | `production_v2_maxdraw5.chk.gz` |
+
+- 以 `-ln(1 - 占比)` 看成長指數:100→2,000 約 0.85,2,000→8,000 約 0.60,**越來越慢**(罕見的 bucket 組合很晚才出現)。所以先前用 `fast` 擬合出的 1.9M 太樂觀。
+- **40k 的節點數 [推測]:約 1.5M–1.75M**(上限的 74%–86%),假設指數繼續降到 0.4–0.6。
+
+### 8.4 記憶體預測 [推算]
+
+用 4.2–4.7 KB/節點(穩態)與「存檔暫時增量至少 2.3 KB/節點」:
+
+| 情境 | 節點數 | 訓練時 RSS | 存檔時峰值 |
+|---|---:|---:|---:|
+| 8k(已成功跑完) | 1.07M | 4.2–4.7 GiB | 至少 6.5–7 GiB |
+| **40k(估計)** | 1.5–1.75M | 6–7.7 GiB | **至少約 10–11 GiB** |
+| 上限 | 2.03M | 8–9 GiB | 至少 12.5–13.5 GiB |
+
+- 在 16 GB 的機器上,加上 Windows、瀏覽器、OneDrive 等,**存檔時的峰值接近或超過實體記憶體**,會大量換頁而卡死。這與「40k 時整台機器卡死」且 `.tmp` 檔(52.9 MB)停在寫到一半相吻合。
+- 8k 版本剛好可以跑完(峰值約 7 GiB)。
+- 因此問題有兩個: (1) 穩態每節點太胖(第 5 節);(2) 存檔時還要再疊上至少 50% 的暫時記憶體。
+
+### 8.5 Interning 的預期效果 [推算]
+
+- 穩態:共用後 1.03 KB/節點(帳面)× RSS/帳面比約 1.1–1.24 ≈ 1.1–1.3 KB/節點。40k(1.5–1.75M 節點)約 **1.6–2.2 GiB**,上限(2.03M)約 2.2–2.5 GiB。
+- 存檔峰值 [推測]:pickle 的 memo 以物件 id 記錄每個物件;共用之後需要記錄的不同物件大幅減少,所以暫時增量也應該跟著降。這一點沒有實測,需要在做完 interning 後用同一個指令(`--iterations 2000 --bet-sizing full`,看 `process peak RSS`)比較。
+- 做完後的驗收標準: (1) 固定 seed 的節點、regret、strategy sum 與改動前完全相同;(2) 2k 次的存檔後 RSS 從 2.447 GB 降到 1.0 GB 以下;(3) 進程峰值從 3.666 GB 降到 2 GB 以下。若 (2) 沒有降幅超過 40%,提案被推翻。
+
+### 8.6 其他觀察
+
+- `full` 每次迭代約 1.27 s,**8k 約 2.8 小時,40k 約 14 小時**,而且是單執行緒。這影響 P1(高迭代正式 checkpoint)的規劃,也是多核心(C2)的動機。
+
+---
+
+## 9. Interning 的實作與驗證(day38)
+
+### 9.1 改了什麼
+
+- **只改 `solver/node_store.py`**:`NodeStore` 新增欄位 `intern: bool = True`。建立**新**節點時,key 內的 `PublicPlayerState`、`PublicAction`、`PublicNodeKey`、手牌 key,以及 `actions` 的元素與 tuple,都換成同值共用的那一份(以 `dataclasses.replace` 重建 key,其餘欄位原樣保留)。已存在的節點、查詢路徑、`remove`、`average_strategies` 不變;`clear()` 同時清空共用表。
+- `intern=False` 會原樣儲存傳入的物件,等同改動前的行為。
+- 沒動 `cfr_trainer.py`、`cfr_node.py`、`public_state.py`、`information_state.py`、key 格式與 checkpoint schema。
+- 新增 `scripts/fingerprint_node_store.py`(固定 seed 的節點表指紋)與 `tests/test_node_store_interning.py`(10 個測試)。
+
+### 9.2 驗證結果(容器,Python 3.11)
+
+1. **改動前後指紋相同。** 改動前(`main` 的程式碼)與改動後各跑一次 `md5_bucket_40`(8,916 個節點)與 `md2_exact_15`(1,979 個節點);指紋(對每個資訊集的 repr、動作、精確的 regret/strategy sum(`float.hex`)、更新次數做 sha256)**完全相同**。
+2. **新測試**:相同 seed 下 `intern=True` 與 `intern=False` 訓練出的節點順序、每個節點的 regret/strategy sum、平均策略完全相等(bucket 與 exact 各一組);訓練後 `intern=True` 的 `PublicAction` 與動作物件「不同物件數 = 不同值數」,`intern=False` 則有大量重複。
+3. **全部測試**:819 個通過(含 checkpoint 存讀測試)。
+4. **效果(60 次迭代,`fast`,13,209 個節點,相同的節點數)**:
+
+| | 改動前 | 改動後 |
+|---|---:|---:|
+| 帳面位元組 | 50.3 MiB | **14.6 MiB** |
+| 每節點 | 3,997 B | **1,161 B**(-71%) |
+| `PublicAction` 物件數 | 67,903 | 50 |
+| `PublicPlayerState` 物件數 | 26,418 | 260 |
+| 動作物件數 | 83,640 | 64 |
+
+   與 8.5 的預測(約 1.03 KB)接近;多出來的是 `players tuple` 沒有完全共用(1,709 個物件對 915 種值,因為共用的是 `PublicNodeKey` 內的 tuple,而相同內容的 tuple 來自不同的 key)。這部分只有約 0.04 MiB,不影響結論。
+5. **速度**:指紋腳本改動前 45.6 s、改動後 46.4 s(同機器,差異在雜訊內)。容器的其他計時受機器負載影響,不能拿來比較;請以第 9.3 的 2,000 次實測為準。
+
+### 9.3 請你在 Windows / Python 3.12 上驗證
+
+```powershell
+git fetch origin
+git checkout ws-a1-memory
+python -m pytest tests -q
+
+# (1) 指紋:改動前後(只暫時換回 main 的 node_store.py)
+python -m scripts.fingerprint_node_store > after.json
+git checkout main -- solver/node_store.py
+python -m scripts.fingerprint_node_store > before.json
+git checkout ws-a1-memory -- solver/node_store.py
+git status --short          # 應該是乾淨的
+fc before.json after.json   # 應該顯示「找不到差異」
+
+# (2) 同一個 2,000 次 full(約 40 分鐘),和第 8.2 節比較
+python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizing full --no-tracemalloc --checkpoint-output experiments\a1_full_2k_interned.chk.gz --csv experiments\memory_profile\a1_full_2k_interned.csv
+```
+
+驗收標準(第 8.5 節):
+- (1) `fc` 沒有差異;
+- (2) 節點數仍是 **562,244**(相同 seed,應完全相同);存檔後 RSS 從 2.447 GB 降到 1.0 GB 以下;`process peak RSS` 從 3.666 GB 降到 2 GB 以下。存檔後 RSS 降幅不到 40% 就算提案被推翻。
+
+(1) 的指紋只能在同一個 Python 版本內比較,所以請在你的 3.12 上兩次都跑,不要和我貼的容器數字比。

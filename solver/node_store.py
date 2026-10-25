@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from solver.cfr_node import CFRNode
 from solver.information_state import InformationState
@@ -7,8 +7,32 @@ from solver.legal_actions import SolverAction
 
 @dataclass
 class NodeStore:
+    """
+    Maps information states to CFR nodes.
+
+    With intern=True (the default), when a new node is created the
+    information state and action tuple that get stored are rebuilt
+    from shared, equal-valued sub-objects. Equal values then occupy
+    memory once instead of once per node. Every key component is an
+    immutable value object and dict lookup uses ==/hash, so lookups,
+    iteration order, regrets and strategies are unchanged. Set
+    intern=False to store the objects exactly as given.
+    """
+
     nodes: dict[InformationState, CFRNode] = field(
         default_factory=dict,
+    )
+
+    intern: bool = field(
+        default=True,
+        compare=False,
+    )
+
+    _pools: dict[str, dict] = field(
+        default_factory=dict,
+        init=False,
+        repr=False,
+        compare=False,
     )
 
     def __len__(self) -> int:
@@ -49,6 +73,15 @@ class NodeStore:
 
             return existing_node
 
+        if self.intern:
+            information_state = self._intern_state(
+                information_state
+            )
+
+            actions = self._intern_actions(
+                actions
+            )
+
         node = CFRNode(
             actions=actions,
         )
@@ -56,6 +89,92 @@ class NodeStore:
         self.nodes[information_state] = node
 
         return node
+
+    def _canonical(
+        self,
+        kind: str,
+        value,
+    ):
+        pool = self._pools.setdefault(
+            kind,
+            {},
+        )
+
+        return pool.setdefault(
+            value,
+            value,
+        )
+
+    def _intern_state(
+        self,
+        information_state: InformationState,
+    ) -> InformationState:
+        public_node = information_state.public_node
+
+        pool = self._pools.setdefault(
+            "public_node",
+            {},
+        )
+
+        canonical_public = pool.get(
+            public_node
+        )
+
+        if canonical_public is None:
+            canonical_public = replace(
+                public_node,
+                players=tuple(
+                    self._canonical(
+                        "player",
+                        player,
+                    )
+                    for player
+                    in public_node.players
+                ),
+                action_history=tuple(
+                    self._canonical(
+                        "public_action",
+                        action,
+                    )
+                    for action
+                    in public_node.action_history
+                ),
+            )
+
+            pool[canonical_public] = canonical_public
+
+        own_hand_key = self._canonical(
+            "hand_key",
+            information_state.own_hand_key,
+        )
+
+        if (
+            canonical_public is public_node
+            and own_hand_key
+            is information_state.own_hand_key
+        ):
+            return information_state
+
+        return replace(
+            information_state,
+            public_node=canonical_public,
+            own_hand_key=own_hand_key,
+        )
+
+    def _intern_actions(
+        self,
+        actions: tuple[SolverAction, ...],
+    ) -> tuple[SolverAction, ...]:
+        return self._canonical(
+            "actions",
+            tuple(
+                self._canonical(
+                    "action",
+                    action,
+                )
+                for action in actions
+            ),
+        )
 
     def remove(
         self,
@@ -70,6 +189,7 @@ class NodeStore:
 
     def clear(self) -> None:
         self.nodes.clear()
+        self._pools.clear()
 
     def average_strategies(
         self,
