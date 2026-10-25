@@ -40,6 +40,8 @@
 - `public_state.py` 26.4 MiB(key)
 - `bucket_hand_codec.py` 25.4 MiB(第 98–99 行)
 
+**更新(A1,day35)**:節點數有確定上限,`fast` 約 34.6 萬、`full` 約 203 萬;8k 的 `full` checkpoint 已有 1,068,645 個資訊集,且其 metadata 顯示用的是 `full` 下注比例。碎片化已排除。詳見 `docs/A1_REPORT.md`。下面這段是 A1 之前的推估,其中「節點數可能到 50 萬以上」「碎片化未排除」已被取代。
+
 **推估 [推測]**:
 - **40k 次的時間**:約 6–7 小時。
 - **40k 次的記憶體**:節點數如果到 50 萬以上，乘 3.9 KB/節點就是 2 GB 以上，和「40k 跑爆 2 GB」吻合。看起來比較像**合理但很大的狀態空間 + 每節點太胖**,不像無上限的 cache 洩漏。但 float key 造成的碎片化(fragmentation)還沒排除，這正是你新增的 `scripts/inspect_node_composition.py` 要回答的。
@@ -61,7 +63,7 @@
 | ID | 名稱 | 類型 | 前置條件 | 可平行? |
 |---|---|---|---|---|
 | A0 | Repo 整理與共用規則 | 基礎 | 無 | 最先做，很短 |
-| A1 | 記憶體與規模(P0) | 基礎 | A0 | 和 A2、D3、E1 平行 |
+| A1 | 診斷完成,待核准 interning 提案(`docs/A1_REPORT.md` 第 5 節) | day35 | `ws-a1-memory` | Q1–Q4 已回答;下一步需動 `node_store.py` |
 | A2 | 評估工具(收斂 / 可剝削度 / 覆蓋率) | 基礎 | A0 | 和 A1 平行 |
 | B1 | Predraw 策略品質 | 抽象 / phase | A2 | 分析可平行;改 code 要排隊 |
 | B2 | Draw(換牌)策略品質 | 抽象 / phase | A2 | 同上 |

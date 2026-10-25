@@ -50,6 +50,9 @@ from solver.memory_guard import (  # noqa: E402
     current_rss_bytes,
     iteration_chunks,
 )
+from solver.memory_guard import (  # noqa: E402
+    peak_rss_bytes as process_peak_rss_bytes,
+)
 from solver.single_draw_game import (  # noqa: E402
     SingleDrawGame,
 )
@@ -74,6 +77,7 @@ CSV_FIELDS = (
     "rss_gb",
     "traced_current_bytes",
     "traced_peak_bytes",
+    "peak_rss_bytes",
     "elapsed_seconds",
 )
 
@@ -320,11 +324,16 @@ def build_sample_row(
     rss_bytes: int,
     traced: tuple[int, int] | None,
     elapsed_seconds: float,
+    peak_rss: int | None = None,
 ) -> dict[str, object]:
     """
     traced is (current, peak) from
     tracemalloc.get_traced_memory(), or None
     when tracemalloc is off.
+
+    peak_rss is the process high-water mark
+    (memory_guard.peak_rss_bytes()), or None
+    where unavailable.
     """
     if traced is None:
         traced_current: object = ""
@@ -346,6 +355,9 @@ def build_sample_row(
             traced_current
         ),
         "traced_peak_bytes": traced_peak,
+        "peak_rss_bytes": (
+            "" if peak_rss is None else peak_rss
+        ),
         "elapsed_seconds": round(
             elapsed_seconds,
             3,
@@ -695,6 +707,7 @@ def main(
                 trainer.node_store
             ),
             rss_bytes=current_rss_bytes(),
+            peak_rss=process_peak_rss_bytes(),
             traced=(
                 tracemalloc.get_traced_memory()
                 if tracemalloc.is_tracing()
@@ -823,6 +836,18 @@ def main(
     report.append(
         "  peak sampled RSS: "
         f"{bytes_to_gb(peak_rss_bytes(rows)):.3f} GB"
+    )
+
+    process_peak = process_peak_rss_bytes()
+
+    report.append(
+        "  process peak RSS (high-water mark, includes "
+        "checkpoint save): "
+        + (
+            "unavailable"
+            if process_peak is None
+            else f"{bytes_to_gb(process_peak):.3f} GB"
+        )
     )
     report.append(
         f"  tracemalloc: {use_tracemalloc}"
