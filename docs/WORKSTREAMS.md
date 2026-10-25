@@ -289,7 +289,7 @@
 
 | ID | 狀態 | 最後更新 | 分支 | 備註 |
 |---|---|---|---|---|
-| A0 | 未開始 | | | |
+| A0 | 已完成,待你執行 `docs/A0_UNTRACK_COMMANDS.md` 的解除追蹤指令 | day33 | `ws-a0-repo-hygiene` | 新增 `.gitignore`、`requirements.txt`、`CLAUDE.md`;尚未執行任何 `git rm --cached` |
 | A1 | 進行中(已有 1k 次 profiling、`inspect_node_composition.py`) | day31 | | 碎片化尚未驗證 |
 | A2 | 未開始 | | | |
 | B1 | 未開始 | | | |

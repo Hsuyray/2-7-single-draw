@@ -1,0 +1,14 @@
+# Virtual environment
+.venv/
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Temporary files (e.g. interrupted checkpoint writes: *.chk.gz.tmp)
+*.tmp
+
+# Scratch checkpoints produced by experiments (profiling / equivalence checks).
+# Production checkpoints live in checkpoints/ and are not ignored.
+experiments/**/*.chk.gz
