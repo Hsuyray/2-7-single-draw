@@ -1,0 +1,4 @@
+event,iteration,cfr_nodes,rss_bytes,rss_gb,traced_current_bytes,traced_peak_bytes,peak_rss_bytes,elapsed_seconds
+start,0,0,23572480,0.022,,,23576576,0.001
+sample,100,51514,221200384,0.206,,,221200384,122.725
+sample,200,94962,387260416,0.3607,,,387260416,244.833

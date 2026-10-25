@@ -91,7 +91,37 @@ def test_sample_row_without_tracemalloc() -> None:
     assert row["rss_gb"] == 1.5
     assert row["traced_current_bytes"] == ""
     assert row["traced_peak_bytes"] == ""
+    assert row["peak_rss_bytes"] == ""
     assert row["elapsed_seconds"] == 1.235
+
+
+def test_sample_row_records_process_peak_rss() -> None:
+    row = build_sample_row(
+        event="after_checkpoint_save",
+        iteration=10,
+        cfr_nodes=1,
+        rss_bytes=100,
+        traced=None,
+        elapsed_seconds=0.0,
+        peak_rss=250,
+    )
+
+    assert row["peak_rss_bytes"] == 250
+
+
+def test_process_peak_rss_is_positive_and_at_least_current() -> None:
+    from solver.memory_guard import (
+        current_rss_bytes,
+        peak_rss_bytes as process_peak,
+    )
+
+    peak = process_peak()
+
+    if peak is None:
+        pytest.skip("peak RSS unavailable on this platform")
+
+    assert peak > 0
+    assert peak >= current_rss_bytes() * 0.5
 
 
 def test_sample_row_with_tracemalloc() -> None:

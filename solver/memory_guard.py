@@ -30,6 +30,42 @@ def current_rss_bytes() -> int:
     )
 
 
+def peak_rss_bytes() -> int | None:
+    """
+    High-water mark of this process's resident memory, in bytes,
+    or None where the platform does not report it.
+
+    Windows: psutil's peak_wset. Linux/macOS: resource.ru_maxrss
+    (kilobytes on Linux, bytes on macOS). Unlike a sampled RSS, the
+    high-water mark includes short peaks, such as the one reached
+    while a checkpoint is being built and written.
+    """
+    import sys
+
+    import psutil
+
+    info = psutil.Process().memory_info()
+
+    peak = getattr(info, "peak_wset", None)
+
+    if peak is not None:
+        return int(peak)
+
+    try:
+        import resource
+    except ImportError:
+        return None
+
+    maxrss = resource.getrusage(
+        resource.RUSAGE_SELF
+    ).ru_maxrss
+
+    if sys.platform == "darwin":
+        return int(maxrss)
+
+    return int(maxrss) * 1024
+
+
 def bytes_to_gb(
     value: int,
 ) -> float:
