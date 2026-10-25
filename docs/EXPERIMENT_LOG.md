@@ -42,4 +42,8 @@ Use the same seed and game config when comparing runs. Record peak RSS from the 
 | Profile (user) | fast, 1,000 iters | 114,110 nodes, 0.465 GB RSS, 590.8 s | `experiments/memory_profile/p0_small_rss.csv` |
 | Profile (user) | fast, 300 iters, tracemalloc | 52,287 nodes, 0.569 GB RSS, 1065.8 s | `experiments/memory_profile/p0_trace300.csv` |
 
-Blank rows for the 3.12 census and the `full` 2k growth curve: see `docs/A1_REPORT.md` section 6.
+| Node census | fast, 100 iters, Python 3.12.9 (user) | 21,487 nodes, 3,881 B/node, 74% shareable, 1,026 B after sharing | `scripts/inspect_memory_model.py` |
+| Node census | full, 100 iters, Python 3.12.9 (user) | 51,514 nodes, 3,788 B/node, 73% shareable, 1,024 B after sharing; 130.3 s | same |
+| Profile (user) | full, stack 20, bucket, seed 42, 2,000 iters | 562,244 nodes (draw 53,181 / postdraw 495,860 / predraw 13,203); training 2,534 s; RSS after save 2.447 GB; **process peak 3.666 GB** | `scripts/profile_memory.py`, `experiments/memory_profile/a1_full_2k.csv` (local) |
+
+Growth of the `full` configuration (cap 2,031,912 info sets): 100 iters 51,514 (2.5%), 2,000 iters 562,244 (27.7%), 8,000 iters 1,068,645 (52.6%, `production_v2_maxdraw5.chk.gz`). See `docs/A1_REPORT.md` section 8 for the memory projections.
