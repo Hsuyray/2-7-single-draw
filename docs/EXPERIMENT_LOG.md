@@ -47,3 +47,6 @@ Use the same seed and game config when comparing runs. Record peak RSS from the 
 | Profile (user) | full, stack 20, bucket, seed 42, 2,000 iters | 562,244 nodes (draw 53,181 / postdraw 495,860 / predraw 13,203); training 2,534 s; RSS after save 2.447 GB; **process peak 3.666 GB** | `scripts/profile_memory.py`, `experiments/memory_profile/a1_full_2k.csv` (local) |
 
 Growth of the `full` configuration (cap 2,031,912 info sets): 100 iters 51,514 (2.5%), 2,000 iters 562,244 (27.7%), 8,000 iters 1,068,645 (52.6%, `production_v2_maxdraw5.chk.gz`). See `docs/A1_REPORT.md` section 8 for the memory projections.
+| Node census after interning | fast, 60 iters, Python 3.11 | 13,209 nodes (unchanged), 1,161 B/node (was 3,997), fingerprints before/after identical | `scripts/inspect_memory_model.py`, `scripts/fingerprint_node_store.py` |
+
+Pending: `full` 2,000 iterations with interning on Python 3.12 (`a1_full_2k_interned`), to compare with 2.447 GB after save / 3.666 GB process peak. See `docs/A1_REPORT.md` section 9.3.

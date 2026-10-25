@@ -216,3 +216,57 @@ python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizi
 ### 8.6 其他觀察
 
 - `full` 每次迭代約 1.27 s,**8k 約 2.8 小時,40k 約 14 小時**,而且是單執行緒。這影響 P1(高迭代正式 checkpoint)的規劃,也是多核心(C2)的動機。
+
+---
+
+## 9. Interning 的實作與驗證(day38)
+
+### 9.1 改了什麼
+
+- **只改 `solver/node_store.py`**:`NodeStore` 新增欄位 `intern: bool = True`。建立**新**節點時,key 內的 `PublicPlayerState`、`PublicAction`、`PublicNodeKey`、手牌 key,以及 `actions` 的元素與 tuple,都換成同值共用的那一份(以 `dataclasses.replace` 重建 key,其餘欄位原樣保留)。已存在的節點、查詢路徑、`remove`、`average_strategies` 不變;`clear()` 同時清空共用表。
+- `intern=False` 會原樣儲存傳入的物件,等同改動前的行為。
+- 沒動 `cfr_trainer.py`、`cfr_node.py`、`public_state.py`、`information_state.py`、key 格式與 checkpoint schema。
+- 新增 `scripts/fingerprint_node_store.py`(固定 seed 的節點表指紋)與 `tests/test_node_store_interning.py`(10 個測試)。
+
+### 9.2 驗證結果(容器,Python 3.11)
+
+1. **改動前後指紋相同。** 改動前(`main` 的程式碼)與改動後各跑一次 `md5_bucket_40`(8,916 個節點)與 `md2_exact_15`(1,979 個節點);指紋(對每個資訊集的 repr、動作、精確的 regret/strategy sum(`float.hex`)、更新次數做 sha256)**完全相同**。
+2. **新測試**:相同 seed 下 `intern=True` 與 `intern=False` 訓練出的節點順序、每個節點的 regret/strategy sum、平均策略完全相等(bucket 與 exact 各一組);訓練後 `intern=True` 的 `PublicAction` 與動作物件「不同物件數 = 不同值數」,`intern=False` 則有大量重複。
+3. **全部測試**:819 個通過(含 checkpoint 存讀測試)。
+4. **效果(60 次迭代,`fast`,13,209 個節點,相同的節點數)**:
+
+| | 改動前 | 改動後 |
+|---|---:|---:|
+| 帳面位元組 | 50.3 MiB | **14.6 MiB** |
+| 每節點 | 3,997 B | **1,161 B**(-71%) |
+| `PublicAction` 物件數 | 67,903 | 50 |
+| `PublicPlayerState` 物件數 | 26,418 | 260 |
+| 動作物件數 | 83,640 | 64 |
+
+   與 8.5 的預測(約 1.03 KB)接近;多出來的是 `players tuple` 沒有完全共用(1,709 個物件對 915 種值,因為共用的是 `PublicNodeKey` 內的 tuple,而相同內容的 tuple 來自不同的 key)。這部分只有約 0.04 MiB,不影響結論。
+5. **速度**:指紋腳本改動前 45.6 s、改動後 46.4 s(同機器,差異在雜訊內)。容器的其他計時受機器負載影響,不能拿來比較;請以第 9.3 的 2,000 次實測為準。
+
+### 9.3 請你在 Windows / Python 3.12 上驗證
+
+```powershell
+git fetch origin
+git checkout ws-a1-memory
+python -m pytest tests -q
+
+# (1) 指紋:改動前後(只暫時換回 main 的 node_store.py)
+python -m scripts.fingerprint_node_store > after.json
+git checkout main -- solver/node_store.py
+python -m scripts.fingerprint_node_store > before.json
+git checkout ws-a1-memory -- solver/node_store.py
+git status --short          # 應該是乾淨的
+fc before.json after.json   # 應該顯示「找不到差異」
+
+# (2) 同一個 2,000 次 full(約 40 分鐘),和第 8.2 節比較
+python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizing full --no-tracemalloc --checkpoint-output experiments\a1_full_2k_interned.chk.gz --csv experiments\memory_profile\a1_full_2k_interned.csv
+```
+
+驗收標準(第 8.5 節):
+- (1) `fc` 沒有差異;
+- (2) 節點數仍是 **562,244**(相同 seed,應完全相同);存檔後 RSS 從 2.447 GB 降到 1.0 GB 以下;`process peak RSS` 從 3.666 GB 降到 2 GB 以下。存檔後 RSS 降幅不到 40% 就算提案被推翻。
+
+(1) 的指紋只能在同一個 Python 版本內比較,所以請在你的 3.12 上兩次都跑,不要和我貼的容器數字比。
