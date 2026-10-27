@@ -306,7 +306,7 @@ python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizi
 - **提案成立**:三個驗收條件都通過,節點數逐點相同。容器內的帳面預測是 1,161 B/節點,實測 1,181 B/節點。
 - **存檔峰值也降了一半**(推測的 pickle memo 機制與結果一致,但沒有直接量 memo)。
 - **計時異常(不是 interning 造成的)**:總時間 13,587 s,改動前 2,534 s。但第 1,000–2,000 次兩者幾乎一樣(1,264 s vs 1,245 s);差距集中在第 500–900 次(多出約 1 萬秒,例如 800→900 用了 5,414 s),像是電腦睡眠或被其他程式占用。前 500 次也慢了 1.9 倍(1,258 s vs 663 s),原因不明。若要確認速度,請在不使用電腦、接上電源的情況下重跑。
-- **還差一項**:9.3 的指紋比較(`Compare-Object`)結果還沒回報。節點數逐點相同是強烈的佐證,但指紋才是精確證明。
+- **指紋比較(day42,Windows / Python 3.12)**:改動前(`main` 的 `node_store.py`)與改動後的 `scripts/fingerprint_node_store.py` 輸出,`Compare-Object` 與 `git diff --no-index` 都沒有任何差異。**interning 在 3.12 上也被證明是行為不變的。**
 
 ### 10.1 interning 之後的記憶體預測 [推算]
 

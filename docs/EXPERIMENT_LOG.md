@@ -51,4 +51,4 @@ Growth of the `full` configuration (cap 2,031,912 info sets): 100 iters 51,514 (
 
 | Profile with interning (user) | full, stack 20, bucket, seed 42, 2,000 iters, Python 3.12 | 562,244 nodes (identical at all 20 samples); RSS before save 0.618 GiB (was 2.097), after save 0.667 GiB (was 2.447), **process peak 1.381 GiB (was 3.666)**; iters 1,000-2,000 took 1,264 s (was 1,245 s). Total time 13,587 s inflated by stalls at iters 500-900 (machine sleep/load, not interning) | `experiments/memory_profile/a1_full_2k_interned.csv` (local) |
 
-Pending: fingerprint comparison on Python 3.12 (`docs/A1_REPORT.md` 9.3).
+Fingerprint comparison on Python 3.12 (user, day42): before/after identical (`Compare-Object` and `git diff --no-index` printed nothing).
