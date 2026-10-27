@@ -258,15 +258,17 @@ python -m scripts.fingerprint_node_store > after.json
 git checkout main -- solver/node_store.py
 python -m scripts.fingerprint_node_store > before.json
 git checkout ws-a1-memory -- solver/node_store.py
-git status --short          # 應該是乾淨的
-fc before.json after.json   # 應該顯示「找不到差異」
+git status --short          # 只應有 after.json、before.json 兩個未追蹤檔,沒有 M 開頭的行
+# 注意:PowerShell 裡的 fc 是 Format-Custom 的別名,不是檔案比較。請用下面任一個:
+Compare-Object (Get-Content before.json) (Get-Content after.json)   # 沒有任何輸出 = 相同
+git diff --no-index --stat before.json after.json                    # 沒有任何輸出 = 相同
 
 # (2) 同一個 2,000 次 full(約 40 分鐘),和第 8.2 節比較
 python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizing full --no-tracemalloc --checkpoint-output experiments\a1_full_2k_interned.chk.gz --csv experiments\memory_profile\a1_full_2k_interned.csv
 ```
 
 驗收標準(第 8.5 節):
-- (1) `fc` 沒有差異;
+- (1) 比較指令沒有任何輸出(兩個 JSON 相同);
 - (2) 節點數仍是 **562,244**(相同 seed,應完全相同);存檔後 RSS 從 2.447 GB 降到 1.0 GB 以下;`process peak RSS` 從 3.666 GB 降到 2 GB 以下。存檔後 RSS 降幅不到 40% 就算提案被推翻。
 
 (1) 的指紋只能在同一個 Python 版本內比較,所以請在你的 3.12 上兩次都跑,不要和我貼的容器數字比。
