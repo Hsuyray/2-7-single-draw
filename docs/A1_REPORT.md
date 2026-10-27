@@ -318,7 +318,7 @@ python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizi
 | 40k(估計) | 1.5–1.75M | 1.65–1.9 GiB | **3.7–4.3 GiB** | 9.7–11.3 GiB |
 | 上限 | 2.03M | 2.2 GiB | 5.0 GiB | 13.2 GiB |
 
-**結論:`full` 的 40k 在 16 GB 的機器上已經跑得動。** 要注意兩件事:
+**結論:`full` 的 40k 在 16 GB 的機器上已經跑得動。** 要注意三件事:
 
 1. `save_training_checkpoint.py` 預設每 500 次存一次(`--checkpoint-every-batches 1`),40k 會存 80 次,每次都會碰到存檔峰值、也要花時間。長時間訓練建議 `--checkpoint-every-batches 10` 左右。
 2. RSS guard(預設 3 GB)只在訓練中檢查,存檔時不檢查。40k 存檔峰值約 4 GiB,所以 guard 本身不會擋住存檔;若要更保險,可以把 `--max-rss-gb` 設成 6。
