@@ -63,7 +63,7 @@
 | ID | 名稱 | 類型 | 前置條件 | 可平行? |
 |---|---|---|---|---|
 | A0 | Repo 整理與共用規則 | 基礎 | 無 | 最先做，很短 |
-| A1 | interning 已實作,容器內驗證通過;待你在 3.12 跑 `docs/A1_REPORT.md` 9.3 的指紋與 2k 驗收 | day38 | `ws-a1-memory` | 改了 `solver/node_store.py`(`intern=True`);下一步候選:存檔峰值、dict 改陣列 |
+| A1 | interning 實測通過(存檔前 RSS -70%,存檔峰值 -62%,節點數相同);只差 3.12 指紋比較 | day41 | `ws-a1-memory` | `full` 40k 預估峰值約 4 GiB,記憶體不再是瓶頸;下一步:合併 → A2 或 P1 長時間訓練 |
 | A2 | 評估工具(收斂 / 可剝削度 / 覆蓋率) | 基礎 | A0 | 和 A1 平行 |
 | B1 | Predraw 策略品質 | 抽象 / phase | A2 | 分析可平行;改 code 要排隊 |
 | B2 | Draw(換牌)策略品質 | 抽象 / phase | A2 | 同上 |
