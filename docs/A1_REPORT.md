@@ -217,6 +217,19 @@ python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizi
 
 - `full` 每次迭代約 1.27 s,**8k 約 2.8 小時,40k 約 14 小時**,而且是單執行緒。這影響 P1(高迭代正式 checkpoint)的規劃,也是多核心(C2)的動機。
 
+### 8.7 修正:存檔暫時增量的精確值(來自 `a1_full_2k.csv`)
+
+CSV 有存檔前的 RSS,所以不必再用「至少」:
+
+| 時間點 | RSS | 每節點 |
+|---|---:|---:|
+| 第 2,000 次、存檔前 | 2.097 GiB | 3.9 KB |
+| 存檔期間的進程峰值 | 3.666 GiB | 6.7 KB |
+| 存檔後 | 2.447 GiB | 4.7 KB |
+
+- **存檔暫時增量 = 3.666 - 2.097 = 1.57 GiB(約 3.0 KB/節點),是穩態的 75%。**(day41 更正:原寫 2.8 KB,是單位換算錯誤) 存檔後還有 0.35 GiB 沒有還給系統。
+- 先前 8.4 節用「至少 2.3 KB/節點」估的峰值偏低。以 4.0 KB 穩態 + 3.0 KB 暫時增量重算:40k(1.5–1.75M 節點)的峰值約 **9.7–11.3 GiB**,上限(2.03M)約 **13.2 GiB**。結論不變,只是更接近 16 GB 的極限。
+
 ---
 
 ## 9. Interning 的實作與驗證(day38)
@@ -258,15 +271,55 @@ python -m scripts.fingerprint_node_store > after.json
 git checkout main -- solver/node_store.py
 python -m scripts.fingerprint_node_store > before.json
 git checkout ws-a1-memory -- solver/node_store.py
-git status --short          # 應該是乾淨的
-fc before.json after.json   # 應該顯示「找不到差異」
+git status --short          # 只應有 after.json、before.json 兩個未追蹤檔,沒有 M 開頭的行
+# 注意:PowerShell 裡的 fc 是 Format-Custom 的別名,不是檔案比較。請用下面任一個:
+Compare-Object (Get-Content before.json) (Get-Content after.json)   # 沒有任何輸出 = 相同
+git diff --no-index --stat before.json after.json                    # 沒有任何輸出 = 相同
 
 # (2) 同一個 2,000 次 full(約 40 分鐘),和第 8.2 節比較
 python -m scripts.profile_memory --iterations 2000 --sample-every 100 --bet-sizing full --no-tracemalloc --checkpoint-output experiments\a1_full_2k_interned.chk.gz --csv experiments\memory_profile\a1_full_2k_interned.csv
 ```
 
 驗收標準(第 8.5 節):
-- (1) `fc` 沒有差異;
+- (1) 比較指令沒有任何輸出(兩個 JSON 相同);
 - (2) 節點數仍是 **562,244**(相同 seed,應完全相同);存檔後 RSS 從 2.447 GB 降到 1.0 GB 以下;`process peak RSS` 從 3.666 GB 降到 2 GB 以下。存檔後 RSS 降幅不到 40% 就算提案被推翻。
 
 (1) 的指紋只能在同一個 Python 版本內比較,所以請在你的 3.12 上兩次都跑,不要和我貼的容器數字比。
+
+---
+
+## 10. Interning 實測結果(day41,Windows / Python 3.12,使用者提供)
+
+同一個指令:`full`、stack 20、bucket、seed 42、2,000 次、存檔。改動前的數字來自 `experiments/memory_profile/a1_full_2k.csv`。
+
+| 指標 | 改動前 | interning 後 | 變化 | 驗收標準 |
+|---|---:|---:|---:|---|
+| 節點數 | 562,244 | **562,244** | 相同 | 必須相同:**通過** |
+| 各 phase 節點數 | 53,181 / 495,860 / 13,203 | 53,181 / 495,860 / 13,203 | 相同 | |
+| 每 100 次的節點數(全部 20 個取樣點) | | 與改動前逐點相同 | 相同 | |
+| 存檔前 RSS | 2.097 GiB(4,005 B/節點) | **0.618 GiB(1,181 B/節點)** | **-70.5%** | |
+| 存檔後 RSS | 2.447 GiB | **0.667 GiB** | **-72.7%** | < 1.0 GB:**通過** |
+| 存檔期間進程峰值 | 3.666 GiB | **1.381 GiB** | **-62.3%** | < 2 GB:**通過** |
+| 存檔暫時增量 | 1.57 GiB(3.0 KB/節點) | 0.76 GiB(1.5 KB/節點) | -51% | |
+| 訓練速度(第 1,000 到 2,000 次) | 1,245 s | 1,264 s | +1.5% | 雜訊範圍 |
+
+- **提案成立**:三個驗收條件都通過,節點數逐點相同。容器內的帳面預測是 1,161 B/節點,實測 1,181 B/節點。
+- **存檔峰值也降了一半**(推測的 pickle memo 機制與結果一致,但沒有直接量 memo)。
+- **計時異常(不是 interning 造成的)**:總時間 13,587 s,改動前 2,534 s。但第 1,000–2,000 次兩者幾乎一樣(1,264 s vs 1,245 s);差距集中在第 500–900 次(多出約 1 萬秒,例如 800→900 用了 5,414 s),像是電腦睡眠或被其他程式占用。前 500 次也慢了 1.9 倍(1,258 s vs 663 s),原因不明。若要確認速度,請在不使用電腦、接上電源的情況下重跑。
+- **指紋比較(day42,Windows / Python 3.12)**:改動前(`main` 的 `node_store.py`)與改動後的 `scripts/fingerprint_node_store.py` 輸出,`Compare-Object` 與 `git diff --no-index` 都沒有任何差異。**interning 在 3.12 上也被證明是行為不變的。**
+
+### 10.1 interning 之後的記憶體預測 [推算]
+
+用 1,181 B/節點(穩態)+ 1,456 B/節點(存檔暫時增量):
+
+| 情境 | 節點數 | 訓練時 RSS | 存檔時峰值 | 改動前的峰值 |
+|---|---:|---:|---:|---:|
+| 8k | 1.07M | 1.2 GiB | 2.6 GiB | 約 7 GiB |
+| 40k(估計) | 1.5–1.75M | 1.65–1.9 GiB | **3.7–4.3 GiB** | 9.7–11.3 GiB |
+| 上限 | 2.03M | 2.2 GiB | 5.0 GiB | 13.2 GiB |
+
+**結論:`full` 的 40k 在 16 GB 的機器上已經跑得動。** 要注意三件事:
+
+1. `save_training_checkpoint.py` 預設每 500 次存一次(`--checkpoint-every-batches 1`),40k 會存 80 次,每次都會碰到存檔峰值、也要花時間。長時間訓練建議 `--checkpoint-every-batches 10` 左右。
+2. RSS guard(預設 3 GB)只在訓練中檢查,存檔時不檢查。40k 存檔峰值約 4 GiB,所以 guard 本身不會擋住存檔;若要更保險,可以把 `--max-rss-gb` 設成 6。
+3. `full` 每次約 1.25 s,40k 約 14 小時(單執行緒)。
