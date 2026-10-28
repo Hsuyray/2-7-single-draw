@@ -55,7 +55,7 @@ Fingerprint comparison on Python 3.12 (user, day42): before/after identical (`Co
 
 ## A2 baseline evaluation reports (day46)
 
-`python -m scripts.evaluate_checkpoint <checkpoint>` (preset `standard`, seed 2027, button 0, deck seeds >= 1e9 so never training deals). Run in the cloud container (Python 3.13, 4 cores); times on the laptop will differ. Full reports: `experiments/eval/*.json` / `.txt`. v1 was evaluated twice and `--compare` reported the two JSON reports identical outside `timing` / `environment`; the v2 second run is pending (REPRO-PENDING).
+`python -m scripts.evaluate_checkpoint <checkpoint>` (preset `standard`, seed 2027, button 0, deck seeds >= 1e9 so never training deals). Run in the cloud container (Python 3.13, 4 cores); times on the laptop will differ. Full reports: `experiments/eval/*.json` / `.txt`. Each checkpoint was evaluated twice; `--compare` reported the two JSON reports identical outside `timing` / `environment`.
 
 | Metric | v1 `production_v1` | v2 `production_v2_maxdraw5` |
 |---|---|---|

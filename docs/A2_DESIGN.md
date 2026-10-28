@@ -220,7 +220,7 @@ SBR 在 v2(約 100 萬 info set **[待測]**)上的速度還沒量過。實作�
 - `--compare` 忽略 `timing` 和 `environment`(python 版本、git commit)。
 
 ### 9.3 驗證結果(對應第 7 節)
-1. 重現性:測試用不同 `PYTHONHASHSEED` 在兩個 process 跑，`--compare` 0 差異;v1 standard 跑兩次 0 差異;v2 第二次執行中(REPRO-PENDING)。
+1. 重現性:測試用不同 `PYTHONHASHSEED` 在兩個 process 跑，`--compare` 0 差異;v1、v2 standard 各跑兩次也 0 差異。
 2. 區段獨立：測試通過(coverage 前後夾一次 SBR,結果相同)。
 3. 對帳：新模組覆蓋率 = `StrategyProfileEvaluator.evaluate`(同 seed,完全相等)。
 4. observer 不改行為:`evaluate_strategy_profile`(200 iters、max_draw 5、fast)和 `inspect_sampled_best_response` 固定 seed 輸出改動前後逐字相同。
