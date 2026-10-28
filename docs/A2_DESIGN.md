@@ -202,3 +202,53 @@ SBR 在 v2(約 100 萬 info set **[待測]**)上的速度還沒量過。實作�
 3. SBR 區段，先量成本(6.2),定 preset。
 4. baseline + H2H + 測試 6、7。
 5. v1 / v2 基準報告、EXPERIMENT_LOG、WORKSTREAMS 狀態表，提出門檻草案。
+
+---
+
+## 9. 實作紀錄(day44–46)
+
+### 9.1 檔案
+- **new** `solver/checkpoint_evaluation.py`、`scripts/evaluate_checkpoint.py`、`tests/test_checkpoint_evaluation.py`(13 個測試)。
+- **overwrite** `solver/strategy_profile_evaluator.py`:可選 observer、per-deal 平方和、`HeadToHeadEvaluator`、`UniformPolicy` / `CallStationPolicy` / `StrategyIndexPolicy`。
+- **overwrite** `solver/best_response.py`:`SampledBestResponseResult` 加 validation 平方和與 SE property,演算法和 RNG 呼叫順序不變。
+- **overwrite** `scripts/inspect_checkpoint_coverage.py`(day45,獨立 commit):CLI 與輸出格式不變。
+
+### 9.2 和設計的差異
+- 新增「**played 時近均勻比例**」(每 phase):靜態統計發現 70–93% 的已存策略是均勻的，只看靜態數字無法知道這些狀態是否真的會走到，所以在自我對打中量「命中的決策裡有多少是均勻策略」。這是目前最有資訊量的指標之一。
+- `--sections` 名稱:`static, coverage, button1, sbr, baselines, previous`(`previous` = 距離 + H2H)。
+- 讀 checkpoint 內部 `StrategyIndex._strategies`(唯讀)做靜態統計，避免 `strategies()` 的深拷貝讓 v2 記憶體加倍。
+- `--compare` 忽略 `timing` 和 `environment`(python 版本、git commit)。
+
+### 9.3 驗證結果(對應第 7 節)
+1. 重現性:測試用不同 `PYTHONHASHSEED` 在兩個 process 跑，`--compare` 0 差異;v1 standard 跑兩次 0 差異;v2 第二次執行中(REPRO-PENDING)。
+2. 區段獨立：測試通過(coverage 前後夾一次 SBR,結果相同)。
+3. 對帳：新模組覆蓋率 = `StrategyProfileEvaluator.evaluate`(同 seed,完全相等)。
+4. observer 不改行為:`evaluate_strategy_profile`(200 iters、max_draw 5、fast)和 `inspect_sampled_best_response` 固定 seed 輸出改動前後逐字相同。
+5. 動作空間一致性:v1、v2 mismatch 都是 0。
+6. H2H:同一份對自己在 4 SE 內;兩個相同的確定性 policy 對調座位結果剛好為 0(驗證 seat 對調)。
+7. 拒絕：單元測試驗證 `max_draw` 不同會列出。v1 對 v2 的實跑沒做：兩份同時載入需約 10 GB,和 v2 評估同時跑會超過本 container 記憶體。
+8. 完成條件:v1、v2 standard 報告在 `experiments/eval/`。
+
+成本(本 container):v1 standard 14 分鐘、峰值 2.0 GB;v2 standard 49 分鐘(SBR 占 42 分鐘)、**峰值 8.2 GB**(來自載入,`strategy_checkpoint.py`,不屬 A2)。超過原本 30 分鐘的目標;為了讓所有 checkpoint 用同一把尺，先不為 v2 縮小 preset。
+
+---
+
+## 10. 門檻草案(待你核准)
+
+**硬性(正確性，任何一項不過，其他數字都不可信):**
+- invalid strategies = 0、action-space mismatches = 0、max zero-sum error ≤ 1e-9
+- 同一 checkpoint 兩次報告 `--compare` 0 差異
+
+**品質(提案):**
+
+| # | 指標 | 門檻 | v1 | v2 |
+|---|---|---|---|---|
+| Q1 | 覆蓋率(button 0) | 整體 ≥ 97%,每 phase ≥ 95% | 不過(draw 94.79%) | 不過 |
+| Q2 | 有任何缺失的 deal 比例 | ≤ 10% | 過(9.27%) | 不過(22.41%) |
+| Q3 | played 時近均勻比例 | 每 phase ≤ 10% | 不過(draw 23%) | 不過(draw 46%) |
+| Q4 | 對 uniform、call_station | 兩者都 > 3 SE | 過 | 不過(call_station +0.06 ± 0.11) |
+| Q5 | 對前一版同設定 checkpoint 的 H2H | ≥ -2 SE(不退步) | n/a | n/a |
+
+**SBR 暫不設門檻**:在 standard 的預算下,SBR 找不到比 profile 更好的 response(v2 平均 -0.30,v1 seat 0 五次都是負的)。這把尺目前量不出可剝削度，用它設門檻沒有意義。下一步先做單變數實驗(v1,response deals 100 / 300 / 1,000),看 gain 是否轉正、變異是否收斂，再決定。
+
+目前 v1、v2 都沒通過。這是預期中的：這套門檻是給 C1 正式解用的。

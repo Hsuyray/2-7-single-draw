@@ -293,7 +293,7 @@
 |---|---|---|---|---|
 | A0 | 已完成,待你執行 `docs/A0_UNTRACK_COMMANDS.md` 的解除追蹤指令 | day33 | `ws-a0-repo-hygiene` | 新增 `.gitignore`、`requirements.txt`、`CLAUDE.md`;尚未執行任何 `git rm --cached` |
 | A1 | 進行中(已有 1k 次 profiling、`inspect_node_composition.py`) | day31 | | 碎片化尚未驗證 |
-| A2 | 未開始 | | | |
+| A2 | **完成**(待核准門檻):`scripts/evaluate_checkpoint.py`,v1 / v2 基準報告在 `experiments/eval/` | day46 | `claude/lucid-ritchie-myhksz` | v2 不贏 call_station;SBR 在 standard 預算下量不出可剝削度;v2 評估峰值 8.2 GB。見 `docs/A2_DESIGN.md` 第 9、10 節 |
 | B1 | 未開始 | | | |
 | B2 | 未開始 | | | |
 | B3 | 未開始 | | | |
