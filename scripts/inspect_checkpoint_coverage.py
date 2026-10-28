@@ -1,7 +1,6 @@
 import argparse
 from pathlib import Path
 import sys
-import random
 
 PROJECT_ROOT = Path(
     __file__
@@ -14,25 +13,26 @@ if str(PROJECT_ROOT) not in sys.path:
     )
 
 
-from solver.bet_sizing import (  # noqa: E402
-    FAST_BET_SIZING,
-    FULL_BET_SIZING,
-)
-from solver.game_state import (  # noqa: E402
-    GameConfig,
-)
-from solver.information_state import (  # noqa: E402
-    InformationState,
-)
-from solver.legal_actions import (  # noqa: E402
-    legal_actions,
-)
-from solver.single_draw_game import (  # noqa: E402
-    GamePhase,
-    SingleDrawGame,
+from solver.checkpoint_evaluation import (  # noqa: E402
+    AssumedGameConfig,
+    CoverageObserver,
+    make_deal_factory,
+    make_profile_evaluator,
+    setup_from_metadata,
 )
 from solver.strategy_checkpoint import (  # noqa: E402
     load_strategy_checkpoint,
+)
+
+
+# Game config this script used to assume when old
+# checkpoints lack it. Now only applied to missing
+# fields, and reported when used.
+LEGACY_GAME_CONFIG = AssumedGameConfig(
+    starting_stack=20.0,
+    small_blind=1.0,
+    big_blind=2.0,
+    big_blind_ante=1.5,
 )
 
 
@@ -41,7 +41,9 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Evaluate strategy coverage of "
             "an existing checkpoint on fresh "
-            "deals, without retraining."
+            "deals, without retraining. "
+            "For the full report use "
+            "scripts.evaluate_checkpoint."
         )
     )
 
@@ -66,24 +68,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_bet_sizing_policy(
-    metadata,
-):
-    if metadata.bet_sizing_mode == "none":
-        return None
-
-    if metadata.bet_sizing_mode == "fixed":
-        return None
-
-    if metadata.bet_pot_fractions == (
-        FAST_BET_SIZING.pot_fractions
-    ):
-        return FAST_BET_SIZING
-
-    return FULL_BET_SIZING
-
-
 def main() -> None:
+    """
+    Fixed (day45) to measure what training produced:
+
+    - button_seat is always 0, as in training. It used to
+      alternate 0/1; PublicNodeKey stores the absolute
+      button seat and training never sees button 1, so
+      every odd deal missed from its first decision
+      (production_v1: 51% reported vs 97% actual).
+    - actions go through the trainer's solver-action path
+      (bucket draw actions), via StrategyProfileEvaluator.
+    - actions are sampled from the strategy instead of
+      taking the argmax, so visited states follow the
+      profile's own reach.
+    - bet sizing is rebuilt from all stored policy fields.
+    """
     args = parse_args()
 
     print(
@@ -125,184 +125,56 @@ def main() -> None:
         f"{checkpoint.strategy_count:,}"
     )
 
-    print()
-
-    game_config = GameConfig(
-        player_count=(
-            metadata.player_count
-            or 2
-        ),
-        starting_stack=(
-            metadata.starting_stack
-            or 20.0
-        ),
-        small_blind=(
-            metadata.small_blind
-            or 1.0
-        ),
-        big_blind=(
-            metadata.big_blind
-            or 2.0
-        ),
-        big_blind_ante=(
-            metadata.big_blind_ante
-            or 1.5
-        ),
+    setup = setup_from_metadata(
+        metadata,
+        assumed=LEGACY_GAME_CONFIG,
     )
 
-    bet_sizing_policy = (
-        resolve_bet_sizing_policy(
-            metadata
+    if setup.assumed_fields:
+        print(
+            "  WARNING: metadata lacks "
+            + ", ".join(
+                setup.assumed_fields
+            )
+            + "; assumed 20 / 1 / 2 / 1.5"
         )
+
+    print(
+        "  button seat: 0 (training "
+        "distribution)"
     )
 
-    raise_sizes = metadata.raise_sizes
-
-    strategy_index = (
-        checkpoint.strategy_index
-    )
-
-    matched = 0
-    missing = 0
-
-    phase_matched: dict[str, int] = {}
-    phase_missing: dict[str, int] = {}
-
-    fallback_rng = random.Random(
-        args.evaluation_seed
-        + 999_999_937
-    )
+    print()
 
     print(
         "Evaluating fresh deals "
         "against saved strategy..."
     )
 
-    for deal_index in range(
-        args.evaluation_deals
-    ):
-        deck_seed = (
+    observer = CoverageObserver()
+
+    result = make_profile_evaluator(
+        checkpoint.strategy_index,
+        setup,
+        random_seed=(
             args.evaluation_seed
-            + deal_index
-        )
-
-        game = SingleDrawGame(
-            config=game_config,
-            button_seat=(
-                deal_index % 2
+            + 999_999_937
+        ),
+    ).evaluate(
+        make_deal_factory(
+            setup.game_config,
+            first_deck_seed=(
+                args.evaluation_seed
             ),
-            deck_seed=deck_seed,
-        )
+        ),
+        deals=args.evaluation_deals,
+        observer=observer,
+    )
 
-        while (
-            game.phase
-            != GamePhase.COMPLETE
-        ):
-            acting_seat = (
-                game.acting_seat
-            )
-
-            if acting_seat is None:
-                break
-
-            actions = legal_actions(
-                game,
-                max_draw=metadata.max_draw,
-                raise_sizes=raise_sizes,
-                bet_sizing_policy=(
-                    bet_sizing_policy
-                ),
-                draw_action_mode=(
-                    metadata
-                    .draw_action_mode
-                ),
-            )
-
-            if not actions:
-                break
-
-            information_state = (
-                InformationState
-                .from_game(
-                    game,
-                    observer_seat=(
-                        acting_seat
-                    ),
-                    abstraction=(
-                        metadata
-                        .abstraction
-                    ),
-                )
-            )
-
-            strategy = (
-                strategy_index
-                .strategy_for_hand(
-                    public_node=(
-                        information_state
-                        .public_node
-                    ),
-                    observer_seat=(
-                        acting_seat
-                    ),
-                    hand_key=(
-                        information_state
-                        .own_hand_key
-                    ),
-                )
-            )
-
-            phase = (
-                information_state.phase
-            )
-
-            if strategy is None:
-                missing += 1
-
-                phase_missing[phase] = (
-                    phase_missing.get(
-                        phase,
-                        0,
-                    )
-                    + 1
-                )
-
-                chosen_action = (
-                    fallback_rng.choice(
-                        actions
-                    )
-                )
-
-            else:
-                matched += 1
-
-                phase_matched[phase] = (
-                    phase_matched.get(
-                        phase,
-                        0,
-                    )
-                    + 1
-                )
-
-                chosen_action = max(
-                    actions,
-                    key=lambda action: (
-                        strategy.get(
-                            action,
-                            0.0,
-                        )
-                    ),
-                )
-
-            from solver.action_executor import (
-                apply_solver_action,
-            )
-
-            game = apply_solver_action(
-                game,
-                chosen_action,
-            )
-
+    matched = result.strategy_decisions
+    missing = (
+        result.missing_strategy_decisions
+    )
     total = matched + missing
 
     print()
@@ -339,31 +211,25 @@ def main() -> None:
     )
 
     all_phases = set(
-        phase_matched
+        observer.matched
     ) | set(
-        phase_missing
+        observer.missing
     )
 
     for phase in sorted(
         all_phases
     ):
+        phase_matched = observer.matched[
+            phase
+        ]
+
         phase_total = (
-            phase_matched.get(
-                phase,
-                0,
-            )
-            + phase_missing.get(
-                phase,
-                0,
-            )
+            phase_matched
+            + observer.missing[phase]
         )
 
         phase_coverage = (
-            phase_matched.get(
-                phase,
-                0,
-            )
-            / phase_total
+            phase_matched / phase_total
             if phase_total > 0
             else 0.0
         )
@@ -371,7 +237,7 @@ def main() -> None:
         print(
             f"  {phase}: "
             f"{phase_coverage:.2%} "
-            f"({phase_matched.get(phase, 0):,}"
+            f"({phase_matched:,}"
             f"/{phase_total:,})"
         )
 
