@@ -1,6 +1,6 @@
 # A2 設計：單一評估入口 `scripts/evaluate_checkpoint.py`
 
-狀態：**設計稿，尚未實作**。依據 `main` @ `27b62a7`。
+狀態：**已實作**(day44–46)。第 6 節三個待決事項都依建議採用(使用者核准)。實作與設計的差異、量測結果和門檻草案見第 9、10 節。設計本文依據 `main` @ `27b62a7`。
 
 標記：**[確認]** = 已用程式或實測驗證;**[推測]** = 推論。
 
@@ -156,6 +156,8 @@ python -m scripts.evaluate_checkpoint CHECKPOINT
 ---
 
 ## 6. 待你決定的事項
+
+> **決定(day44)**:三項都依建議。6.1 採 (A);6.2 先量再定(結果見 9.3);6.3 修(day45 commit)。
 
 ### 6.1 current-vs-average 要怎麼處理
 checkpoint 只存 average strategy,沒有 regret,所以**從 checkpoint 算不出 current-vs-average**。選項:
