@@ -24,6 +24,7 @@ from solver.strategy_index import (
 )
 from solver.strategy_profile_evaluator import (
     StrategyProfileEvaluator,
+    standard_error,
 )
 from solver.terminal_utility import (
     terminal_utility,
@@ -59,11 +60,42 @@ class SampledBestResponseResult:
     opponent_strategy_hits: int
     opponent_strategy_misses: int
 
+    # Per validation deal sums of squares, for
+    # standard errors. The improvement is paired:
+    # response and baseline play the same deck.
+    baseline_sum_squares: float = 0.0
+    response_sum_squares: float = 0.0
+    improvement_sum_squares: float = 0.0
+
     @property
     def improvement(self) -> float:
         return (
             self.response_value
             - self.baseline_value
+        )
+
+    @property
+    def baseline_standard_error(
+        self,
+    ) -> float:
+        return standard_error(
+            mean=self.baseline_value,
+            sum_squares=(
+                self.baseline_sum_squares
+            ),
+            count=self.validation_deals,
+        )
+
+    @property
+    def improvement_standard_error(
+        self,
+    ) -> float:
+        return standard_error(
+            mean=self.improvement,
+            sum_squares=(
+                self.improvement_sum_squares
+            ),
+            count=self.validation_deals,
         )
 
     @property
@@ -393,6 +425,10 @@ class SampledBestResponse:
         baseline_total = 0.0
         response_total = 0.0
 
+        baseline_sum_squares = 0.0
+        response_sum_squares = 0.0
+        improvement_sum_squares = 0.0
+
         for _ in range(
             validation_deals
         ):
@@ -404,17 +440,38 @@ class SampledBestResponse:
                 base_game
             )
 
-            baseline_total += (
+            baseline_deal = (
                 self._sample_profile_rollout(
                     base_game
                 )
             )
 
-            response_total += (
+            response_deal = (
                 self._sample_response_rollout(
                     game=response_game,
                     policy=policy,
                 )
+            )
+
+            baseline_total += baseline_deal
+            response_total += response_deal
+
+            baseline_sum_squares += (
+                baseline_deal
+                * baseline_deal
+            )
+
+            response_sum_squares += (
+                response_deal
+                * response_deal
+            )
+
+            improvement_sum_squares += (
+                (
+                    response_deal
+                    - baseline_deal
+                )
+                ** 2
             )
 
         baseline_value = (
@@ -472,6 +529,15 @@ class SampledBestResponse:
             ),
             opponent_strategy_misses=(
                 self._opponent_misses
+            ),
+            baseline_sum_squares=(
+                baseline_sum_squares
+            ),
+            response_sum_squares=(
+                response_sum_squares
+            ),
+            improvement_sum_squares=(
+                improvement_sum_squares
             ),
         )
 
