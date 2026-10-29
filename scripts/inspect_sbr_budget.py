@@ -59,6 +59,9 @@ from solver.checkpoint_evaluation import (
 from solver.information_state import (
     InformationState,
 )
+from solver.response_grouping import (
+    coarse_grouping,
+)
 from solver.single_draw_game import (
     GamePhase,
 )
@@ -314,6 +317,17 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--grouping",
+        choices=("none", "coarse"),
+        default="none",
+        help=(
+            "coarse = grouped SBR "
+            "(solver/response_grouping); its "
+            "fallback already samples the profile."
+        ),
+    )
+
+    parser.add_argument(
         "--check-report",
         help=(
             "evaluate_checkpoint standard report "
@@ -368,8 +382,10 @@ def run_one(
     response_deals: int,
     validation_deals: int,
     sweeps: int,
+    grouping=None,
 ) -> dict:
     optimizer = FallbackProbeSBR(
+        response_grouping=grouping,
         probe_seed=derive_seed(
             seed,
             "sbr-probe",
@@ -634,6 +650,11 @@ def main() -> None:
                         args.validation_deals
                     ),
                     sweeps=args.sweeps,
+                    grouping=(
+                        coarse_grouping
+                        if args.grouping == "coarse"
+                        else None
+                    ),
                 )
 
                 runs.append(run)
@@ -767,8 +788,15 @@ def main() -> None:
         if name.endswith(suffix):
             name = name[: -len(suffix)]
 
+    grouping_suffix = (
+        ""
+        if args.grouping == "none"
+        else f"__{args.grouping}"
+    )
+
     out_path = out_dir / (
-        f"sbr_budget__{name}__s{args.seed}.json"
+        f"sbr_budget__{name}{grouping_suffix}"
+        f"__s{args.seed}.json"
     )
 
     out_path.write_text(
@@ -778,6 +806,7 @@ def main() -> None:
                     args.checkpoint
                 ).name,
                 "parameters": {
+                    "grouping": args.grouping,
                     "budgets": budgets,
                     "repeats": args.repeats,
                     "seats": seats,
