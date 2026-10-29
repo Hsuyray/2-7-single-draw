@@ -233,7 +233,9 @@ SBR 在 v2(約 100 萬 info set **[待測]**)上的速度還沒量過。實作�
 
 ---
 
-## 10. 門檻草案(待你核准)
+## 10. 門檻(day48 核准;Q4 day49 修正)
+
+實作在 `solver/benchmark_gates.py`(`GATES_VERSION = 1`),每份新報告都有 `gates` 區段;舊報告用 `python -m scripts.evaluate_checkpoint --gates REPORT.json` 重算。只有 `standard` preset 且沒有覆寫參數的報告算正式 benchmark。
 
 **硬性(正確性，任何一項不過，其他數字都不可信):**
 - invalid strategies = 0、action-space mismatches = 0、max zero-sum error ≤ 1e-9
@@ -246,9 +248,37 @@ SBR 在 v2(約 100 萬 info set **[待測]**)上的速度還沒量過。實作�
 | Q1 | 覆蓋率(button 0) | 整體 ≥ 97%,每 phase ≥ 95% | 不過(draw 94.79%) | 不過 |
 | Q2 | 有任何缺失的 deal 比例 | ≤ 10% | 過(9.27%) | 不過(22.41%) |
 | Q3 | played 時近均勻比例 | 每 phase ≤ 10% | 不過(draw 23%) | 不過(draw 46%) |
-| Q4 | 對 uniform、call_station | 兩者都 > 3 SE | 過 | 不過(call_station +0.06 ± 0.11) |
+| Q4 | 對 uniform、call_station | **不輸**:utility ≥ -2 SE(原草案「> 3 SE」已撤回，見下) | 過 | 過 |
 | Q5 | 對前一版同設定 checkpoint 的 H2H | ≥ -2 SE(不退步) | n/a | n/a |
 
 **SBR 暫不設門檻**:在 standard 的預算下,SBR 找不到比 profile 更好的 response(v2 平均 -0.30,v1 seat 0 五次都是負的)。這把尺目前量不出可剝削度，用它設門檻沒有意義。下一步先做單變數實驗(v1,response deals 100 / 300 / 1,000),看 gain 是否轉正、變異是否收斂，再決定。
 
-目前 v1、v2 都沒通過。這是預期中的：這套門檻是給 C1 正式解用的。
+**Q4 為什麼改成「不輸」**:這是兩人零和遊戲。用對調座位的 duplicate 格式時，遊戲值是 0,而均衡策略對**任何**對手的期望都 ≥ 0。對手偏離均衡，只會讓均衡策略賺得多或打平，不會讓它被剝削;均衡的缺點是**不會主動最大化**剝削弱對手。所以:
+- 顯著輸給固定對手 = 證明這份策略可被剝削，一定不是均衡(可靠的否證)。
+- 贏多少不代表多接近均衡，只當參考資訊。call_station 只用抽象內的動作(check / call / pat),所以這個保證對它成立。
+- Q4 的檢定力很低(連均勻亂打也會過);判斷「離均衡多遠」要靠可剝削度，也就是 SBR(第 11 節)。
+
+目前 v1、v2 都沒通過(v1:Q1、Q3;v2:Q1、Q2、Q3)。這是預期中的：這套門檻是給 C1 正式解用的。
+
+---
+
+## 11. SBR 預算實驗(day49,待執行)
+
+**問題**:standard 預算下 SBR gain 是負的(response 在 held-out 牌上比 profile 還差)。可剝削度不可能是負的，所以這是量測問題。
+
+**兩個假說**
+- (a) **過擬合**:100 局學到的純策略 response 不能推廣。預測:gain 隨 response deals 增加而上升。
+- (b) **fallback 偏差**(**[確認]** 程式碼層面):validation 遇到沒學過的狀態時,response 用 profile 機率最高的動作。策略是均勻或缺失時，最高機率是平手,`max` 取第一個合法動作：面對下注就是 **FOLD**,換牌就是 **pat**。v2 實際打到的 draw 決策有 46% 是均勻策略，這個偏差可能很大。預測:fallback 改成照 profile 抽樣時,gain 明顯高於 argmax 版本;argmax 版本的 gain 和「平手 fallback 比例」負相關。
+
+**實驗**(`scripts/inspect_sbr_budget.py`,一次只變一個變數)
+- 變數:response deals 100 / 300 / 1,000;其他固定(validation 1,000、sweeps ≤ 3、seed 2027、每個 seat 3 次)。
+- 同一次 validation 裡另外跑一個 probe:只把 fallback 從 argmax 改成照 profile 抽樣，用**獨立 RNG**,所以 production 的數字和 `evaluate_checkpoint` 完全相同(`--check-report` 自動比對 100 局那一點)。probe 只在 script 裡,`solver/best_response.py` 的演算法沒改。
+- 另外記錄 validation 中 responder 決策有多少來自 fallback、多少是平手 fallback(`best_response.py` 只加計數，固定 seed 前後輸出相同)。
+
+**判讀**
+- (b) 成立:每個預算下 sample gain 都比 argmax gain 高出好幾個 SE。
+- (b) 不成立:兩者差距在 2 SE 內。
+- (a) 成立:argmax、sample 兩者都隨預算上升。
+- 兩者都不成立(1,000 局、sample 版本仍 ≤ 0):問題在別處(例如每個 sweep 重設 action value 造成的震盪，已知限制，**不重試**跨 sweep 累積)，回報再決定。
+
+**之後的決定(需要你核准，屬演算法改動)**:如果 (b) 成立，提案把 `SampledBestResponse` 的 fallback 改成照 profile 抽樣。這樣 response 只在學過的狀態偏離 profile,gain 才是「可剝削度的下界估計」,SBR 才可能當門檻用。

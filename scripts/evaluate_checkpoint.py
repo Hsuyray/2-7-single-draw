@@ -25,6 +25,10 @@ import sys
 from pathlib import Path
 from time import perf_counter
 
+from solver.benchmark_gates import (
+    evaluate_gates,
+    render_gates,
+)
 from solver.checkpoint_evaluation import (
     AssumedGameConfig,
     CheckpointConfigError,
@@ -162,6 +166,15 @@ def parse_args() -> argparse.Namespace:
         "--no-write",
         action="store_true",
         help="Print only; write no files.",
+    )
+
+    parser.add_argument(
+        "--gates",
+        metavar="REPORT_JSON",
+        help=(
+            "Re-evaluate the benchmark gates of "
+            "a saved report and print them."
+        ),
     )
 
     parser.add_argument(
@@ -605,6 +618,10 @@ def build_report(
 
         report["previous"] = section
 
+    report["gates"] = evaluate_gates(
+        report
+    )
+
     peak = peak_rss_bytes()
 
     timing["peak_rss_gb"] = (
@@ -829,6 +846,21 @@ def render_summary(
             f"{min(validation_errors):.4f}.."
             f"{max(validation_errors):.4f}"
         )
+
+        fallback_shares = [
+            run["response_fallback_share"]
+            for runs in sbr["runs"].values()
+            for run in runs
+            if "response_fallback_share" in run
+        ]
+
+        if fallback_shares:
+            add(
+                "  responder validation decisions "
+                "from fallback: "
+                f"{pct(min(fallback_shares))}.."
+                f"{pct(max(fallback_shares))}"
+            )
         add("  proxy only; NOT exploitability")
 
     baselines = report.get("baselines")
@@ -901,6 +933,14 @@ def render_summary(
         "current-vs-average: unavailable "
         "(checkpoint has no regrets)"
     )
+
+    gates = report.get("gates")
+
+    if gates is not None:
+        add("")
+
+        for line in render_gates(gates):
+            add(line)
 
     timing = report["timing"]
 
@@ -1064,6 +1104,26 @@ def main() -> None:
             "Reports identical outside "
             "timing/environment."
         )
+
+        return
+
+    if args.gates is not None:
+        saved = json.loads(
+            Path(args.gates).read_text(
+                encoding="utf-8"
+            )
+        )
+
+        gates = evaluate_gates(saved)
+
+        print(
+            f"{saved['checkpoint']['name']} "
+            f"(report preset "
+            f"{saved['parameters']['preset']})"
+        )
+
+        for line in render_gates(gates):
+            print(line)
 
         return
 

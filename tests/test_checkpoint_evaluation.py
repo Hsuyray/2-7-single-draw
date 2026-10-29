@@ -548,6 +548,17 @@ def test_script_is_reproducible_across_processes(
         "available"
     ] is False
 
+    assert data["gates"]["verdict"] in {
+        "PASS",
+        "FAIL",
+    }
+    assert data["gates"]["benchmark_run"] is False
+
+    sbr_run = data["sbr"]["runs"]["seat_0"][0]
+    assert 0.0 <= sbr_run[
+        "response_fallback_share"
+    ] <= 1.0
+
     same = run_script(
         "--compare",
         str(reports[0]),

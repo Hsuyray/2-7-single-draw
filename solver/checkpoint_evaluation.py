@@ -1432,6 +1432,20 @@ def evaluate_sampled_best_response(
                         result
                         .opponent_strategy_coverage
                     ),
+                    "response_fallback_share": (
+                        result
+                        .response_fallback_share
+                    ),
+                    "response_fallback_tie_decisions": (
+                        result
+                        .response_fallback_tie_decisions
+                    ),
+                    "response_decisions": (
+                        result
+                        .response_policy_decisions
+                        + result
+                        .response_fallback_decisions
+                    ),
                 }
             )
 
