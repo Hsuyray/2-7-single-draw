@@ -1,0 +1,51 @@
+========================================================================
+CHECKPOINT EVALUATION
+========================================================================
+  checkpoint: production_v1.chk.gz
+  sha256: 9069fb8b8b5a51a71c50764fe7db6681f7263e66df70fc7e8776abe68841ca6c
+  format v3, 20,000 iterations, 305,175 strategies
+  abstraction=bucket max_draw=1 draw_action_mode=full bet_sizing=policy [0.2, 0.33, 0.5, 0.66, 0.9, 1.0, 1.25]
+  preset=standard seed=2027 overridden=-
+
+STATIC
+  invalid strategies: 0
+  predraw_betting   states=   38,015 public=     48 near-uniform= 78.19% deterministic=  1.48%
+  draw              states=  116,113 public=    216 near-uniform= 85.86% deterministic=  0.28%
+  postdraw_betting  states=  151,047 public=  1,472 near-uniform= 70.30% deterministic=  7.11%
+
+COVERAGE (self-play, 20,000 deals, button 0)
+  overall: 96.83% (se 0.06%, 84,486/87,250)
+  predraw_betting    97.28% (41,838/43,009)  near-uniform when played: 10.82%
+  draw               94.79% (28,520/30,086)  near-uniform when played: 23.08%
+  postdraw_betting   99.81% (14,128/14,155)  near-uniform when played: 18.10%
+  deals with any miss: 9.27%; first miss by phase: predraw_betting=995, draw=841, postdraw_betting=18
+  action-space mismatches: 0
+  self-play seat 0: +1.2011 ± 0.0691 chips/deal; max zero-sum error 8.88e-15
+  top missing public nodes:
+       378  pot=4.5 bet=2  (root)
+        67  pot=23.5 bet=20  pre: s0 raise 20
+        62  pot=23.5 bet=20  pre: s0 raise 20 | draw: s1 draw 1
+        62  pot=10.5 bet=7  pre: s0 raise 7
+        55  pot=12.4 bet=8.9  pre: s0 raise 8.9
+        55  pot=8.3 bet=4.8  pre: s0 raise 4.8
+        53  pot=5.5 bet=2  pre: s0 call
+        46  pot=19.3 bet=8.9  pre: s0 raise 8.9, s1 call
+        41  pot=11 bet=7.5  pre: s0 raise 7.5
+        35  pot=9.1 bet=5.6  pre: s0 raise 5.6
+
+BUTTON 1 DIAGNOSTIC (2,000 deals): coverage 0.00%
+
+SBR PROXY (5 repeats/seat, 100 response deals, 1,000 validation deals, <= 3 sweeps)
+  seat_0: mean gain -0.4865 sd 0.3104 [-0.7347, -0.0043]
+  seat_1: mean gain +0.6981 sd 0.3575 [+0.2538, +1.2205]
+  mean over seats: +0.1058 ± 0.0919 (se over repeats)
+  per-run gain se (validation noise): 0.3415..0.3706
+  proxy only; NOT exploitability
+
+BASELINES (duplicate, 5,000 deal pairs)
+  vs uniform       +1.8635 ± 0.0801 chips/deal (profile coverage 96.91%)
+  vs call_station  +1.1537 ± 0.0893 chips/deal (profile coverage 96.34%)
+
+current-vs-average: unavailable (checkpoint has no regrets)
+
+TIMING  load_s=32.5  static_s=3.1  coverage_s=108.5  button1_s=10.4  sbr_s=578.8  baselines_s=107.4  peak_rss_gb=1.989

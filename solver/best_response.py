@@ -24,6 +24,7 @@ from solver.strategy_index import (
 )
 from solver.strategy_profile_evaluator import (
     StrategyProfileEvaluator,
+    standard_error,
 )
 from solver.terminal_utility import (
     terminal_utility,
@@ -59,11 +60,70 @@ class SampledBestResponseResult:
     opponent_strategy_hits: int
     opponent_strategy_misses: int
 
+    # Per validation deal sums of squares, for
+    # standard errors. The improvement is paired:
+    # response and baseline play the same deck.
+    baseline_sum_squares: float = 0.0
+    response_sum_squares: float = 0.0
+    improvement_sum_squares: float = 0.0
+
+    # Responder decisions in the validation
+    # rollouts: taken from the learned policy, or
+    # from the fallback (highest-probability
+    # profile action). A tied fallback (uniform or
+    # missing strategy) resolves to the first legal
+    # action: fold when facing a bet, stand pat on
+    # the draw.
+    response_policy_decisions: int = 0
+    response_fallback_decisions: int = 0
+    response_fallback_tie_decisions: int = 0
+
+    @property
+    def response_fallback_share(
+        self,
+    ) -> float:
+        total = (
+            self.response_policy_decisions
+            + self.response_fallback_decisions
+        )
+
+        if total == 0:
+            return 0.0
+
+        return (
+            self.response_fallback_decisions
+            / total
+        )
+
     @property
     def improvement(self) -> float:
         return (
             self.response_value
             - self.baseline_value
+        )
+
+    @property
+    def baseline_standard_error(
+        self,
+    ) -> float:
+        return standard_error(
+            mean=self.baseline_value,
+            sum_squares=(
+                self.baseline_sum_squares
+            ),
+            count=self.validation_deals,
+        )
+
+    @property
+    def improvement_standard_error(
+        self,
+    ) -> float:
+        return standard_error(
+            mean=self.improvement,
+            sum_squares=(
+                self.improvement_sum_squares
+            ),
+            count=self.validation_deals,
         )
 
     @property
@@ -198,6 +258,10 @@ class SampledBestResponse:
         self._opponent_hits = 0
         self._opponent_misses = 0
 
+        self._response_policy_decisions = 0
+        self._response_fallback_decisions = 0
+        self._response_fallback_ties = 0
+
     def optimize(
         self,
         game_factory: GameFactory,
@@ -237,6 +301,10 @@ class SampledBestResponse:
 
         self._opponent_hits = 0
         self._opponent_misses = 0
+
+        self._response_policy_decisions = 0
+        self._response_fallback_decisions = 0
+        self._response_fallback_ties = 0
 
         policy: PureResponsePolicy = {}
 
@@ -393,6 +461,10 @@ class SampledBestResponse:
         baseline_total = 0.0
         response_total = 0.0
 
+        baseline_sum_squares = 0.0
+        response_sum_squares = 0.0
+        improvement_sum_squares = 0.0
+
         for _ in range(
             validation_deals
         ):
@@ -404,17 +476,38 @@ class SampledBestResponse:
                 base_game
             )
 
-            baseline_total += (
+            baseline_deal = (
                 self._sample_profile_rollout(
                     base_game
                 )
             )
 
-            response_total += (
+            response_deal = (
                 self._sample_response_rollout(
                     game=response_game,
                     policy=policy,
                 )
+            )
+
+            baseline_total += baseline_deal
+            response_total += response_deal
+
+            baseline_sum_squares += (
+                baseline_deal
+                * baseline_deal
+            )
+
+            response_sum_squares += (
+                response_deal
+                * response_deal
+            )
+
+            improvement_sum_squares += (
+                (
+                    response_deal
+                    - baseline_deal
+                )
+                ** 2
             )
 
         baseline_value = (
@@ -472,6 +565,24 @@ class SampledBestResponse:
             ),
             opponent_strategy_misses=(
                 self._opponent_misses
+            ),
+            baseline_sum_squares=(
+                baseline_sum_squares
+            ),
+            response_sum_squares=(
+                response_sum_squares
+            ),
+            improvement_sum_squares=(
+                improvement_sum_squares
+            ),
+            response_policy_decisions=(
+                self._response_policy_decisions
+            ),
+            response_fallback_decisions=(
+                self._response_fallback_decisions
+            ),
+            response_fallback_tie_decisions=(
+                self._response_fallback_ties
             ),
         )
 
@@ -835,6 +946,19 @@ class SampledBestResponse:
                         )
                     )
 
+                    # Counting only; the action
+                    # above is unchanged.
+                    self._response_fallback_decisions += 1
+
+                    if self._is_tied_fallback(
+                        actions=actions,
+                        strategy=strategy,
+                    ):
+                        self._response_fallback_ties += 1
+
+                else:
+                    self._response_policy_decisions += 1
+
             else:
                 strategy = (
                     self._opponent_strategy(
@@ -954,6 +1078,41 @@ class SampledBestResponse:
                 probability,
             ) in probabilities.items()
         }
+
+    @staticmethod
+    def _is_tied_fallback(
+        *,
+        actions: tuple[
+            SolverAction,
+            ...,
+        ],
+        strategy: Strategy | None,
+    ) -> bool:
+        """
+        True when more than one action shares the
+        highest probability, so max() picks the
+        first legal action.
+        """
+        if len(actions) <= 1:
+            return False
+
+        normalized = (
+            SampledBestResponse
+            ._normalized_strategy(
+                actions=actions,
+                strategy=strategy,
+            )
+        )
+
+        best = max(
+            normalized.values()
+        )
+
+        return sum(
+            1
+            for value in normalized.values()
+            if best - value <= 1e-12
+        ) > 1
 
     @staticmethod
     def _highest_probability_action(

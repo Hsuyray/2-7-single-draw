@@ -52,3 +52,34 @@ Growth of the `full` configuration (cap 2,031,912 info sets): 100 iters 51,514 (
 | Profile with interning (user) | full, stack 20, bucket, seed 42, 2,000 iters, Python 3.12 | 562,244 nodes (identical at all 20 samples); RSS before save 0.618 GiB (was 2.097), after save 0.667 GiB (was 2.447), **process peak 1.381 GiB (was 3.666)**; iters 1,000-2,000 took 1,264 s (was 1,245 s). Total time 13,587 s inflated by stalls at iters 500-900 (machine sleep/load, not interning) | `experiments/memory_profile/a1_full_2k_interned.csv` (local) |
 
 Fingerprint comparison on Python 3.12 (user, day42): before/after identical (`Compare-Object` and `git diff --no-index` printed nothing).
+
+## A2 baseline evaluation reports (day46)
+
+`python -m scripts.evaluate_checkpoint <checkpoint>` (preset `standard`, seed 2027, button 0, deck seeds >= 1e9 so never training deals). Run in the cloud container (Python 3.13, 4 cores); times on the laptop will differ. Full reports: `experiments/eval/*.json` / `.txt`. Each checkpoint was evaluated twice; `--compare` reported the two JSON reports identical outside `timing` / `environment`.
+
+| Metric | v1 `production_v1` | v2 `production_v2_maxdraw5` |
+|---|---|---|
+| Config | max_draw 1, bucket, full sizing, 20,000 iters | max_draw 5, bucket, full sizing, 8,000 iters |
+| Strategies (info sets) | 305,175 | 1,068,645 |
+| Invalid strategies / action-space mismatches / max zero-sum error | 0 / 0 / 8.9e-15 | 0 / 0 / 8.9e-15 |
+| Stored strategies near-uniform (pre / draw / post) | 78% / 86% / 70% | 82% / 93% / 81% |
+| Coverage overall (20k deals) | 96.83% ± 0.06 | 92.78% ± 0.08 |
+| Coverage pre / draw / post | 97.28 / 94.79 / 99.81% | 94.55 / 87.25 / 97.76% |
+| Played decisions near-uniform (pre / draw / post) | 10.8 / 23.1 / 18.1% | 19.3 / 46.1 / 27.3% |
+| Deals with any missing decision | 9.27% | 22.41% |
+| First miss: pre / draw / post (deals) | 995 / 841 / 18 | 2,110 / 2,202 / 171 |
+| Largest missing public node | root (pot 4.5, bet 2): 378 | root: 790 |
+| Button-1 coverage (diagnostic) | 0.00% | 0.00% |
+| Self-play seat 0 (chips/deal) | +1.20 ± 0.07 | +0.73 ± 0.07 |
+| vs uniform (duplicate, 5k pairs) | +1.86 ± 0.08 | +1.12 ± 0.09 |
+| vs call_station | +1.15 ± 0.09 | **+0.06 ± 0.11** |
+| SBR gain seat 0 / seat 1 (mean of 5, sd) | -0.49 (0.31) / +0.70 (0.36) | -0.42 (0.43) / -0.17 (0.40) |
+| SBR mean over seats (se over repeats) | +0.11 ± 0.09 | -0.30 ± 0.10 |
+| SBR per-run gain se | 0.34-0.37 | 0.41-0.43 |
+| Load time / total time / peak RSS | 33 s / 14 min / 2.0 GB | 147 s / 49 min / 8.2 GB |
+
+Reading (confirmed = measured above; the rest is hypothesis):
+- Confirmed: the old ~94-98% coverage numbers overstate training. A large share of decisions that "hit" a stored strategy hit a uniform one (v2 draw: 46%). Draw is the weakest phase in both.
+- Confirmed: v2 vs call_station is +0.06 ± 0.11 (v1: +1.15). Corrected reading (day49): this is **not** a failure by itself. In this two-player zero-sum game, in the seat-swapped duplicate format, an equilibrium strategy guarantees at least the game value 0 against any opponent; it does not promise to beat a weak opponent by much, and a larger margin does not mean closer to equilibrium (a maximally exploitative strategy would win more). Only a significant **loss** would prove the profile exploitable. The result is consistent with that guarantee and gives no evidence either way about convergence. Gate Q4 was changed to "does not lose" accordingly (`solver/benchmark_gates.py`).
+- Confirmed: at this budget (100 response deals, 3 sweeps) SBR does not find a response better than the profile on held-out deals (v2 mean -0.30; v1 seat 0 negative in all 5 repeats; every run used all 3 sweeps). It cannot detect exploitability at this size and is not usable as a gate yet. Two hypotheses (A2_DESIGN section 11): (a) overfitting to 100 deals; (b) **fallback bias**, confirmed in code: on validation states the response never learned, it plays the profile's argmax, and for a uniform or missing strategy that is the first legal action, i.e. FOLD when facing a bet and stand pat on the draw. Experiment: `scripts/inspect_sbr_budget.py` (results below once run).
+- Confirmed: `production_v2_maxdraw5.chk.gz` is the 8k run. `production_v2_maxdraw5_v2.chk.gz` still could not be loaded (killed), iteration count unknown.
