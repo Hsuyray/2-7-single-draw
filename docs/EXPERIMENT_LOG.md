@@ -106,3 +106,25 @@ Reading:
 - Confirmed: (b) the fallback bias is falsified, in the opposite direction. Sampling the profile on unlearned states is not better than the argmax: equal for seat 0 (mean difference -0.07 over 9 runs) and worse for seat 1 in all 9 runs (mean -0.57). Likely cause (hypothesis): folding / standing pat is cheaper than playing a uniform strategy that includes large raises with any hand.
 - Confirmed: (c) SBR is sample-starved by construction. Learned states grow about linearly with deals (40-84 new states per deal), so each state's pure action is picked from roughly one sampled value per action, and values reset every sweep. More deals add states, not samples per state. The gain therefore measures replacing the profile's mixed strategy with noise-picked pure actions, which can be negative. **At any affordable budget the current SBR cannot estimate exploitability.** It stays ungated and is marked inconclusive in reports.
 - Not retried: cross-sweep value accumulation (reverted earlier, CLAUDE.md).
+
+## A2 SBR power test, first v1 run (day52)
+
+`python -m scripts.inspect_sbr_power checkpoints/production_v1.chk.gz` (user's laptop, day51 code; leaks 0 / 0.1 / 0.3 / 1, response 300, validation 1,000, sweeps <= 3, 2 repeats, seed 2027). Gain = mean of 2 runs ± mean per-run se.
+
+| Responder | Mode | Leak 0 | 0.1 | 0.3 | 1 | Verdict |
+|---|---|---|---|---|---|---|
+| seat 0 | reference exploit | -1.94 | -0.51 | -0.38 | +0.75 ± 0.11 | |
+| seat 0 | per_state | -0.20 ± 0.35 | -0.19 | -0.29 | +0.38 ± 0.17 | PASS (51% of reference) |
+| seat 0 | grouped | +0.51 ± 0.36 | +0.43 | -0.15 | **+1.70 ± 0.22** | PASS |
+| seat 1 | reference exploit | -1.02 | -0.01 | +0.18 | +0.095 ± 0.05 | |
+| seat 1 | per_state | +0.23 | +0.53 | +0.31 | -0.03 ± 0.04 | (invalid test, see below) |
+| seat 1 | grouped | +0.36 | +0.08 | +0.69 | +0.07 ± 0.04 | (invalid test, see below) |
+
+Fallback share: grouped 2-8% (except seat 1 leak 1), per_state 38-70%. Policy keys: grouped ~6-7k vs per_state ~17-22k at 300 deals.
+
+Reading:
+- Confirmed: with the leak in seat 1, grouped SBR finds the full leak at +1.70 ± 0.22, more than the hand-written exploit (+0.75); the original per-state SBR finds only +0.38 ± 0.17. Grouped is the clearly stronger detector.
+- Confirmed: the seat 1 rows are a **test-design error**, not an estimator failure. The day51 leak applied to every state with FOLD, including seat 0's first decision facing the big blind. At leak 1 seat 0 folds every hand at once, so seat 1 never acts: reference exploit +0.095, SBR runs took 6-8 s with 108-289 policy keys and 88-100% fallback.
+- Fix (day52): the leak applies only when the opponent's last public action is a voluntary raise; a P0 check marks a test "INVALID" when the reference exploit itself is not significant. On v1, all 79,010 seat-1 FOLD states face a voluntary raise (0 differ), so the seat-0 responder results above are unchanged by the fix; 1,348 seat-0 root FOLD states are now excluded.
+- Not yet shown: power for small leaks (0.1, 0.3). Per-run se ~0.35 at 1,000 validation deals is larger than those leaks' effect; the hand-written reference does not gain there either.
+- Pending: rerun with `--responder-seats 1` on the day52 code.

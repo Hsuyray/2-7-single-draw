@@ -9,7 +9,10 @@ original per-information-set SBR ("per_state") with grouped SBR
 exploit (smallest raise whenever legal) gives a reference gain.
 
 Pre-registered criteria per mode and responder seat (see
-solver/exploitability_power.judge_estimator):
+solver/exploitability_power.judge_estimator; P0 added day52 after
+the first v1 run, where an open-fold leak left seat 1 nothing to
+exploit):
+    P0 informative  the reference exploit gains significantly
     P1 power     finds the largest leak, >= 50% of the reference gain
     P2 monotone  gain does not fall as the leak grows
     P3 validity  no significantly negative gain without a leak
@@ -370,13 +373,18 @@ def main() -> None:
                     / len(selected),
                 }
 
+            largest_reference = references[
+                f"seat_{seat}_leak_"
+                f"{probabilities[-1]:g}"
+            ]
+
             verdict = judge_estimator(
                 rows,
                 reference_at_largest_leak=(
-                    references[
-                        f"seat_{seat}_leak_"
-                        f"{probabilities[-1]:g}"
-                    ]["gain"]
+                    largest_reference["gain"]
+                ),
+                reference_standard_error=(
+                    largest_reference["gain_se"]
                 ),
             )
 
@@ -395,13 +403,13 @@ def main() -> None:
                     for p in probabilities
                 )
                 + "   "
-                + ("PASS" if verdict["pass"] else "FAIL")
+                + verdict["status"]
                 + " ("
                 + ", ".join(
                     f"{key.split('_')[0]}="
                     f"{'ok' if value else 'no'}"
                     for key, value in verdict.items()
-                    if key != "pass"
+                    if key not in ("pass", "status")
                 )
                 + ")"
             )

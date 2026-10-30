@@ -9,6 +9,7 @@ from solver.checkpoint_evaluation import (
 )
 from solver.exploitability_power import (
     FOLD,
+    faces_voluntary_raise,
     judge_estimator,
     plant_fold_leak,
     reference_exploit_gain,
@@ -84,6 +85,10 @@ def test_plant_fold_leak(
         if (
             state.observer_seat == 1
             and FOLD in strategy
+            and faces_voluntary_raise(
+                state,
+                leaky_seat=1,
+            )
         ):
             planted += 1
             assert strategy[FOLD] == pytest.approx(
@@ -95,6 +100,48 @@ def test_plant_fold_leak(
             assert strategy == original[state]
 
     assert planted > 0
+
+
+def test_leak_ignores_blinds(
+    trained,
+) -> None:
+    index, _ = trained
+
+    original = index.strategies()
+
+    leaky_button = plant_fold_leak(
+        index,
+        leaky_seat=0,
+        probability=1.0,
+    ).strategies()
+
+    root_states = [
+        state
+        for state in original
+        if state.observer_seat == 0
+        and not state.public_node.action_history
+        and FOLD in original[state]
+    ]
+
+    # Seat 0 may fold to the big blind at the
+    # root; that is not a voluntary raise.
+    assert root_states
+    for state in root_states:
+        assert leaky_button[state] == original[state]
+
+    # For seat 1 every bet it can fold to is a
+    # voluntary raise by seat 0, so the day51 rule
+    # ("any FOLD state") and the day52 rule agree,
+    # and the day51 seat-0 responder results stand.
+    for state, strategy in original.items():
+        if (
+            state.observer_seat == 1
+            and FOLD in strategy
+        ):
+            assert faces_voluntary_raise(
+                state,
+                leaky_seat=1,
+            )
 
 
 def test_coarse_grouping_uses_only_own_information(
@@ -139,6 +186,14 @@ def test_judge_estimator() -> None:
         good,
         reference_at_largest_leak=3.0,
     )["pass"]
+
+    uninformative = judge_estimator(
+        good,
+        reference_at_largest_leak=0.09,
+        reference_standard_error=0.05,
+    )
+    assert uninformative["status"] == "INVALID"
+    assert not uninformative["pass"]
 
     weak = judge_estimator(
         good,
