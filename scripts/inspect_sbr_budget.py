@@ -6,6 +6,11 @@ standard budget (100 response deals)? Two hypotheses:
 
   overfit   the pure response learned on few deals does not
             generalise; gain should rise with response deals.
+  samples   (added day50, after overfit and fallback were both
+            falsified) learned states grow about linearly with
+            response deals, so each state's action is chosen from
+            about one sampled value per action however many deals
+            are used. Measured here as visits per learned state.
   fallback  on validation states it never learned, the responder
             plays the profile's highest-probability action. For a
             uniform or missing strategy that is the first legal
@@ -36,6 +41,7 @@ import argparse
 import json
 import random
 import sys
+from collections import Counter
 from copy import deepcopy
 from pathlib import Path
 from time import perf_counter
@@ -52,6 +58,9 @@ from solver.checkpoint_evaluation import (
 )
 from solver.information_state import (
     InformationState,
+)
+from solver.response_grouping import (
+    coarse_grouping,
 )
 from solver.single_draw_game import (
     GamePhase,
@@ -94,6 +103,37 @@ class FallbackProbeSBR(SampledBestResponse):
         self.probe_gain_sum_squares = 0.0
 
         self._last_baseline: float | None = None
+
+        # Responder-state visits during training,
+        # summed over sweeps (measurement only).
+        self.training_visits: Counter = Counter()
+
+    def _sampled_response_traversal(
+        self,
+        *,
+        game,
+        **kwargs,
+    ) -> float:
+        if (
+            game.phase
+            != GamePhase.COMPLETE
+            and game.acting_seat
+            == self.responder_seat
+        ):
+            self.training_visits[
+                InformationState.from_game(
+                    game,
+                    observer_seat=(
+                        self.responder_seat
+                    ),
+                    abstraction=self.abstraction,
+                )
+            ] += 1
+
+        return super()._sampled_response_traversal(
+            game=game,
+            **kwargs,
+        )
 
     def _sample_profile_rollout(
         self,
@@ -277,6 +317,17 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--grouping",
+        choices=("none", "coarse"),
+        default="none",
+        help=(
+            "coarse = grouped SBR "
+            "(solver/response_grouping); its "
+            "fallback already samples the profile."
+        ),
+    )
+
+    parser.add_argument(
         "--check-report",
         help=(
             "evaluate_checkpoint standard report "
@@ -331,8 +382,10 @@ def run_one(
     response_deals: int,
     validation_deals: int,
     sweeps: int,
+    grouping=None,
 ) -> dict:
     optimizer = FallbackProbeSBR(
+        response_grouping=grouping,
         probe_seed=derive_seed(
             seed,
             "sbr-probe",
@@ -408,6 +461,15 @@ def run_one(
         + result.response_fallback_decisions
     )
 
+    # Visits per learned state per sweep: the number
+    # of sampled values behind each action choice.
+    per_sweep = sorted(
+        count / result.sweeps
+        for count in (
+            optimizer.training_visits.values()
+        )
+    )
+
     return {
         "seat": seat,
         "repeat": repeat,
@@ -442,6 +504,28 @@ def run_one(
             / decisions
             if decisions
             else 0.0
+        ),
+        "visits_per_state_mean": (
+            sum(per_sweep) / len(per_sweep)
+        ),
+        "visits_per_state_median": per_sweep[
+            len(per_sweep) // 2
+        ],
+        "states_with_one_visit_share": (
+            sum(
+                1
+                for value in per_sweep
+                if value <= 1.0
+            )
+            / len(per_sweep)
+        ),
+        "states_with_at_most_three_visits_share": (
+            sum(
+                1
+                for value in per_sweep
+                if value <= 3.0
+            )
+            / len(per_sweep)
         ),
         "elapsed_s": elapsed,
     }
@@ -566,6 +650,11 @@ def main() -> None:
                         args.validation_deals
                     ),
                     sweeps=args.sweeps,
+                    grouping=(
+                        coarse_grouping
+                        if args.grouping == "coarse"
+                        else None
+                    ),
                 )
 
                 runs.append(run)
@@ -579,6 +668,8 @@ def main() -> None:
                     f"(se {run['gain_sample_se']:.4f})  "
                     f"fallback {run['fallback_share']:.1%} "
                     f"tie {run['fallback_tie_share']:.1%}  "
+                    f"visits/state {run['visits_per_state_mean']:.2f} "
+                    f"(1-visit {run['states_with_one_visit_share']:.0%})  "
                     f"{run['elapsed_s']:.0f}s",
                     flush=True,
                 )
@@ -606,6 +697,8 @@ def main() -> None:
                     "gain_sample",
                     "fallback_share",
                     "fallback_tie_share",
+                    "visits_per_state_mean",
+                    "states_with_one_visit_share",
                 )
             }
 
@@ -614,7 +707,8 @@ def main() -> None:
         f"{'budget':>6} {'seat':>4} "
         f"{'argmax gain (sd)':>20} "
         f"{'sample gain (sd)':>20} "
-        f"{'fallback':>9} {'tie':>7}"
+        f"{'fallback':>9} {'tie':>7} "
+        f"{'visits':>7} {'1-visit':>8}"
     )
 
     for response_deals in budgets:
@@ -630,7 +724,9 @@ def main() -> None:
                 f"{row['gain_sample']['mean']:>+11.4f} "
                 f"({row['gain_sample']['sd']:.4f}) "
                 f"{row['fallback_share']['mean']:>9.1%} "
-                f"{row['fallback_tie_share']['mean']:>7.1%}"
+                f"{row['fallback_tie_share']['mean']:>7.1%} "
+                f"{row['visits_per_state_mean']['mean']:>7.2f} "
+                f"{row['states_with_one_visit_share']['mean']:>8.0%}"
             )
 
     check = None
@@ -692,8 +788,15 @@ def main() -> None:
         if name.endswith(suffix):
             name = name[: -len(suffix)]
 
+    grouping_suffix = (
+        ""
+        if args.grouping == "none"
+        else f"__{args.grouping}"
+    )
+
     out_path = out_dir / (
-        f"sbr_budget__{name}__s{args.seed}.json"
+        f"sbr_budget__{name}{grouping_suffix}"
+        f"__s{args.seed}.json"
     )
 
     out_path.write_text(
@@ -703,6 +806,7 @@ def main() -> None:
                     args.checkpoint
                 ).name,
                 "parameters": {
+                    "grouping": args.grouping,
                     "budgets": budgets,
                     "repeats": args.repeats,
                     "seats": seats,

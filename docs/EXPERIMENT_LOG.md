@@ -83,3 +83,26 @@ Reading (confirmed = measured above; the rest is hypothesis):
 - Confirmed: v2 vs call_station is +0.06 ± 0.11 (v1: +1.15). Corrected reading (day49): this is **not** a failure by itself. In this two-player zero-sum game, in the seat-swapped duplicate format, an equilibrium strategy guarantees at least the game value 0 against any opponent; it does not promise to beat a weak opponent by much, and a larger margin does not mean closer to equilibrium (a maximally exploitative strategy would win more). Only a significant **loss** would prove the profile exploitable. The result is consistent with that guarantee and gives no evidence either way about convergence. Gate Q4 was changed to "does not lose" accordingly (`solver/benchmark_gates.py`).
 - Confirmed: at this budget (100 response deals, 3 sweeps) SBR does not find a response better than the profile on held-out deals (v2 mean -0.30; v1 seat 0 negative in all 5 repeats; every run used all 3 sweeps). It cannot detect exploitability at this size and is not usable as a gate yet. Two hypotheses (A2_DESIGN section 11): (a) overfitting to 100 deals; (b) **fallback bias**, confirmed in code: on validation states the response never learned, it plays the profile's argmax, and for a uniform or missing strategy that is the first legal action, i.e. FOLD when facing a bet and stand pat on the draw. Experiment: `scripts/inspect_sbr_budget.py` (results below once run).
 - Confirmed: `production_v2_maxdraw5.chk.gz` is the 8k run. `production_v2_maxdraw5_v2.chk.gz` still could not be loaded (killed), iteration count unknown.
+
+## A2 SBR budget experiment (day50)
+
+`python -m scripts.inspect_sbr_budget checkpoints/production_v1.chk.gz --check-report experiments/eval/production_v1__9069fb8b__standard__s2027.json` (user's laptop; budgets 100/300/1,000, 3 repeats, validation 1,000, sweeps <= 3, seed 2027). `CHECK OK`: the 100-deal production gains equal the standard report exactly.
+
+| Budget | Seat | Argmax gain (sd) | Sample-fallback gain (sd) | Fallback share | Tied fallback | States learned |
+|---|---|---|---|---|---|---|
+| 100 | 0 | -0.36 (0.36) | -0.52 (0.44) | 66.8% | 22.8% | ~8.5k |
+| 100 | 1 | +0.48 (0.20) | +0.01 (0.02) | 82.9% | 22.0% | ~7.2k |
+| 300 | 0 | -0.67 (0.56) | -0.73 (0.16) | 43.6% | 19.9% | ~21.3k |
+| 300 | 1 | +0.27 (0.10) | -0.22 (0.16) | 62.2% | 20.8% | ~17.3k |
+| 1,000 | 0 | -0.43 (0.37) | -0.41 (0.41) | 21.6% | 13.0% | ~50k |
+| 1,000 | 1 | +0.48 (0.50) | -0.25 (0.29) | 34.5% | 16.2% | ~40.5k |
+
+Per-run gain se 0.34-0.39 throughout. Time per run: ~45 s (100), ~110 s (300), ~320-590 s (1,000).
+
+Follow-up measurement (container, v1, seat 0, 1 repeat, validation 200): responder-state visits per learned state per sweep: **0.44** at 100 deals (97% of states <= 1 visit per sweep), **0.53** at 300 deals (94%).
+
+Reading:
+- Confirmed: (a) overfitting is falsified. Mean gain over seats is +0.06 / -0.20 / +0.02 for 100 / 300 / 1,000 deals: no rise over a 10x budget, although the fallback share fell from 67-83% to 22-35%.
+- Confirmed: (b) the fallback bias is falsified, in the opposite direction. Sampling the profile on unlearned states is not better than the argmax: equal for seat 0 (mean difference -0.07 over 9 runs) and worse for seat 1 in all 9 runs (mean -0.57). Likely cause (hypothesis): folding / standing pat is cheaper than playing a uniform strategy that includes large raises with any hand.
+- Confirmed: (c) SBR is sample-starved by construction. Learned states grow about linearly with deals (40-84 new states per deal), so each state's pure action is picked from roughly one sampled value per action, and values reset every sweep. More deals add states, not samples per state. The gain therefore measures replacing the profile's mixed strategy with noise-picked pure actions, which can be negative. **At any affordable budget the current SBR cannot estimate exploitability.** It stays ungated and is marked inconclusive in reports.
+- Not retried: cross-sweep value accumulation (reverted earlier, CLAUDE.md).

@@ -262,7 +262,7 @@ SBR 在 v2(約 100 萬 info set **[待測]**)上的速度還沒量過。實作�
 
 ---
 
-## 11. SBR 預算實驗(day49,待執行)
+## 11. SBR 預算實驗(day49 設計，day50 結果：見 EXPERIMENT_LOG,(a)(b) 都被推翻，新的 (c) 成立)
 
 **問題**:standard 預算下 SBR gain 是負的(response 在 held-out 牌上比 profile 還差)。可剝削度不可能是負的，所以這是量測問題。
 
@@ -282,3 +282,52 @@ SBR 在 v2(約 100 萬 info set **[待測]**)上的速度還沒量過。實作�
 - 兩者都不成立(1,000 局、sample 版本仍 ≤ 0):問題在別處(例如每個 sweep 重設 action value 造成的震盪，已知限制，**不重試**跨 sweep 累積)，回報再決定。
 
 **之後的決定(需要你核准，屬演算法改動)**:如果 (b) 成立，提案把 `SampledBestResponse` 的 fallback 改成照 profile 抽樣。這樣 response 只在學過的狀態偏離 profile,gain 才是「可剝削度的下界估計」,SBR 才可能當門檻用。
+
+### 11.1 結果(day50)
+- (a) 過擬合：**推翻**。response deals 從 100 加到 1,000(10 倍),兩個 seat 平均 gain 是 +0.06 / −0.20 / +0.02,沒有上升。
+- (b) fallback 偏差：**推翻**，而且方向相反。照 profile 抽樣不比 argmax 好(seat 1 九次全部更差，平均 −0.57)。
+- (c) **樣本不足(新增，已確認)**:每個學到的狀態每個 sweep 平均只被看過 0.44–0.53 次，94–97% 的狀態最多 1 次。學到的狀態數和局數幾乎成正比，所以加局數只會增加狀態，不會增加每個狀態的樣本。SBR 等於用單一樣本挑純策略，拿去取代 profile 的混合策略。
+- 結論：**目前的 SBR 在任何負擔得起的預算下都量不出可剝削度。** 報告繼續列出，但不設門檻，視為「不確定」。
+
+---
+
+## 12. 可剝削度估計的提案(待你核准，屬演算法層面)
+
+A2 現在有可重現的報告和門檻，但缺一個可信的「離均衡多遠」指標，這是 GTO 產品最關鍵的數字。三個選項:
+
+| | 做法 | 優點 | 缺點 / 風險 | 工作量 [推測] |
+|---|---|---|---|---|
+| **A(建議先做)粗分組 SBR** | response 不再對每個 info set 各學一個動作，而是對「(public node, 粗手牌強度級別,約 8–16 級)」學一個動作;沒學到的照 profile 抽樣 | 沿用現有 SBR 架構;粗分組的 response 仍是合法策略(只用了較少資訊),所以 gain 仍是**可剝削度的下界**;每組樣本數隨局數增加 | 下界可能偏鬆:只抓得到「整類手牌都犯的錯」(例如整體過度 fold) | 小:`best_response.py` 加一個分組參數 + 測試 |
+| B Local Best Response(LBR,Lisý & Bowling 2017) | 每個決策點用對手 range(依 profile 做 Bayes 更新)估計各動作的期望值，取最大;不學習 | 大型撲克遊戲的標準下界方法;沒有樣本不足問題 | 需要對手 range 追蹤(換牌讓 range 轉移變複雜，repo 有 `draw_range_transition` 可用);運算量大 | 中到大 |
+| C 精確 best response | 在抽象遊戲上走完整棵 public tree,用 range 向量算最佳回應 | 真正的可剝削度(在抽象內) | Python 下以 v2 的規模(約 200 萬 info set、換牌機會節點)很可能跑不動;要先估算 | 大 |
+
+**不論選哪個，都先過「檢測力測試」**:做一個已知可被剝削的 profile(例如某個 seat 面對加注永遠 fold),估計器必須量到顯著為正的 gain;同時對 checkpoint 自己 vs 自己要量到接近 0。過不了就代表估計器本身不可信。目前的 SBR 我建議也補跑這個測試，確認它到底能不能偵測明顯的漏洞。
+
+**選項 A 的驗證計畫**
+- 處理的問題：樣本不足(11.1 的 (c))。
+- 為什麼應該有效：分組後每組的樣本數隨局數線性成長;粗分組 response 是合法策略，所以 gain 在期望上 ≥ 0 才合理(若仍顯著為負，代表實作或評估有錯)。
+- 怎麼測：檢測力測試 + v1 上 response deals 100 / 300 / 1,000,看 gain 是否 ≥ 0 且隨局數收斂、標準差下降。
+- 什麼結果推翻它：檢測力測試量不到明顯漏洞，或 gain 仍隨機正負、不隨局數穩定。
+
+### 12.1 檢測力測試與選項 A 的實作(day51,使用者核准選項 A)
+
+**實作**
+- `solver/best_response.py`:`SampledBestResponse` 新增可選參數 `response_grouping`。給了以後，每組資訊狀態只學一個動作;沒學到的地方照 profile 的混合策略打(訓練時用列舉出的各動作值按 profile 機率加權，validation 時照 profile 抽樣)。**不給時行為完全不變**(固定 seed 的 `inspect_sampled_best_response` 輸出改動前後逐字相同)。沒有做跨 sweep 累積(CLAUDE.md 禁止重試)。
+- `solver/response_grouping.py`:`coarse_grouping(state, actions) = (seat, public node, 粗手牌級別, actions)`。postdraw:128 個 bucket 每 8 個一級(16 級);predraw / draw:由 `DrawHandBucket` 分約 20 級(順子或同花 / 無對子:最大牌級別 × 低牌張數 / 一對：未成對的低牌張數 / 兩對以上)。只用 responder 自己的資訊，所以分組 response 是合法策略,gain 是可剝削度的下界。
+- `solver/exploitability_power.py`:植入漏洞「漏洞那一方面對下注時額外以機率 p fold」,以及手寫的參考 exploit(能加注就用最小加注，否則照 profile)。只改有存的策略;沒存的狀態仍是均勻，所以覆蓋率低的 checkpoint 實際漏洞較小。
+- `scripts/inspect_sbr_power.py`:p = 0 / 0.1 / 0.3 / 1 × 兩種模式(`per_state` 原版、`grouped`)× 兩個 responder seat × 每格 2 次;所有格子共用同一批 validation 牌(common random numbers)。
+- `scripts/inspect_sbr_budget.py` 加 `--grouping coarse`,通過檢測力測試後用來跑分組版本的預算曲線。
+
+**預先登記的通過條件**(每個模式、每個 seat,`judge_estimator`)
+- P1 檢測力：最大漏洞時，平均 gain > 2 SE,且 ≥ 參考 exploit gain 的 50%。
+- P2 單調：漏洞變大時，gain 下降不超過 2 SE。
+- P3 有效性：沒有漏洞時，gain ≥ −2 SE(合法 response 期望不會比 profile 差)。
+- SE 用每次執行的 SE 平均(保守：同一批 validation 牌，重複之間誤差相關)。
+
+**更正**:第 12 節原本寫「checkpoint 自己對自己要量到接近 0」是錯的：最佳回應對非均衡策略本來就該是正的。正確的對照是 P3:不能顯著為負。
+
+**冒煙測試(container,40 次迭代的小 checkpoint,p = 1,seat 0,100 局 / 300 局 validation)**:參考 exploit +1.96 ± 0.58;原版 SBR −0.50 ± 0.42(找不到這麼明顯的漏洞);分組 SBR +0.97 ± 0.48(約參考值的 49%),fallback 5%。只是一次執行，不是結論，正式結果等 v1 的檢測力測試。
+
+**判讀**
+- 分組版 P1–P3 全過、原版沒過 → 分組 SBR 取代原版當可剝削度指標，接著跑分組版的預算曲線(gain 應 ≥ 0 且隨局數穩定),再決定是否設門檻。
+- 兩者都沒過 → SBR 這條路放棄，改評估選項 B(LBR)。

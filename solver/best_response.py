@@ -1,5 +1,5 @@
 import random
-from collections.abc import Callable
+from collections.abc import Callable, Hashable
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -38,8 +38,23 @@ GameFactory = Callable[
 
 
 PureResponsePolicy = dict[
-    InformationState,
+    Hashable,
     SolverAction,
+]
+
+
+# Maps a responder information state and its legal
+# actions to a policy key. It must depend only on
+# the responder's own information (the state and
+# the actions), so a policy keyed by it is a legal
+# strategy. Include the actions in the key: states
+# sharing a key must share their legal actions.
+ResponseGrouping = Callable[
+    [
+        InformationState,
+        tuple[SolverAction, ...],
+    ],
+    Hashable,
 ]
 
 
@@ -175,6 +190,23 @@ class SampledBestResponse:
 
     The responder never conditions its action
     on the opponent's private hand.
+
+    Grouped mode (response_grouping given):
+      - one pure action is learned per group of
+        information states, so each group pools
+        the samples of all its states
+      - where the response has no learned action
+        (validation states outside every learned
+        group, and unlearned states during
+        training), it plays the profile's mixed
+        strategy instead of its argmax
+      - the response is still a legal strategy,
+        so its expected gain is a lower bound on
+        the profile's exploitability
+
+    Without response_grouping the behaviour is
+    exactly the original per-information-set
+    response with argmax fallback.
     """
 
     def __init__(
@@ -194,6 +226,10 @@ class SampledBestResponse:
         ) = None,
         draw_action_mode: DrawActionMode = "full",
         random_seed: int | None = None,
+        response_grouping: (
+            ResponseGrouping
+            | None
+        ) = None,
     ) -> None:
         if responder_seat not in {
             0,
@@ -233,6 +269,10 @@ class SampledBestResponse:
 
         self._random = random.Random(
             random_seed
+        )
+
+        self.response_grouping = (
+            response_grouping
         )
 
         self._action_helper = (
@@ -364,6 +404,19 @@ class SampledBestResponse:
                 state,
                 actions,
             ) in legal_actions_by_state.items():
+                if (
+                    state not in policy
+                    and self.response_grouping
+                    is not None
+                ):
+                    # Grouped keys are not states;
+                    # every visited group has
+                    # sampled values for all its
+                    # actions, so the loop below
+                    # always sets an action.
+                    policy[state] = None
+                    initial_policy[state] = None
+
                 if state not in policy:
                     strategy = (
                         self.strategy_index
@@ -697,9 +750,14 @@ class SampledBestResponse:
                 )
             )
 
+        key = self._policy_key(
+            state,
+            actions,
+        )
+
         existing_actions = (
             legal_actions_by_state.get(
-                state
+                key
             )
         )
 
@@ -715,19 +773,19 @@ class SampledBestResponse:
             )
 
         legal_actions_by_state[
-            state
+            key
         ] = actions
 
         state_sums = (
             action_sums.setdefault(
-                state,
+                key,
                 {},
             )
         )
 
         state_counts = (
             action_counts.setdefault(
-                state,
+                key,
                 {},
             )
         )
@@ -785,7 +843,7 @@ class SampledBestResponse:
 
         chosen_action = (
             policy.get(
-                state
+                key
             )
         )
 
@@ -799,6 +857,22 @@ class SampledBestResponse:
                     state
                 )
             )
+
+            if self.response_grouping is not None:
+                # Unlearned: the response plays the
+                # profile here, whose value is the
+                # profile-weighted mean of the
+                # enumerated action values.
+                weights = self._normalized_strategy(
+                    actions=actions,
+                    strategy=strategy,
+                )
+
+                return sum(
+                    weights[action]
+                    * action_values[action]
+                    for action in actions
+                )
 
             chosen_action = (
                 self._highest_probability_action(
@@ -924,7 +998,10 @@ class SampledBestResponse:
             ):
                 action = (
                     policy.get(
-                        state
+                        self._policy_key(
+                            state,
+                            actions,
+                        )
                     )
                 )
 
@@ -939,12 +1016,27 @@ class SampledBestResponse:
                         )
                     )
 
-                    action = (
-                        self._highest_probability_action(
+                    if (
+                        self.response_grouping
+                        is not None
+                    ):
+                        action = self._sample_action(
                             actions=actions,
-                            strategy=strategy,
+                            strategy=(
+                                self._normalized_strategy(
+                                    actions=actions,
+                                    strategy=strategy,
+                                )
+                            ),
                         )
-                    )
+
+                    else:
+                        action = (
+                            self._highest_probability_action(
+                                actions=actions,
+                                strategy=strategy,
+                            )
+                        )
 
                     # Counting only; the action
                     # above is unchanged.
@@ -1078,6 +1170,22 @@ class SampledBestResponse:
                 probability,
             ) in probabilities.items()
         }
+
+    def _policy_key(
+        self,
+        state: InformationState,
+        actions: tuple[
+            SolverAction,
+            ...,
+        ],
+    ) -> Hashable:
+        if self.response_grouping is None:
+            return state
+
+        return self.response_grouping(
+            state,
+            actions,
+        )
 
     @staticmethod
     def _is_tied_fallback(
