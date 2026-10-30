@@ -50,7 +50,9 @@ from solver.strategy_checkpoint import (
 )
 
 
-REPORT_VERSION = 1
+# 2 (day53): SBR section uses grouped SBR by default
+# and records its grouping.
+REPORT_VERSION = 2
 
 # Ignored by --compare: they legitimately differ
 # between otherwise identical runs.
@@ -92,6 +94,9 @@ PRESETS = {
         "match_deal_pairs": 5_000,
     },
 }
+
+
+DEFAULT_SBR_GROUPING = "coarse"
 
 
 def parse_args() -> argparse.Namespace:
@@ -138,6 +143,18 @@ def parse_args() -> argparse.Namespace:
                 "Override the preset value."
             ),
         )
+
+    parser.add_argument(
+        "--sbr-grouping",
+        choices=("coarse", "none"),
+        default=DEFAULT_SBR_GROUPING,
+        help=(
+            "coarse = grouped SBR (benchmark "
+            "default); none = original "
+            "per-state SBR. A non-default value "
+            "makes the run a non-benchmark run."
+        ),
+    )
 
     parser.add_argument(
         "--sections",
@@ -213,6 +230,13 @@ def resolve_parameters(
 
             parameters[name] = value
             overridden.append(name)
+
+    parameters["sbr_grouping"] = (
+        args.sbr_grouping
+    )
+
+    if args.sbr_grouping != DEFAULT_SBR_GROUPING:
+        overridden.append("sbr_grouping")
 
     sections = [
         section.strip()
@@ -507,6 +531,7 @@ def build_report(
                 "sbr_validation_deals"
             ],
             sweeps=parameters["sbr_sweeps"],
+            grouping=parameters["sbr_grouping"],
             progress=progress,
         )
 
@@ -815,7 +840,8 @@ def render_summary(
             f"SBR PROXY ({sbr['repeats']} repeats/seat, "
             f"{sbr['response_deals']:,} response deals, "
             f"{sbr['validation_deals']:,} validation deals, "
-            f"<= {sbr['max_sweeps']} sweeps)"
+            f"<= {sbr['max_sweeps']} sweeps, "
+            f"grouping {sbr.get('grouping', 'none')})"
         )
 
         for seat_name, summary in sbr[

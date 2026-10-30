@@ -545,6 +545,15 @@ def check_against_report(
 
     problems = []
 
+    if sbr.get("grouping", "none") != runs[0][
+        "_grouping"
+    ]:
+        return [
+            "report SBR grouping "
+            f"{sbr.get('grouping', 'none')!r} differs "
+            f"from this run's {runs[0]['_grouping']!r}"
+        ]
+
     if (
         sbr["validation_deals"] != runs[0]["_validation_deals"]
         or sbr["max_sweeps"] != runs[0]["_sweeps"]
@@ -738,6 +747,7 @@ def main() -> None:
             )
             run["_sweeps"] = args.sweeps
             run["_seed"] = args.seed
+            run["_grouping"] = args.grouping
 
         problems = check_against_report(
             runs,
@@ -749,6 +759,7 @@ def main() -> None:
                 "_validation_deals",
                 "_sweeps",
                 "_seed",
+                "_grouping",
             ):
                 run.pop(key)
 

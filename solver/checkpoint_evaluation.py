@@ -49,6 +49,9 @@ from solver.postdraw_strength_bucket import (
 from solver.public_state import (
     PublicNodeKey,
 )
+from solver.response_grouping import (
+    coarse_grouping,
+)
 from solver.single_draw_game import (
     SingleDrawGame,
 )
@@ -1292,6 +1295,15 @@ def _l1(
 # ----------------------------------------------------------------
 
 
+# "coarse" = grouped SBR (A2_DESIGN 12.1): passed the
+# v1 power test for both seats; "none" = the original
+# per-information-set SBR, which failed it for seat 1.
+SBR_GROUPINGS = {
+    "none": None,
+    "coarse": coarse_grouping,
+}
+
+
 def evaluate_sampled_best_response(
     strategy_index: StrategyIndex,
     setup: EvaluationSetup,
@@ -1301,6 +1313,7 @@ def evaluate_sampled_best_response(
     response_deals: int,
     validation_deals: int,
     sweeps: int,
+    grouping: str = "none",
     progress: (
         Callable[[str], None]
         | None
@@ -1310,8 +1323,8 @@ def evaluate_sampled_best_response(
     dict,
 ]:
     """
-    Runs the unchanged SampledBestResponse
-    `repeats` times per seat with independent
+    Runs SampledBestResponse (grouping per
+    SBR_GROUPINGS) `repeats` times per seat with independent
     response seeds and deals. The validation deals
     are the same for every run, so runs differ only
     in what the response learned.
@@ -1365,6 +1378,9 @@ def evaluate_sampled_best_response(
                     setup.draw_action_mode
                 ),
                 random_seed=policy_seed,
+                response_grouping=(
+                    SBR_GROUPINGS[grouping]
+                ),
             )
 
             started = perf_counter()
@@ -1480,13 +1496,18 @@ def evaluate_sampled_best_response(
     ]
 
     section = {
+        "grouping": grouping,
         "note": (
-            "Proxy only, not exploitability. "
-            "Gain = held-out response value "
-            "minus held-out profile value for "
-            "the responder seat. Negative gains "
-            "mean the sampled response did not "
-            "generalise to the validation deals."
+            "Lower-bound proxy, not exact "
+            "exploitability. Gain = held-out "
+            "response value minus held-out "
+            "profile value for the responder "
+            "seat. grouping 'coarse' learns one "
+            "action per (seat, public node, "
+            "coarse hand class) and plays the "
+            "profile elsewhere; 'none' is the "
+            "original per-state SBR, which is "
+            "sample-starved (A2_DESIGN 11-12)."
         ),
         "repeats": repeats,
         "response_deals": response_deals,

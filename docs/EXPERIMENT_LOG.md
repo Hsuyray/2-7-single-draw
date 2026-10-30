@@ -128,3 +128,17 @@ Reading:
 - Fix (day52): the leak applies only when the opponent's last public action is a voluntary raise; a P0 check marks a test "INVALID" when the reference exploit itself is not significant. On v1, all 79,010 seat-1 FOLD states face a voluntary raise (0 differ), so the seat-0 responder results above are unchanged by the fix; 1,348 seat-0 root FOLD states are now excluded.
 - Not yet shown: power for small leaks (0.1, 0.3). Per-run se ~0.35 at 1,000 validation deals is larger than those leaks' effect; the hand-written reference does not gain there either.
 - Pending: rerun with `--responder-seats 1` on the day52 code.
+
+## A2 SBR power test, seat 1 rerun (day53)
+
+`python -m scripts.inspect_sbr_power checkpoints/production_v1.chk.gz --responder-seats 1 --out-dir experiments/eval/power_seat1` (user's laptop, day52 code: leak only after a voluntary raise). Leak 0 rows are bit-identical to the day51 run (same seeds; the rule change does not touch leak 0).
+
+| Responder | Mode | Leak 0 | 0.1 | 0.3 | 1 | Verdict |
+|---|---|---|---|---|---|---|
+| seat 1 | reference exploit | -1.02 | -1.13 | -0.19 | **+1.98 ± 0.22** | P0 ok |
+| seat 1 | per_state | +0.23 ± 0.36 | +0.24 | -0.21 | +0.31 ± 0.22 | **FAIL** (16% of reference) |
+| seat 1 | grouped | +0.36 ± 0.38 | +0.55 | +0.36 | **+3.13 ± 0.24** | **PASS** |
+
+Combined with day52 (seat 0): grouped SBR passes P0-P3 for both seats and beats the hand-written exploit at full leak in both (+1.70 vs +0.75, +3.13 vs +1.98); per-state SBR passes seat 0 only marginally (51%) and fails seat 1 (16%). Neither detects the 0.1 / 0.3 leaks at 1,000 validation deals (per-run se ~0.35-0.39; the reference does not gain there either).
+
+Decision (day53): grouped SBR (`coarse`) replaces per-state SBR in `scripts/evaluate_checkpoint.py` (report version 2). The day46-48 v1 / v2 reports (version 1) remain valid for every section except SBR. No-leak grouped gain on v1 at 300 response deals: seat 0 +0.51 ± 0.36, seat 1 +0.36 ± 0.38 (not significant individually); this is the first plausible lower-bound reading for v1, pending the grouped budget curve.

@@ -331,3 +331,10 @@ A2 現在有可重現的報告和門檻，但缺一個可信的「離均衡多�
 **判讀**
 - 分組版 P1–P3 全過、原版沒過 → 分組 SBR 取代原版當可剝削度指標，接著跑分組版的預算曲線(gain 應 ≥ 0 且隨局數穩定),再決定是否設門檻。
 - 兩者都沒過 → SBR 這條路放棄，改評估選項 B(LBR)。
+
+### 12.2 結果與決定(day52–53)
+- 檢測力測試(v1,300 局 response、1,000 局 validation):**分組 SBR 兩個 seat 都通過 P0–P3**,完全漏洞時比手寫 exploit 還強(seat 0:+1.70 vs +0.75;seat 1:+3.13 vs +1.98)。原版 SBR:seat 0 勉強通過(參考值的 51%),seat 1 失敗(16%)。
+- 第一次 seat 1 的測試設計錯誤(漏洞包含開局面對大盲注的 fold,leak = 1 時 seat 1 根本沒有行動機會),day52 已修正並加上 P0 檢查。
+- 限制:0.1 / 0.3 的小漏洞在 1,000 局 validation 下偵測不到(每次 SE 約 0.35–0.39)。
+- **決定**:`evaluate_checkpoint` 的 SBR 預設改用分組版(`--sbr-grouping coarse`,report version 2)。用 `none` 的報告不算正式 benchmark。
+- **下一步**:分組版的預算曲線(response deals 100 / 300 / 1,000)決定 standard preset 的 response deals 和是否設 SBR 門檻;之後重產 v1 / v2 的 standard 報告。

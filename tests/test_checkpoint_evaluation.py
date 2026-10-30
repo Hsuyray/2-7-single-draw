@@ -554,6 +554,10 @@ def test_script_is_reproducible_across_processes(
     }
     assert data["gates"]["benchmark_run"] is False
 
+    assert data["report_version"] == 2
+    assert data["sbr"]["grouping"] == "coarse"
+    assert data["parameters"]["sbr_grouping"] == "coarse"
+
     sbr_run = data["sbr"]["runs"]["seat_0"][0]
     assert 0.0 <= sbr_run[
         "response_fallback_share"
