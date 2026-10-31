@@ -1,3 +1,4 @@
+import pytest
 import copy
 
 from solver.benchmark_gates import (
@@ -43,6 +44,19 @@ def passing_report() -> dict:
             "opponents": {
                 "uniform": dict(match),
                 "call_station": dict(match),
+            },
+        },
+        "sbr": {
+            "grouping": "coarse",
+            "runs": {
+                "seat_0": [
+                    {"gain": 0.1, "gain_standard_error": 0.3},
+                    {"gain": 0.3, "gain_standard_error": 0.3},
+                ],
+                "seat_1": [
+                    {"gain": 0.2, "gain_standard_error": 0.3},
+                    {"gain": 0.2, "gain_standard_error": 0.3},
+                ],
             },
         },
     }
@@ -169,3 +183,46 @@ def test_missing_section_is_incomplete_and_quick_is_not_benchmark() -> None:
     gates = evaluate_gates(report)
     assert gates["benchmark_run"] is False
     assert gates["note"]
+
+
+def test_q6_sbr_gate() -> None:
+    report = passing_report()
+
+    gate = [
+        gate
+        for gate in evaluate_gates(report)["gates"]
+        if gate["id"] == "Q6"
+    ][0]
+
+    assert gate["status"] == "pass"
+    assert gate["value"]["mean_gain"] == pytest.approx(0.2)
+    assert gate["value"]["lower_bound"] == pytest.approx(-0.4)
+
+    # v1-like numbers: 1.57 - 2 * 0.37 > 0.2.
+    for runs in report["sbr"]["runs"].values():
+        for run in runs:
+            run["gain"] = 1.57
+            run["gain_standard_error"] = 0.37
+
+    assert statuses(report)["Q6"] == "fail"
+    assert evaluate_gates(report)["verdict"] == "FAIL"
+
+    # Just at the tolerance passes.
+    for runs in report["sbr"]["runs"].values():
+        for run in runs:
+            run["gain"] = 0.94
+            run["gain_standard_error"] = 0.37
+
+    assert statuses(report)["Q6"] == "pass"
+
+
+def test_q6_not_applicable_to_per_state_sbr() -> None:
+    report = passing_report()
+    report["sbr"]["grouping"] = "none"
+    assert statuses(report)["Q6"] == "n/a"
+
+    del report["sbr"]["grouping"]
+    assert statuses(report)["Q6"] == "n/a"
+
+    del report["sbr"]
+    assert statuses(report)["Q6"] == "missing"
