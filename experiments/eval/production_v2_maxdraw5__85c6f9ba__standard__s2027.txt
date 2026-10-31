@@ -35,11 +35,12 @@ COVERAGE (self-play, 20,000 deals, button 0)
 
 BUTTON 1 DIAGNOSTIC (2,000 deals): coverage 0.00%
 
-SBR PROXY (5 repeats/seat, 100 response deals, 1,000 validation deals, <= 3 sweeps)
-  seat_0: mean gain -0.4229 sd 0.4310 [-0.8782, +0.1263]
-  seat_1: mean gain -0.1733 sd 0.3973 [-0.6692, +0.2540]
-  mean over seats: -0.2981 ± 0.0952 (se over repeats)
-  per-run gain se (validation noise): 0.4144..0.4339
+SBR PROXY (2 repeats/seat, 1,000 response deals, 1,000 validation deals, <= 3 sweeps, grouping coarse)
+  seat_0: mean gain +2.1913 sd 0.1195 [+2.1068, +2.2758]
+  seat_1: mean gain +2.7427 sd 0.0863 [+2.6817, +2.8038]
+  mean over seats: +2.4670 ± 0.0117 (se over repeats)
+  per-run gain se (validation noise): 0.4629..0.4794
+  responder validation decisions from fallback: 1.01%..1.22%
   proxy only; NOT exploitability
 
 BASELINES (duplicate, 5,000 deal pairs)
@@ -48,4 +49,15 @@ BASELINES (duplicate, 5,000 deal pairs)
 
 current-vs-average: unavailable (checkpoint has no regrets)
 
-TIMING  load_s=147.1  static_s=10.0  coverage_s=110.2  button1_s=9.3  sbr_s=2516.5  baselines_s=135.9  peak_rss_gb=8.181
+GATES v1: FAIL
+  H1  PASS     No NaN, inf, negative or non-normalized stored strategy
+  H2  PASS     Stored action sets equal the rebuilt legal actions at every played state
+  H3  PASS     Every simulated deal is zero-sum
+  H4  EXTERNAL Same checkpoint and arguments give an identical report
+  Q1  FAIL     Self-play coverage (button 0): overall >= 97%, every phase >= 95%  failing: predraw_betting, draw
+  Q2  FAIL     Deals with any missing decision <= 10%
+  Q3  FAIL     Played decisions using a near-uniform stored strategy, every phase <= 10%  failing: predraw_betting, draw, postdraw_betting
+  Q4  PASS     Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only
+  Q5  N/A      Does not lose to the previous compatible checkpoint (utility >= -2 SE)
+
+TIMING  load_s=57.7  static_s=9.3  coverage_s=92.3  button1_s=8.0  sbr_s=10841.2  baselines_s=165.7  peak_rss_gb=8.139

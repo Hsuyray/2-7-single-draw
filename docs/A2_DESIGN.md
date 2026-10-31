@@ -338,3 +338,40 @@ A2 現在有可重現的報告和門檻，但缺一個可信的「離均衡多�
 - 限制:0.1 / 0.3 的小漏洞在 1,000 局 validation 下偵測不到(每次 SE 約 0.35–0.39)。
 - **決定**:`evaluate_checkpoint` 的 SBR 預設改用分組版(`--sbr-grouping coarse`,report version 2)。用 `none` 的報告不算正式 benchmark。
 - **下一步**:分組版的預算曲線(response deals 100 / 300 / 1,000)決定 standard preset 的 response deals 和是否設 SBR 門檻;之後重產 v1 / v2 的 standard 報告。
+
+### 12.3 分組版預算曲線與 standard preset(day54)
+- v1、沒植入漏洞:response deals 100 / 300 / 1,000 的兩 seat 平均 gain 為 −0.07 / +0.12 / **+1.28**;1,000 局時 6 次全部為正。**v1 的可剝削度下界約每局 1.3 chips(約 0.64 BB/手)**,而且還在隨預算上升。
+- 100 局(原 standard)沒有檢測力 → standard preset 改為 **1,000 response deals × 每個 seat 2 次**。成本(使用者筆電):v1 每次約 13–15 分鐘，SBR 合計約 1 小時;v2 [推測] 約 2.5 倍。
+- 量測 script 在分組模式下的 `sample` 欄與 `visits` 欄有 bug(已修，只影響 `inspect_sbr_budget`,不影響正式 gain)。
+
+### 12.4 SBR 門檻提案 Q6(待你核准)
+- 定義:standard preset 下，分組 SBR 的平均 gain(兩個 seat × 所有重複)為 G,保守 SE 為每次執行 SE 的平均(重複之間共用 validation 牌，誤差相關)。
+- **Q6 失敗條件:G − 2·SE > T**,T = **0.2 chips/局(= 0.1 BB/手 = 100 mbb/手)**。意思是「有統計把握它的可剝削度超過 T」。
+- 這是單邊的否證：因為 SBR 是**下界**,通過 Q6 不代表可剝削度 ≤ T,只代表在這個預算下沒抓到超過 T 的證據。所以 Q6 只能淘汰策略，不能證明策略夠好。
+- 用 v1 的數字試算:G ≈ 1.28、SE ≈ 0.37 → 1.28 − 0.74 = 0.54 > 0.2 → **不過**。
+- T 的選擇是產品決策：職業級 GTO 解通常遠低於 100 mbb/手;0.2 chips 是「目前工具解析度做得到」的起點，之後隨工具改進往下調。
+
+
+## 13. Benchmark 現況(day55)
+
+**怎麼用**
+- 正式評估：`python -m scripts.evaluate_checkpoint <checkpoint> [--previous <前一版>]`(preset `standard`,不加覆寫參數)。輸出 `experiments/eval/<名稱>__<sha8>__standard__s2027.json` / `.txt`,內含 gates 判定。
+- 重現性檢查:`--compare A.json B.json`(忽略 timing / environment)。
+- 舊報告重算門檻:`--gates REPORT.json`。
+
+**包含的指標**:靜態統計、各 phase 覆蓋率與第一次缺失、實際打到時的均勻策略比例、動作空間一致性、button 1 診斷、分組 SBR 可剝削度下界(附 SE)、對 uniform / call_station 的不輸檢查、和前一版的距離與 head-to-head。
+
+**驗證過的性質**
+- 同一 checkpoint、同參數 → 報告逐位相同，且跨平台(Linux / Python 3.13 vs Windows / Python 3.12)。
+- 評估走和訓練同一條動作路徑，動作空間不一致次數為 0。
+- 可剝削度估計器通過檢測力測試(兩個 seat,第 12.2 節)。
+
+**基準數字**:v1 下界 +1.57 chips/局、v2 +2.47(不同遊戲，不能直接排名);兩者 gates 都是 FAIL。
+
+**成本(使用者筆電)**:v1 約 26 分鐘、2 GB;v2 約 3.1 小時、8.1 GB。
+
+**已知限制**
+- SBR 是下界，而且會隨 response 局數變大;只能在同一個 preset 下比較。小漏洞(遠小於 0.4 chips/局)在目前的 validation 局數下偵測不到。
+- current-vs-average 需要 checkpoint 存 regret(C1 範圍)。
+- 載入 v2 這種規模的 checkpoint 要 8 GB,兩份同時載入(`--previous`)放不下 16 GB。
+- 待決:Q6(SBR 門檻，第 12.4 節)。

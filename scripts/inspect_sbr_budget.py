@@ -6,6 +6,10 @@ standard budget (100 response deals)? Two hypotheses:
 
   overfit   the pure response learned on few deals does not
             generalise; gain should rise with response deals.
+  In grouped mode (--grouping coarse) the production fallback
+  already samples the profile, so the probe only replicates the
+  production rollout with an independent RNG (a noise check).
+
   samples   (added day50, after overfit and fallback were both
             falsified) learned states grow about linearly with
             response deals, so each state's action is chosen from
@@ -120,13 +124,19 @@ class FallbackProbeSBR(SampledBestResponse):
             and game.acting_seat
             == self.responder_seat
         ):
+            # Keyed like the policy: per state, or
+            # per group in grouped mode (day54; the
+            # day53 grouped run counted per state).
             self.training_visits[
-                InformationState.from_game(
-                    game,
-                    observer_seat=(
-                        self.responder_seat
+                self._policy_key(
+                    InformationState.from_game(
+                        game,
+                        observer_seat=(
+                            self.responder_seat
+                        ),
+                        abstraction=self.abstraction,
                     ),
-                    abstraction=self.abstraction,
+                    self._solver_actions(game),
                 )
             ] += 1
 
@@ -209,7 +219,18 @@ class FallbackProbeSBR(SampledBestResponse):
                 acting_seat
                 == self.responder_seat
             ):
-                learned = policy.get(state)
+                # Policy key, not the raw state: in
+                # grouped mode the policy is keyed by
+                # group (day54 fix; the day53 grouped
+                # run never found a learned action
+                # here, so its "sample" column was the
+                # profile against itself).
+                learned = policy.get(
+                    self._policy_key(
+                        state,
+                        actions,
+                    )
+                )
 
                 if learned in actions:
                     action = learned
@@ -677,7 +698,7 @@ def main() -> None:
                     f"(se {run['gain_sample_se']:.4f})  "
                     f"fallback {run['fallback_share']:.1%} "
                     f"tie {run['fallback_tie_share']:.1%}  "
-                    f"visits/state {run['visits_per_state_mean']:.2f} "
+                    f"visits/key {run['visits_per_state_mean']:.2f} "
                     f"(1-visit {run['states_with_one_visit_share']:.0%})  "
                     f"{run['elapsed_s']:.0f}s",
                     flush=True,

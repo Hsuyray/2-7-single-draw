@@ -83,12 +83,17 @@ PRESETS = {
         "sbr_sweeps": 3,
         "match_deal_pairs": 200,
     },
+    # SBR: 1,000 response deals x 2 repeats per seat
+    # (day54). The grouped budget curve on v1 found
+    # no power at 100 deals (mean gain -0.07) and a
+    # clear lower bound at 1,000 (+1.28, all 6 runs
+    # positive); see EXPERIMENT_LOG day54.
     "standard": {
         "deals": 20_000,
         "button1_deals": 2_000,
         "top": 25,
-        "sbr_repeats": 5,
-        "sbr_response_deals": 100,
+        "sbr_repeats": 2,
+        "sbr_response_deals": 1_000,
         "sbr_validation_deals": 1_000,
         "sbr_sweeps": 3,
         "match_deal_pairs": 5_000,

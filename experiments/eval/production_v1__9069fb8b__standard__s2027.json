@@ -950,9 +950,112 @@
     "reason": "Checkpoints store the average strategy only (no regrets), so the current strategy cannot be reconstructed. Use the distance to a previous checkpoint and the SBR proxy instead."
   },
   "environment": {
-    "git_commit": "7f5972223678105e23b785e5293065a164c5bd5d",
-    "platform": "Linux-6.18.44-fc-v180-x86_64-with-glibc2.39",
-    "python": "3.13.17"
+    "git_commit": "c37f6d8b8a1aa1cf17d1ef31fa7357ac2fc6a9ce",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.12.9"
+  },
+  "gates": {
+    "benchmark_run": true,
+    "gates": [
+      {
+        "description": "No NaN, inf, negative or non-normalized stored strategy",
+        "id": "H1",
+        "kind": "hard",
+        "status": "pass",
+        "threshold": "== 0",
+        "value": 0
+      },
+      {
+        "description": "Stored action sets equal the rebuilt legal actions at every played state",
+        "id": "H2",
+        "kind": "hard",
+        "status": "pass",
+        "threshold": "== 0",
+        "value": 0
+      },
+      {
+        "description": "Every simulated deal is zero-sum",
+        "id": "H3",
+        "kind": "hard",
+        "status": "pass",
+        "threshold": "<= 1e-09",
+        "value": 8.881784197001252e-15
+      },
+      {
+        "description": "Same checkpoint and arguments give an identical report",
+        "detail": "checked by evaluate_checkpoint --compare on two runs",
+        "id": "H4",
+        "kind": "hard",
+        "status": "external"
+      },
+      {
+        "description": "Self-play coverage (button 0): overall >= 97%, every phase >= 95%",
+        "failing_phases": [
+          "draw"
+        ],
+        "id": "Q1",
+        "kind": "quality",
+        "status": "fail",
+        "value": {
+          "by_phase": {
+            "draw": 0.9479492122581932,
+            "postdraw_betting": 0.9980925468032498,
+            "predraw_betting": 0.9727731405054756
+          },
+          "overall": 0.9683209169054441
+        }
+      },
+      {
+        "description": "Deals with any missing decision <= 10%",
+        "id": "Q2",
+        "kind": "quality",
+        "status": "pass",
+        "value": 0.0927
+      },
+      {
+        "description": "Played decisions using a near-uniform stored strategy, every phase <= 10%",
+        "failing_phases": [
+          "predraw_betting",
+          "draw",
+          "postdraw_betting"
+        ],
+        "id": "Q3",
+        "kind": "quality",
+        "status": "fail",
+        "value": {
+          "draw": 0.23075035063113605,
+          "postdraw_betting": 0.18095643838534456,
+          "predraw_betting": 0.10815526554806636
+        }
+      },
+      {
+        "description": "Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only",
+        "failing_opponents": [],
+        "id": "Q4",
+        "kind": "quality",
+        "status": "pass",
+        "value": {
+          "call_station": {
+            "standard_error": 0.08928976085911998,
+            "utility": 1.1536999999999935
+          },
+          "uniform": {
+            "standard_error": 0.0800524628793056,
+            "utility": 1.8635399999999969
+          }
+        }
+      },
+      {
+        "description": "Does not lose to the previous compatible checkpoint (utility >= -2 SE)",
+        "detail": "no --previous given",
+        "id": "Q5",
+        "kind": "quality",
+        "status": "n/a"
+      }
+    ],
+    "gates_version": 1,
+    "note": null,
+    "verdict": "FAIL"
   },
   "parameters": {
     "button1_deals": 2000,
@@ -960,8 +1063,9 @@
     "match_deal_pairs": 5000,
     "overridden": [],
     "preset": "standard",
-    "sbr_repeats": 5,
-    "sbr_response_deals": 100,
+    "sbr_grouping": "coarse",
+    "sbr_repeats": 2,
+    "sbr_response_deals": 1000,
     "sbr_sweeps": 3,
     "sbr_validation_deals": 1000,
     "sections": [
@@ -975,180 +1079,109 @@
     "seed": 2027,
     "top": 25
   },
-  "report_version": 1,
+  "report_version": 2,
   "sbr": {
     "gain_by_seat": {
       "seat_0": {
-        "count": 5,
-        "max": -0.004299999999998416,
-        "mean": -0.48654000000000036,
-        "min": -0.7347000000000006,
-        "sd": 0.31037949835644874,
-        "standard_error": 0.13880593142946074
+        "count": 2,
+        "max": 2.0231000000000003,
+        "mean": 1.583125,
+        "min": 1.1431499999999994,
+        "sd": 0.6222186121051031,
+        "standard_error": 0.4399750000000001
       },
       "seat_1": {
-        "count": 5,
-        "max": 1.2204999999999981,
-        "mean": 0.6980599999999997,
-        "min": 0.253800000000001,
-        "sd": 0.3575352681904254,
-        "standard_error": 0.15989463280548197
+        "count": 2,
+        "max": 1.574000000000001,
+        "mean": 1.5577000000000005,
+        "min": 1.5413999999999999,
+        "sd": 0.02305168106668221,
+        "standard_error": 0.016299999999999544
       }
     },
+    "grouping": "coarse",
     "max_sweeps": 3,
     "mean_seat_gain": {
-      "count": 5,
-      "max": 0.28535000000000016,
-      "mean": 0.10575999999999967,
-      "min": -0.2370500000000002,
-      "sd": 0.20558443946466368,
-      "standard_error": 0.0919401563518357
+      "count": 2,
+      "max": 1.7822500000000001,
+      "mean": 1.5704125000000002,
+      "min": 1.358575,
+      "sd": 0.29958346551921056,
+      "standard_error": 0.21183749999999926
     },
-    "note": "Proxy only, not exploitability. Gain = held-out response value minus held-out profile value for the responder seat. Negative gains mean the sampled response did not generalise to the validation deals.",
-    "repeats": 5,
-    "response_deals": 100,
+    "note": "Lower-bound proxy, not exact exploitability. Gain = held-out response value minus held-out profile value for the responder seat. grouping 'coarse' learns one action per (seat, public node, coarse hand class) and plays the profile elsewhere; 'none' is the original per-state SBR, which is sample-starved (A2_DESIGN 11-12).",
+    "repeats": 2,
+    "response_deals": 1000,
     "runs": {
       "seat_0": [
         {
-          "baseline_standard_error": 0.31518734032238627,
-          "baseline_value": 1.6434000000000002,
-          "changed_actions": 3398,
-          "gain": -0.7279000000000014,
-          "gain_standard_error": 0.3706399405832506,
-          "information_states": 8394,
-          "opponent_strategy_coverage": 0.9661169415292353,
+          "baseline_standard_error": 0.3109867499889164,
+          "baseline_value": 1.0597000000000003,
+          "changed_actions": 10058,
+          "gain": 1.1431499999999994,
+          "gain_standard_error": 0.3704199529169819,
+          "information_states": 10058,
+          "opponent_strategy_coverage": 0.9671251976111014,
           "policy_seed": 2013936138,
           "repeat": 0,
+          "response_decisions": 2528,
+          "response_fallback_share": 0.006329113924050633,
+          "response_fallback_tie_decisions": 10,
           "response_first_deck_seed": 2413011771,
-          "response_value": 0.9154999999999988,
+          "response_value": 2.2028499999999998,
           "sweeps_completed": 3
         },
         {
-          "baseline_standard_error": 0.30844017244837,
-          "baseline_value": 1.2743999999999984,
-          "changed_actions": 3534,
-          "gain": -0.004299999999998416,
-          "gain_standard_error": 0.348578511225934,
-          "information_states": 8840,
-          "opponent_strategy_coverage": 0.9667609957312101,
+          "baseline_standard_error": 0.3051411508005962,
+          "baseline_value": 1.208900000000001,
+          "changed_actions": 10158,
+          "gain": 2.0231000000000003,
+          "gain_standard_error": 0.3828838419500441,
+          "information_states": 10158,
+          "opponent_strategy_coverage": 0.9675452781371281,
           "policy_seed": 1088867861,
           "repeat": 1,
+          "response_decisions": 2679,
+          "response_fallback_share": 0.0033594624860022394,
+          "response_fallback_tie_decisions": 9,
           "response_first_deck_seed": 1705444815,
-          "response_value": 1.2701,
-          "sweeps_completed": 3
-        },
-        {
-          "baseline_standard_error": 0.313101366502457,
-          "baseline_value": 1.5973999999999997,
-          "changed_actions": 3485,
-          "gain": -0.3545999999999996,
-          "gain_standard_error": 0.36245608458577894,
-          "information_states": 8296,
-          "opponent_strategy_coverage": 0.9700431581619701,
-          "policy_seed": 292016550,
-          "repeat": 2,
-          "response_first_deck_seed": 2165977169,
-          "response_value": 1.2428000000000001,
-          "sweeps_completed": 3
-        },
-        {
-          "baseline_standard_error": 0.31169179033487926,
-          "baseline_value": 1.4031000000000011,
-          "changed_actions": 3388,
-          "gain": -0.611200000000002,
-          "gain_standard_error": 0.36818986724017577,
-          "information_states": 8574,
-          "opponent_strategy_coverage": 0.9732423140166426,
-          "policy_seed": 1620414858,
-          "repeat": 3,
-          "response_first_deck_seed": 2200091940,
-          "response_value": 0.7918999999999992,
-          "sweeps_completed": 3
-        },
-        {
-          "baseline_standard_error": 0.30132528476255926,
-          "baseline_value": 1.5062999999999993,
-          "changed_actions": 3382,
-          "gain": -0.7347000000000006,
-          "gain_standard_error": 0.36035104937933615,
-          "information_states": 8321,
-          "opponent_strategy_coverage": 0.9657846715328468,
-          "policy_seed": 897186531,
-          "repeat": 4,
-          "response_first_deck_seed": 1285365178,
-          "response_value": 0.7715999999999987,
+          "response_value": 3.2320000000000015,
           "sweeps_completed": 3
         }
       ],
       "seat_1": [
         {
-          "baseline_standard_error": 0.31634715334807684,
-          "baseline_value": -1.2347000000000008,
-          "changed_actions": 3183,
-          "gain": 0.253800000000001,
-          "gain_standard_error": 0.3636393255949074,
-          "information_states": 7241,
-          "opponent_strategy_coverage": 0.9660251118738323,
+          "baseline_standard_error": 0.31636815136356156,
+          "baseline_value": -1.6619000000000013,
+          "changed_actions": 9475,
+          "gain": 1.574000000000001,
+          "gain_standard_error": 0.36861943015023524,
+          "information_states": 9475,
+          "opponent_strategy_coverage": 0.9665327704225929,
           "policy_seed": 196826116,
           "repeat": 0,
+          "response_decisions": 2180,
+          "response_fallback_share": 0.00963302752293578,
+          "response_fallback_tie_decisions": 16,
           "response_first_deck_seed": 3044649421,
-          "response_value": -0.9808999999999998,
+          "response_value": -0.0879000000000003,
           "sweeps_completed": 3
         },
         {
-          "baseline_standard_error": 0.309593258543748,
-          "baseline_value": -1.2164999999999995,
-          "changed_actions": 3195,
-          "gain": 0.5749999999999987,
-          "gain_standard_error": 0.36170707348213005,
-          "information_states": 7410,
-          "opponent_strategy_coverage": 0.9752636542913488,
+          "baseline_standard_error": 0.3116790381511453,
+          "baseline_value": -1.541,
+          "changed_actions": 9794,
+          "gain": 1.5413999999999999,
+          "gain_standard_error": 0.3788987335559336,
+          "information_states": 9794,
+          "opponent_strategy_coverage": 0.9691808717765328,
           "policy_seed": 552741942,
           "repeat": 1,
+          "response_decisions": 2355,
+          "response_fallback_share": 0.013588110403397028,
+          "response_fallback_tie_decisions": 25,
           "response_first_deck_seed": 2057928573,
-          "response_value": -0.6415000000000007,
-          "sweeps_completed": 3
-        },
-        {
-          "baseline_standard_error": 0.31325294036073287,
-          "baseline_value": -1.2326000000000006,
-          "changed_actions": 2962,
-          "gain": 0.6090000000000001,
-          "gain_standard_error": 0.3414850084718376,
-          "information_states": 6801,
-          "opponent_strategy_coverage": 0.971244076930224,
-          "policy_seed": 177579394,
-          "repeat": 2,
-          "response_first_deck_seed": 2240339615,
-          "response_value": -0.6236000000000005,
-          "sweeps_completed": 3
-        },
-        {
-          "baseline_standard_error": 0.31002479800070115,
-          "baseline_value": -1.4300000000000008,
-          "changed_actions": 2996,
-          "gain": 0.8320000000000007,
-          "gain_standard_error": 0.362211973178018,
-          "information_states": 6875,
-          "opponent_strategy_coverage": 0.9646262263368799,
-          "policy_seed": 1011634923,
-          "repeat": 3,
-          "response_first_deck_seed": 3087687086,
-          "response_value": -0.5980000000000001,
-          "sweeps_completed": 3
-        },
-        {
-          "baseline_standard_error": 0.30537788933597576,
-          "baseline_value": -1.9993999999999985,
-          "changed_actions": 2891,
-          "gain": 1.2204999999999981,
-          "gain_standard_error": 0.3566173940173357,
-          "information_states": 6637,
-          "opponent_strategy_coverage": 0.9688668706590898,
-          "policy_seed": 1353182227,
-          "repeat": 4,
-          "response_first_deck_seed": 2646716938,
-          "response_value": -0.7789000000000005,
+          "response_value": 0.0004000000000000057,
           "sweeps_completed": 3
         }
       ]
@@ -1228,24 +1261,18 @@
     "near_uniform_tolerance": 1e-06
   },
   "timing": {
-    "baselines_s": 107.43642454200017,
-    "button1_s": 10.405069106000155,
-    "coverage_s": 108.53639118700016,
-    "load_s": 32.494519112000035,
-    "peak_rss_gb": 1.989,
+    "baselines_s": 80.15304059998016,
+    "button1_s": 6.212701199983712,
+    "coverage_s": 70.41622290000669,
+    "load_s": 12.996121000003768,
+    "peak_rss_gb": 1.979,
     "sbr_runs_s": {
-      "seat0_repeat0": 63.70894490499995,
-      "seat0_repeat1": 62.15771354799995,
-      "seat0_repeat2": 60.110518864999904,
-      "seat0_repeat3": 58.81773860199996,
-      "seat0_repeat4": 60.01848560600001,
-      "seat1_repeat0": 61.63659326700008,
-      "seat1_repeat1": 57.42185491499981,
-      "seat1_repeat2": 54.478577219000044,
-      "seat1_repeat3": 51.044347317999836,
-      "seat1_repeat4": 49.389063490000126
+      "seat0_repeat0": 365.1785346000106,
+      "seat0_repeat1": 371.6090738000057,
+      "seat1_repeat0": 323.9685458000167,
+      "seat1_repeat1": 334.3512588000158
     },
-    "sbr_s": 578.786547297,
-    "static_s": 3.0508955520001564
+    "sbr_s": 1395.108799299982,
+    "static_s": 2.3281755999778397
   }
 }

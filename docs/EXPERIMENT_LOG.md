@@ -142,3 +142,40 @@ Reading:
 Combined with day52 (seat 0): grouped SBR passes P0-P3 for both seats and beats the hand-written exploit at full leak in both (+1.70 vs +0.75, +3.13 vs +1.98); per-state SBR passes seat 0 only marginally (51%) and fails seat 1 (16%). Neither detects the 0.1 / 0.3 leaks at 1,000 validation deals (per-run se ~0.35-0.39; the reference does not gain there either).
 
 Decision (day53): grouped SBR (`coarse`) replaces per-state SBR in `scripts/evaluate_checkpoint.py` (report version 2). The day46-48 v1 / v2 reports (version 1) remain valid for every section except SBR. No-leak grouped gain on v1 at 300 response deals: seat 0 +0.51 ± 0.36, seat 1 +0.36 ± 0.38 (not significant individually); this is the first plausible lower-bound reading for v1, pending the grouped budget curve.
+
+## A2 grouped SBR budget curve, v1 (day54)
+
+`python -m scripts.inspect_sbr_budget checkpoints/production_v1.chk.gz --grouping coarse` (user's laptop, day53 code; budgets 100/300/1,000, 3 repeats, validation 1,000, sweeps <= 3, seed 2027). No leak planted.
+
+| Response deals | Seat 0 gain (sd) | Seat 1 gain (sd) | Mean over seats | Fallback | Policy keys | Time per run |
+|---|---|---|---|---|---|---|
+| 100 | +0.13 (0.34) | -0.26 (0.26) | -0.07 | 8-14% | ~3.9k | ~110 s |
+| 300 | +0.09 (0.35) | +0.16 (0.48) | +0.12 | 3-5% | ~6.7k | ~290 s |
+| 1,000 | **+1.21 (0.79)** | **+1.36 (0.35)** | **+1.28** | 0.5-1% | ~9.9k | ~780-930 s |
+
+Per-run gain se 0.36-0.40 throughout.
+
+Reading:
+- Confirmed: at 1,000 response deals all 6 runs are positive (+0.45 to +2.02) on held-out validation deals. **v1 is exploitable by at least ~1.3 chips per deal per seat (~0.64 BB/hand, ~640 mbb/hand).** This is a lower bound; the gain is still rising with the budget, so the true value is higher.
+- Confirmed: grouped SBR has no power at 100 deals (the previous standard preset) and little at 300. The standard preset now uses 1,000 response deals x 2 repeats per seat.
+- Confirmed: no significantly negative gain at any budget (validity, P3).
+- Measurement bug (script only, fixed day54): in grouped mode the "sample" probe looked up learned actions by raw state instead of group key, so it never found one and played the profile against itself; that column (mean about -0.04 over 18 runs) is a noise check, not a fallback comparison. The "visits/state" column counted states, not groups. The production gains above are unaffected.
+- Because the lower bound grows with the response budget, SBR numbers are comparable only at the same preset.
+
+## A2 benchmark reports, report v2 (day55)
+
+`python -m scripts.evaluate_checkpoint <checkpoint>` (user's laptop, Windows 11, Python 3.12.9, preset standard, seed 2027, grouped SBR 1,000 response deals x 2 repeats per seat).
+
+| Metric | v1 `production_v1` | v2 `production_v2_maxdraw5` |
+|---|---|---|
+| Gates v1 verdict | FAIL (Q1, Q3) | FAIL (Q1, Q2, Q3) |
+| **Grouped SBR lower bound, mean over seats** | **+1.57 chips/deal** (4 runs +1.14 to +2.02, per-run se ~0.37) | **+2.47 chips/deal** (4 runs +2.11 to +2.80, per-run se ~0.47) |
+| SBR fallback share | 0.3-1.4% | 1.0-1.2% |
+| Policy keys learned per run | ~9.5-10k | ~60-66k |
+| SBR time (4 runs) | 1,395 s | 10,841 s |
+| Total time / peak RSS | ~26 min / 1.98 GB | ~3.1 h / 8.14 GB |
+
+Reading:
+- Confirmed: **reproducible across platforms.** The new v1 report (Windows, Python 3.12.9) is identical to the day46 report (Linux container, Python 3.13.17) in every section except SBR (checkpoint, setup, static, coverage, button-1 diagnostic, baselines, current_vs_average compared as JSON). The v2 summary numbers outside SBR also match the day46 v2 report. The four v1 SBR gains equal the same-seed runs of the grouped budget curve exactly.
+- Confirmed: both checkpoints are clearly exploitable; every SBR run is positive and far above its se. v2's lower bound (+2.47) is higher than v1's (+1.57), but they are different games (max_draw 5 vs 1), so the numbers are not a like-for-like ranking.
+- v2 needs ~3 h and 8 GB for a standard report on the laptop; SBR is 95% of that.
