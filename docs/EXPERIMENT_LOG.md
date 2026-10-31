@@ -161,3 +161,21 @@ Reading:
 - Confirmed: no significantly negative gain at any budget (validity, P3).
 - Measurement bug (script only, fixed day54): in grouped mode the "sample" probe looked up learned actions by raw state instead of group key, so it never found one and played the profile against itself; that column (mean about -0.04 over 18 runs) is a noise check, not a fallback comparison. The "visits/state" column counted states, not groups. The production gains above are unaffected.
 - Because the lower bound grows with the response budget, SBR numbers are comparable only at the same preset.
+
+## A2 benchmark reports, report v2 (day55)
+
+`python -m scripts.evaluate_checkpoint <checkpoint>` (user's laptop, Windows 11, Python 3.12.9, preset standard, seed 2027, grouped SBR 1,000 response deals x 2 repeats per seat).
+
+| Metric | v1 `production_v1` | v2 `production_v2_maxdraw5` |
+|---|---|---|
+| Gates v1 verdict | FAIL (Q1, Q3) | FAIL (Q1, Q2, Q3) |
+| **Grouped SBR lower bound, mean over seats** | **+1.57 chips/deal** (4 runs +1.14 to +2.02, per-run se ~0.37) | **+2.47 chips/deal** (4 runs +2.11 to +2.80, per-run se ~0.47) |
+| SBR fallback share | 0.3-1.4% | 1.0-1.2% |
+| Policy keys learned per run | ~9.5-10k | ~60-66k |
+| SBR time (4 runs) | 1,395 s | 10,841 s |
+| Total time / peak RSS | ~26 min / 1.98 GB | ~3.1 h / 8.14 GB |
+
+Reading:
+- Confirmed: **reproducible across platforms.** The new v1 report (Windows, Python 3.12.9) is identical to the day46 report (Linux container, Python 3.13.17) in every section except SBR (checkpoint, setup, static, coverage, button-1 diagnostic, baselines, current_vs_average compared as JSON). The v2 summary numbers outside SBR also match the day46 v2 report. The four v1 SBR gains equal the same-seed runs of the grouped budget curve exactly.
+- Confirmed: both checkpoints are clearly exploitable; every SBR run is positive and far above its se. v2's lower bound (+2.47) is higher than v1's (+1.57), but they are different games (max_draw 5 vs 1), so the numbers are not a like-for-like ranking.
+- v2 needs ~3 h and 8 GB for a standard report on the laptop; SBR is 95% of that.
