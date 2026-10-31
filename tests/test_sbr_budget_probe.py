@@ -9,6 +9,9 @@ from scripts.inspect_sbr_budget import (
 from solver.best_response import (
     SampledBestResponse,
 )
+from solver.response_grouping import (
+    coarse_grouping,
+)
 from solver.checkpoint_evaluation import (
     EVALUATION_DECK_SEED_BASE,
     evaluate_sampled_best_response,
@@ -185,3 +188,38 @@ def test_run_one_reproduces_evaluate_checkpoint_sbr(
         )
 
         assert 0.0 <= run["fallback_share"] <= 1.0
+
+
+def test_run_one_reproduces_grouped_evaluate_checkpoint_sbr(
+    trained,
+) -> None:
+    index, setup = trained
+
+    section, _ = evaluate_sampled_best_response(
+        index,
+        setup,
+        seed=21,
+        repeats=1,
+        response_deals=6,
+        validation_deals=15,
+        sweeps=2,
+        grouping="coarse",
+    )
+
+    assert section["grouping"] == "coarse"
+
+    run = run_one(
+        index,
+        setup,
+        seed=21,
+        seat=0,
+        repeat=0,
+        response_deals=6,
+        validation_deals=15,
+        sweeps=2,
+        grouping=coarse_grouping,
+    )
+
+    assert run["gain_argmax"] == (
+        section["runs"]["seat_0"][0]["gain"]
+    )
