@@ -293,7 +293,7 @@
 |---|---|---|---|---|
 | A0 | 已完成,待你執行 `docs/A0_UNTRACK_COMMANDS.md` 的解除追蹤指令 | day33 | `ws-a0-repo-hygiene` | 新增 `.gitignore`、`requirements.txt`、`CLAUDE.md`;尚未執行任何 `git rm --cached` |
 | A1 | 進行中(已有 1k 次 profiling、`inspect_node_composition.py`) | day31 | | 碎片化尚未驗證 |
-| A2 | **進行中**:評估入口與門檻(v1)完成，v1 / v2 基準報告在 `experiments/eval/`;SBR 預算實驗完成：目前 SBR 樣本不足、量不出可剝削度;分組 SBR 通過兩個 seat 的檢測力測試、已成為評估預設(report v2);待跑分組版預算曲線，再定 preset 與 SBR 門檻 | day53 | `claude/lucid-ritchie-myhksz` | v1、v2 都沒過門檻;SBR fallback 會在均勻策略上 fold / pat,實驗見 `docs/A2_DESIGN.md` 第 11 節;v2 評估峰值 8.2 GB |
+| A2 | **進行中**:評估入口與門檻(v1)完成，v1 / v2 基準報告在 `experiments/eval/`;SBR 預算實驗完成：目前 SBR 樣本不足、量不出可剝削度;分組 SBR 為評估預設;v1 可剝削度下界約 1.3 chips/局;standard preset 改 1,000 局;待核准 Q6、重產 v1 / v2 報告 | day54 | `claude/lucid-ritchie-myhksz` | v1、v2 都沒過門檻;SBR fallback 會在均勻策略上 fold / pat,實驗見 `docs/A2_DESIGN.md` 第 11 節;v2 評估峰值 8.2 GB |
 | B1 | 未開始 | | | |
 | B2 | 未開始 | | | |
 | B3 | 未開始 | | | |

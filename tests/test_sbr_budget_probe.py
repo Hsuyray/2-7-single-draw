@@ -223,3 +223,38 @@ def test_run_one_reproduces_grouped_evaluate_checkpoint_sbr(
     assert run["gain_argmax"] == (
         section["runs"]["seat_0"][0]["gain"]
     )
+
+
+def test_grouped_probe_counts_and_looks_up_by_group(
+    trained,
+) -> None:
+    index, setup = trained
+
+    probe, result = optimize(
+        FallbackProbeSBR,
+        index,
+        setup,
+        probe_seed=3,
+        response_grouping=coarse_grouping,
+    )
+
+    # Visits are keyed like the policy, so every
+    # learned group was visited and nothing else.
+    assert len(probe.training_visits) == (
+        result.information_states
+    )
+    assert all(
+        len(key) == 4
+        for key in probe.training_visits
+    )
+
+    _, plain_grouped = optimize(
+        SampledBestResponse,
+        index,
+        setup,
+        response_grouping=coarse_grouping,
+    )
+
+    assert dataclasses.asdict(plain_grouped) == (
+        dataclasses.asdict(result)
+    )
