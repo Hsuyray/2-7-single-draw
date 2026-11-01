@@ -208,7 +208,7 @@
 ### C1. 正式訓練流程與解庫
 
 - **目標**:像 GTO Wizard 一樣，有一個「解庫」,每個遊戲設定(人數、有效籌碼深度)一份正式解。
-- **擁有**:`scripts/save_training_checkpoint.py`、新增的 `scripts/solve_library.py`、`solutions/manifest.json`(或類似的檔案)、`solver/training_run.py`、`tests/test_training_run.py`(day59)。
+- **擁有**:`scripts/save_training_checkpoint.py`、新增的 `scripts/solve_library.py`、`solutions/manifest.json`(或類似的檔案)、`solver/training_run.py`、`solver/solution_library.py`、`solutions/`、`tests/test_training_run.py`、`tests/test_solve_library.py`(day59–62)。
 - **產出**:
   1. 設定矩陣：先做單挑 × {10, 20, 30, 50, 100} bb,實際深度由你決定。
   2. 每份解的 metadata:config、seed、迭代數、時間、節點數、峰值 RSS、A2 評估報告。
@@ -308,7 +308,7 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | **第 1–2 步完成**:設計已核准(選項 A:另存訓練狀態檔,v3 不變);`--state-output` / `--resume` 已實作,T1–T6 通過。T5:`full` 2k 存狀態檔不提高峰值(約 1.5 GB),狀態檔 16 MB | day60 | `ws-c1-training` | 下一步：第 3 步 `scripts/solve_library.py` + `solutions/manifest.json` |
+| C1 | **第 1–3 步完成**:可續跑訓練(`--state-output` / `--resume`,v3 不變)、解庫 `scripts/solve_library.py` + `solutions/manifest.json`(第一份解 `hu_d5_full_bucket_s20` 已登記，狀態 planned);885 tests 通過 | day62 | `ws-c1-training` | 下一步：你在筆電訓練到 8k 並評估，指令在 `docs/C1_DESIGN.md` 8.7 |
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |

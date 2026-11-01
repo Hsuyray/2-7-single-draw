@@ -16,3 +16,11 @@ experiments/**/*.chk.gz
 # Resumable training state files (WS C1) and their previous copies.
 experiments/**/*.state.gz
 experiments/**/*.state.gz.prev
+experiments/**/*.state.gz.json
+
+# Solution library (WS C1): solutions/manifest.json and eval reports are
+# tracked; checkpoints and training state are not (sha256 in the manifest).
+solutions/**/*.chk.gz
+solutions/**/*.state.gz
+solutions/**/*.state.gz.prev
+solutions/**/*.state.gz.json

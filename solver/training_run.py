@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import gzip
+import json
 import os
 from pathlib import Path
 import pickle
@@ -201,7 +202,102 @@ def save_training_state(
         if temporary_path.exists():
             temporary_path.unlink()
 
+    write_state_summary(
+        output_path,
+        state,
+    )
+
     return output_path
+
+
+def state_summary_path(
+    state_path: str | Path,
+) -> Path:
+    path = Path(
+        state_path
+    )
+
+    return path.with_suffix(
+        path.suffix
+        + ".json"
+    )
+
+
+def write_state_summary(
+    state_path: str | Path,
+    state: TrainingState,
+) -> Path:
+    """
+    Small JSON next to the state file (<state>.json), so progress
+    can be read without unpickling the whole trainer. Written after
+    the state file; if the process dies in between, the summary is
+    one save behind.
+    """
+    summary_path = state_summary_path(
+        state_path
+    )
+
+    temporary_path = summary_path.with_suffix(
+        summary_path.suffix
+        + ".tmp"
+    )
+
+    summary = {
+        "state_version": (
+            TRAINING_STATE_VERSION
+        ),
+        "completed_iterations": (
+            state.trainer.completed_iterations
+        ),
+        "cfr_nodes": len(
+            state.trainer.node_store
+        ),
+        "config": state.run.config,
+        "segments": state.run.segments,
+        "git_commit": state.run.git_commit,
+        "python_version": (
+            state.run.python_version
+        ),
+    }
+
+    try:
+        temporary_path.write_text(
+            json.dumps(
+                summary,
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        os.replace(
+            temporary_path,
+            summary_path,
+        )
+
+    finally:
+        if temporary_path.exists():
+            temporary_path.unlink()
+
+    return summary_path
+
+
+def read_state_summary(
+    state_path: str | Path,
+) -> dict[str, Any] | None:
+    summary_path = state_summary_path(
+        state_path
+    )
+
+    if not summary_path.is_file():
+        return None
+
+    return json.loads(
+        summary_path.read_text(
+            encoding="utf-8"
+        )
+    )
 
 
 def load_training_state(

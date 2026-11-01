@@ -1,6 +1,6 @@
 # C1 設計：可續跑訓練與解庫(solution library)
 
-狀態：**已核准**(day59,第 6 節 a–f 依建議:a = 選項 A,e = 不動)。第 7 節第 1 步已實作，紀錄見第 8 節;第 2 步(T5)待你在筆電跑。設計本文依據 `main` @ `6205caa`。
+狀態：**已核准**(day59,第 6 節 a–f 依建議:a = 選項 A,e = 不動)。第 7 節第 1–3 步已實作(紀錄見第 8 節);第 4 步(第一份解的訓練)待你在筆電跑。設計本文依據 `main` @ `6205caa`。
 
 標記：**[確認]** = 已用程式或實測驗證;**[推測]** = 推論。
 
@@ -243,3 +243,44 @@ python -m scripts.save_training_checkpoint --iterations 2000 --max-draw 5 --abst
 - batch 4 比前三個慢約 50%,節點成長反而變慢;原因未查(可能是筆電上其他負載)。不影響 T5 的結論。
 
 **結論**:第 7 節第 2 步完成，可以進第 3 步(`scripts/solve_library.py` + `solutions/manifest.json`)。
+
+### 8.6 第 3 步:解庫(day62)
+
+**檔案**
+- **新增** `solver/solution_library.py`:manifest 讀寫(`.tmp` → replace)、`new_solution_entry`、`training_argv`、`checkpoint_record`、`evaluation_summary`、`stopping_advice`。
+- **新增** `scripts/solve_library.py`:`add` / `train` / `status` / `evaluate` / `release`。
+- **新增** `solutions/manifest.json`:第一份解 `hu_d5_full_bucket_s20`(10 bb、`max_draw=5`、`full`、bucket、seed 42,milestone 8k / 16k / 32k,狀態 `planned`)。
+- **修改** `solver/training_run.py`:存狀態檔後另寫 `<state>.json`(迭代數、節點數、segments),讀進度不必 unpickle 整個 trainer。
+- **修改** `scripts/save_training_checkpoint.py`:`main()` 回傳小的 summary dict(原本回傳 `None`)。
+- **修改** `.gitignore`:`solutions/` 下的 checkpoint 和狀態檔不進 git;manifest 和 eval 報告進 git。
+- **新增** `tests/test_solve_library.py`(11 個測試)。
+
+**和設計的差異**
+- **訓練迴圈仍沒有搬**。`train` 直接呼叫 `save_training_checkpoint.main()`,每個 milestone 一次(`--iterations <milestone> --resume`),所以不需要搬迴圈，也不用再證明一次等價。
+- 檔案名稱:`solutions/<id>/strategy_008000.chk.gz`、`training.state.gz`(+ `.prev`、`.json`)、`eval/`。訓練中先寫 `strategy_latest.chk.gz`,到達 milestone 才改名，所以有 milestone 名稱的檔案一定是完整的。訓練時 `--checkpoint-every-batches 0`,中間只存狀態檔。
+- 設計裡的 `training_log.jsonl` 沒做:每段的時間和峰值已經在狀態檔的 segments 裡。
+- manifest 的 `status`:`planned` → `training` → `trained` → `released`。設計寫的 `evaluated` 改成記在每個 checkpoint 的 `evaluation` 欄位，因為每個 milestone 各自評估。
+- `release` 要求有 `standard` preset 的評估;gates 不是 PASS 時要加 `--allow-fail`。released 之後 `train` 會拒絕。
+- `train` 預設 `--max-rss-gb 10`(訓練 script 預設 3,`full` 到約 2M 節點時會被擋)。
+- 停止規則(3.3)在 `status` / `evaluate` 只給建議，不會自動停：只看 `standard` 評估;最新一份 PASS → 停;最近兩次 milestone 間的 SBR mean gain 下降都不超過 2 × √(SE₁² + SE₂²) → 停(平台期)。
+- blinds 只支援 1 / 2 / 1.5(訓練 script 寫死);manifest 存了 blinds,不一樣時 `add` / `train` 會拒絕。要支援其他 blinds 要先改訓練 script。
+
+**驗證**
+- `pytest tests -q`:885 passed(新增 11 個)。
+- 每個 milestone 的策略檔和「直接訓練到同樣次數」完全相同(3 / 6 次，分兩次 `train`);記憶體停止(結束碼 3)後同一行指令續跑，結果仍相同;「訓練完但還沒記錄」的情況會直接補記錄，不重訓。
+- 用真的 v2 standard 報告測 `evaluation_summary`:verdict FAIL、Q6 下界 1.53(和 A2_DESIGN 13 節相同)。
+- T2 再做一次：不加新參數時兩組設定的策略檔仍和改動前完全相同。
+- CLI 實跑(scratchpad,bucket、`max_draw=1`、20 / 40 次 + `evaluate --preset quick`):檔案和 manifest 如上。
+
+### 8.7 第 4 步指令(筆電)
+
+```
+python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 8000
+python -m scripts.solve_library status
+python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 8000
+```
+
+- **[推測]** 時間:T5 的 2k 花了約 51 分鐘，每次迭代會隨節點變多而變慢，所以 8k 約 4–6 小時;評估約 3 小時、8 GB(v2 規模),不能和訓練同時跑。
+- 中斷(關機、記憶體不足)後再跑同一行 `train` 就會續跑。
+- 8k 的評估可以直接和 v2(同一個遊戲、也是 8k)比較：兩者應該是同一個量級;差很多就表示訓練流程有問題，要先查。
+- 評估完把 `solutions/manifest.json` 和 `solutions/hu_d5_full_bucket_s20/eval/` commit 進去。

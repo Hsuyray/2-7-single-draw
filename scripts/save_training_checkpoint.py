@@ -405,7 +405,12 @@ def available_memory_gb() -> float:
 
 def main(
     argv: list[str] | None = None,
-) -> None:
+) -> dict[str, object]:
+    """
+    Returns a small run summary (used by scripts.solve_library).
+    Exits with EXIT_STOPPED_EARLY instead when training stopped
+    early and a training state was saved.
+    """
     args = parse_args(
         argv
     )
@@ -948,6 +953,29 @@ def main(
         sys.exit(
             EXIT_STOPPED_EARLY
         )
+
+    return {
+        "completed_iterations": (
+            trainer.completed_iterations
+        ),
+        "cfr_nodes": len(
+            trainer.node_store
+        ),
+        "stopped_early": stopped_early,
+        "checkpoint_path": (
+            final_checkpoint_path
+        ),
+        "segments": (
+            list(run_info.segments)
+            if run_info is not None
+            else []
+        ),
+        "git_commit": (
+            run_info.git_commit
+            if run_info is not None
+            else None
+        ),
+    }
 
 
 if __name__ == "__main__":
