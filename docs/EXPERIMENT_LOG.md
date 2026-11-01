@@ -8,6 +8,8 @@ Raw profiling output from `scripts/profile_memory.py` goes to `experiments/memor
 
 These numbers come from earlier notes, not from runs in this repository's current state. Blank cells mean "not recorded". They were **not** re-verified.
 
+**Superseded (day56):** the v1 "~98%" and v2 "~94%" coverage figures and the v1 / v2 file attributions below are replaced by the A2 benchmark reports ("A2 benchmark reports, report v2 (day55)" below): v1 96.8%, v2 92.8%, and `production_v2_maxdraw5.chk.gz` is the 8k run.
+
 | ID | max_draw | Abstraction | Bet sizing | Train seed | Eval seed | Iterations | CFR nodes | Train time | Peak RSS | Coverage (overall) | Coverage by phase | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | H1 | 1 | bucket | fast | 42 | 100000 | 1,000 | 27,912 | 138.790 s | | 74.20% | predraw 76.74%, draw 64.40%, postdraw 90.98% | 957 of 3,710 evaluated decisions missing. Largest missing group: 226 at predraw, seat 0, pot 4.5, current bet 2.0, history length 0. |
