@@ -1,0 +1,732 @@
+{
+  "bucket_resolution": {
+    "examples": {
+      "made_8_vs_9 (0,0,1,1,3)": [
+        "8-5-4-3-2",
+        "9-5-4-3-2"
+      ]
+    },
+    "max_merged": 48,
+    "no_pair_rank_sets": 1287,
+    "one_card_discards": 705,
+    "patterns_merging_more_than_one": 136,
+    "rank_class_patterns": 141,
+    "straight_draw_ambiguous_discards": 65,
+    "straight_draw_ambiguous_rank_set_discards": 484
+  },
+  "checkpoint": "production_v2_maxdraw5.chk.gz",
+  "deals": 20000,
+  "draw_decisions": 30168,
+  "elapsed_s": 125.03099070000462,
+  "max_draw": 5,
+  "missing_draw_decisions": {
+    "made_7_or_better": 14,
+    "made_8_or_9": 67,
+    "no_pair_T_plus_0_low": 38,
+    "no_pair_T_plus_1_low": 155,
+    "no_pair_T_plus_2_low": 381,
+    "no_pair_T_plus_3_low": 268,
+    "no_pair_T_plus_4_low": 89,
+    "one_pair": 1791,
+    "straight_or_flush": 104,
+    "two_pair_or_worse": 940
+  },
+  "reach_weighted": {
+    "all|all": {
+      "any_mistake": 0.11511844106421902,
+      "break_made_low": 0.0016689728310932462,
+      "expected_draw_count": 2.431810638686827,
+      "keep_high": 0.5702846598880351,
+      "keep_pair": 0.11344946823312577,
+      "snow": 0.03973373027493819,
+      "weight": 30168.0
+    },
+    "all|missing": {
+      "any_mistake": 0.23450090979984403,
+      "break_made_low": 0.0035254743956329606,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.30041265921497273,
+      "keep_pair": 0.23097543540421106,
+      "snow": 0.030592019755653756,
+      "weight": 3847.0
+    },
+    "all|near_uniform": {
+      "any_mistake": 0.16475657244107467,
+      "break_made_low": 0.002953992912477336,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.5794873908027032,
+      "keep_pair": 0.16180257952859733,
+      "snow": 0.03040011537827592,
+      "weight": 12134.0
+    },
+    "all|trained": {
+      "any_mistake": 0.04029124409849593,
+      "break_made_low": 6.649202568697064e-05,
+      "expected_draw_count": 2.3549984738073237,
+      "keep_high": 0.6355931570805927,
+      "keep_pair": 0.04022475207280896,
+      "snow": 0.05019557869418047,
+      "weight": 14187.0
+    },
+    "made_7_or_better|all": {
+      "any_mistake": 0.9682610070850202,
+      "break_made_low": 0.9682610070850202,
+      "expected_draw_count": 2.500576923076923,
+      "keep_high": 0.7961677631578947,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 52.0
+    },
+    "made_7_or_better|missing": {
+      "any_mistake": 0.96875,
+      "break_made_low": 0.96875,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.7544642857142857,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 14.0
+    },
+    "made_7_or_better|near_uniform": {
+      "any_mistake": 0.96875,
+      "break_made_low": 0.96875,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.8125,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 37.0
+    },
+    "made_7_or_better|trained": {
+      "any_mistake": 0.9433223684210524,
+      "break_made_low": 0.9433223684210524,
+      "expected_draw_count": 2.53,
+      "keep_high": 0.7757236842105262,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 1.0
+    },
+    "made_8_or_9|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.420701224316843,
+      "keep_high": 0.7487962764956191,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 545.0
+    },
+    "made_8_or_9|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.43656716417910446,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 67.0
+    },
+    "made_8_or_9|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.8125,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 293.0
+    },
+    "made_8_or_9|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.266390093257729,
+      "keep_high": 0.7609809226492545,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 185.0
+    },
+    "no_pair_T_plus_0_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.4794754233985223,
+      "keep_high": 0.7583498389488154,
+      "keep_pair": 0.0,
+      "snow": 0.04116270807182786,
+      "weight": 234.0
+    },
+    "no_pair_T_plus_0_low|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.6200657894736842,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 38.0
+    },
+    "no_pair_T_plus_0_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.8053728070175439,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 114.0
+    },
+    "no_pair_T_plus_0_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.441429866771392,
+      "keep_high": 0.7570592965124737,
+      "keep_pair": 0.0,
+      "snow": 0.05953748400985029,
+      "weight": 82.0
+    },
+    "no_pair_T_plus_1_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.44914895020366,
+      "keep_high": 0.7241762309110387,
+      "keep_pair": 0.0,
+      "snow": 0.04595585047503448,
+      "weight": 2441.0
+    },
+    "no_pair_T_plus_1_low|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.3092741935483871,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 155.0
+    },
+    "no_pair_T_plus_1_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.7976598173515982,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 876.0
+    },
+    "no_pair_T_plus_1_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.41196637407599,
+      "keep_high": 0.7241323969176195,
+      "keep_pair": 0.0,
+      "snow": 0.05670885177982911,
+      "weight": 1410.0
+    },
+    "no_pair_T_plus_2_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.3434949445894886,
+      "keep_high": 0.7045184083654887,
+      "keep_pair": 0.0,
+      "snow": 0.05233111463949799,
+      "weight": 6487.0
+    },
+    "no_pair_T_plus_2_low|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.3198818897637795,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 381.0
+    },
+    "no_pair_T_plus_2_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.774102975495916,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 1714.0
+    },
+    "no_pair_T_plus_2_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.2688414630127554,
+      "keep_high": 0.7107293750152353,
+      "keep_pair": 0.0,
+      "snow": 0.0623868831207702,
+      "weight": 4392.0
+    },
+    "no_pair_T_plus_3_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.28116261781876,
+      "keep_high": 0.7194630901185443,
+      "keep_pair": 0.0,
+      "snow": 0.06067579836368787,
+      "weight": 5010.0
+    },
+    "no_pair_T_plus_3_low|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.18493470149253732,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 268.0
+    },
+    "no_pair_T_plus_3_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.7838489687292083,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 1503.0
+    },
+    "no_pair_T_plus_3_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.1615080936313653,
+      "keep_high": 0.733813702221023,
+      "keep_pair": 0.0,
+      "snow": 0.0767650508805424,
+      "weight": 3239.0
+    },
+    "no_pair_T_plus_4_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.3886373990508685,
+      "keep_high": 0.7489396083944434,
+      "keep_pair": 0.0,
+      "snow": 0.043853818182106485,
+      "weight": 927.0
+    },
+    "no_pair_T_plus_4_low|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.3925561797752809,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 89.0
+    },
+    "no_pair_T_plus_4_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.8044154228855721,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 402.0
+    },
+    "no_pair_T_plus_4_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.2632267635783325,
+      "keep_high": 0.7705378829854351,
+      "keep_pair": 0.0,
+      "snow": 0.05804756755691003,
+      "weight": 436.0
+    },
+    "one_pair|all": {
+      "any_mistake": 0.20630346596382665,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.524499220865417,
+      "keep_high": 0.46835520354057397,
+      "keep_pair": 0.20630346596382665,
+      "snow": 0.02658904263628049,
+      "weight": 12392.0
+    },
+    "one_pair|missing": {
+      "any_mistake": 0.25,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.41820212171970966,
+      "keep_pair": 0.25,
+      "snow": 0.03125,
+      "weight": 1791.0
+    },
+    "one_pair|near_uniform": {
+      "any_mistake": 0.25,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.4952860338766379,
+      "keep_pair": 0.25,
+      "snow": 0.03125,
+      "weight": 6258.0
+    },
+    "one_pair|trained": {
+      "any_mistake": 0.12531949118667882,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5699042931071565,
+      "keep_high": 0.45023202447036786,
+      "keep_pair": 0.12531949118667882,
+      "snow": 0.017950763607825982,
+      "weight": 4343.0
+    },
+    "straight_or_flush|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.4972089560815607,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.030992684177837817,
+      "weight": 159.0
+    },
+    "straight_or_flush|missing": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 104.0
+    },
+    "straight_or_flush|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 52.0
+    },
+    "straight_or_flush|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.3520746723227313,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.017612261425404344,
+      "weight": 3.0
+    },
+    "two_pair_or_worse|all": {
+      "any_mistake": 0.45082301271899733,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.513892496306055,
+      "keep_high": 0.07123330939242516,
+      "keep_pair": 0.45082301271899733,
+      "snow": 0.030373470681726283,
+      "weight": 1921.0
+    },
+    "two_pair_or_worse|missing": {
+      "any_mistake": 0.4689494680851064,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.09468085106382979,
+      "keep_pair": 0.4689494680851064,
+      "snow": 0.03125,
+      "weight": 940.0
+    },
+    "two_pair_or_worse|near_uniform": {
+      "any_mistake": 0.45063559322033897,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.05084745762711865,
+      "keep_pair": 0.45063559322033897,
+      "snow": 0.03125,
+      "weight": 885.0
+    },
+    "two_pair_or_worse|trained": {
+      "any_mistake": 0.2750625774291027,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.777994639624295,
+      "keep_high": 0.029574868154674038,
+      "keep_pair": 0.2750625774291027,
+      "snow": 0.01371028312079378,
+      "weight": 96.0
+    }
+  },
+  "seed": 2027,
+  "static": {
+    "all|all": {
+      "any_mistake": 0.18518564360076784,
+      "break_made_low": 0.003081826348215642,
+      "expected_draw_count": 2.4953869867691543,
+      "keep_high": 0.47283964812574303,
+      "keep_pair": 0.1821038172525522,
+      "snow": 0.03087368146413114,
+      "weight": 129801.0
+    },
+    "all|near_uniform": {
+      "any_mistake": 0.1942123269192456,
+      "break_made_low": 0.003273021400584407,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.4628338134214371,
+      "keep_pair": 0.19093930551866117,
+      "snow": 0.030418319996015408,
+      "weight": 120464.0
+    },
+    "all|trained": {
+      "any_mistake": 0.06872528381955906,
+      "break_made_low": 0.0006150682044273914,
+      "expected_draw_count": 2.4358708653339614,
+      "keep_high": 0.6019328120777135,
+      "keep_pair": 0.06811021561513166,
+      "snow": 0.03674865885463224,
+      "weight": 9337.0
+    },
+    "made_7_or_better|all": {
+      "any_mistake": 0.9685814572027568,
+      "break_made_low": 0.9685814572027568,
+      "expected_draw_count": 2.4987068129241607,
+      "keep_high": 0.7358127947473654,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 413.0
+    },
+    "made_7_or_better|near_uniform": {
+      "any_mistake": 0.96875,
+      "break_made_low": 0.96875,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.7346437346437347,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 407.0
+    },
+    "made_7_or_better|trained": {
+      "any_mistake": 0.9571486374564256,
+      "break_made_low": 0.9571486374564256,
+      "expected_draw_count": 2.410985622946376,
+      "keep_high": 0.815114038443656,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 6.0
+    },
+    "made_8_or_9|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.48603533331847,
+      "keep_high": 0.7232706537938086,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 2981.0
+    },
+    "made_8_or_9|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.7198999642729547,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 2799.0
+    },
+    "made_8_or_9|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.2712710363865893,
+      "keep_high": 0.7751088953810082,
+      "keep_pair": 0.0,
+      "snow": 0.0,
+      "weight": 182.0
+    },
+    "no_pair_T_plus_0_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.4981328809613053,
+      "keep_high": 0.7700132458737221,
+      "keep_pair": 0.0,
+      "snow": 0.03209287396052662,
+      "weight": 1113.0
+    },
+    "no_pair_T_plus_0_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.7708333333333334,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 1053.0
+    },
+    "no_pair_T_plus_0_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.465364941832216,
+      "keep_high": 0.7556207109575455,
+      "keep_pair": 0.0,
+      "snow": 0.046885311967768795,
+      "weight": 60.0
+    },
+    "no_pair_T_plus_1_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.489579387934942,
+      "keep_high": 0.6475625917263416,
+      "keep_pair": 0.0,
+      "snow": 0.032771371652538905,
+      "weight": 8212.0
+    },
+    "no_pair_T_plus_1_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.635307613868117,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 7355.0
+    },
+    "no_pair_T_plus_1_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.40014694716657,
+      "keep_high": 0.7527380434734107,
+      "keep_pair": 0.0,
+      "snow": 0.04582818437648725,
+      "weight": 857.0
+    },
+    "no_pair_T_plus_2_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.479315952170303,
+      "keep_high": 0.6174521552659556,
+      "keep_pair": 0.0,
+      "snow": 0.03362974226712834,
+      "weight": 16694.0
+    },
+    "no_pair_T_plus_2_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.601246676665076,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 14669.0
+    },
+    "no_pair_T_plus_2_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.329481731126438,
+      "keep_high": 0.7348438419801834,
+      "keep_pair": 0.0,
+      "snow": 0.05086847773206952,
+      "weight": 2025.0
+    },
+    "no_pair_T_plus_3_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.473210829402178,
+      "keep_high": 0.6295546961661417,
+      "keep_pair": 0.0,
+      "snow": 0.03465606144138652,
+      "weight": 13730.0
+    },
+    "no_pair_T_plus_3_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.612913763066202,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 12054.0
+    },
+    "no_pair_T_plus_3_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.280539789792297,
+      "keep_high": 0.7492383522441036,
+      "keep_pair": 0.0,
+      "snow": 0.059152878037134454,
+      "weight": 1676.0
+    },
+    "no_pair_T_plus_4_low|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.4813514297818102,
+      "keep_high": 0.6567873055547916,
+      "keep_pair": 0.0,
+      "snow": 0.033449401701909964,
+      "weight": 3384.0
+    },
+    "no_pair_T_plus_4_low|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.6463666558651977,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 3086.0
+    },
+    "no_pair_T_plus_4_low|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.288232343562566,
+      "keep_high": 0.7647004765013962,
+      "keep_pair": 0.0,
+      "snow": 0.056225756239138676,
+      "weight": 298.0
+    },
+    "one_pair|all": {
+      "any_mistake": 0.24331706024187372,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5036616240481666,
+      "keep_high": 0.46516161035699893,
+      "keep_pair": 0.24331706024187372,
+      "snow": 0.030555810921760344,
+      "weight": 64632.0
+    },
+    "one_pair|near_uniform": {
+      "any_mistake": 0.25,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.46565526783949396,
+      "keep_pair": 0.25,
+      "snow": 0.03125,
+      "weight": 60708.0
+    },
+    "one_pair|trained": {
+      "any_mistake": 0.13992564667502408,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.560310419337614,
+      "keep_high": 0.4575242611094646,
+      "keep_pair": 0.13992564667502408,
+      "snow": 0.0198160477816558,
+      "weight": 3924.0
+    },
+    "straight_or_flush|all": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.4989724659608314,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.03112949519836638,
+      "weight": 1504.0
+    },
+    "straight_or_flush|near_uniform": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.03125,
+      "weight": 1492.0
+    },
+    "straight_or_flush|trained": {
+      "any_mistake": 0.0,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.371215733757522,
+      "keep_high": 0.0,
+      "keep_pair": 0.0,
+      "snow": 0.016146731528586578,
+      "weight": 12.0
+    },
+    "two_pair_or_worse|all": {
+      "any_mistake": 0.4616168365997016,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.504209948135201,
+      "keep_high": 0.08763357546408385,
+      "keep_pair": 0.4616168365997016,
+      "snow": 0.030952241006329973,
+      "weight": 17138.0
+    },
+    "two_pair_or_worse|near_uniform": {
+      "any_mistake": 0.4645990439997625,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.5,
+      "keep_high": 0.08817766165904638,
+      "keep_pair": 0.4645990439997625,
+      "snow": 0.03125,
+      "weight": 16841.0
+    },
+    "two_pair_or_worse|trained": {
+      "any_mistake": 0.29251463180366694,
+      "break_made_low": 0.0,
+      "expected_draw_count": 2.742929599801529,
+      "keep_high": 0.05678187307565243,
+      "keep_pair": 0.29251463180366694,
+      "snow": 0.014068203254151906,
+      "weight": 297.0
+    }
+  }
+}

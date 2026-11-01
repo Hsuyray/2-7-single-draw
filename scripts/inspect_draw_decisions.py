@@ -661,6 +661,8 @@ def main() -> None:
     )
 
     print(
+        "  (structure only, not evidence of strategic loss; "
+        "see docs/proposals/B2-draw-analysis.md 2.1)\n"
         "  one-card discards whose 'kept four is a "
         "straight draw' answer differs inside a pattern: "
         f"{resolution['straight_draw_ambiguous_discards']:,}"

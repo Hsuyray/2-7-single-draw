@@ -181,3 +181,22 @@ Reading:
 - Confirmed: **reproducible across platforms.** The new v1 report (Windows, Python 3.12.9) is identical to the day46 report (Linux container, Python 3.13.17) in every section except SBR (checkpoint, setup, static, coverage, button-1 diagnostic, baselines, current_vs_average compared as JSON). The v2 summary numbers outside SBR also match the day46 v2 report. The four v1 SBR gains equal the same-seed runs of the grouped budget curve exactly.
 - Confirmed: both checkpoints are clearly exploitable; every SBR run is positive and far above its se. v2's lower bound (+2.47) is higher than v1's (+1.57), but they are different games (max_draw 5 vs 1), so the numbers are not a like-for-like ranking.
 - v2 needs ~3 h and 8 GB for a standard report on the laptop; SBR is 95% of that.
+
+## B2 draw-decision analysis (day57-59)
+
+`python -m scripts.inspect_draw_decisions <checkpoint>` (20,000 self-play deals, seed 2027, same deals as the benchmark coverage section). Avoidable mistakes = breaking a made 7-low or keeping a pair when the state has an action free of it.
+
+| | v1 (`max_draw=1`, 6 draw actions) | v2 (`max_draw=5`, 32 draw actions) |
+|---|---|---|
+| Draw decisions | 30,086 | 30,168 |
+| Avoidable mistake probability, all / trained | 15.1% / 8.5% | 11.5% / 4.0% |
+| Missing + near-uniform share of draw decisions | 27% | 53% |
+| Expected cards drawn, trained (uniform) | 0.76 (0.83) | 2.35 (2.50) |
+| Made 8 / 9, trained, expected cards drawn | 0.51 | 2.27 |
+
+Reading:
+- Confirmed: the discard mapping and draw_count encoding are correct (`tests/test_draw_mapping_properties.py`).
+- Confirmed: draw quality is dominated by under-training. In v2 even "trained" states (not within 1e-6 of uniform) are close to uniform: made 8 / 9 hands, which should mostly stand pat, draw 2.27 cards on average.
+- The 1e-6 near-uniform test (A2 Q3) understates how untrained a checkpoint is; a distance-from-uniform metric is proposed to A2.
+- v1 and v2 mistake rates are not comparable (different action sets).
+- Details and proposals: `docs/proposals/B2-draw-analysis.md`.
