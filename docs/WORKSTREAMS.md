@@ -208,7 +208,7 @@
 ### C1. 正式訓練流程與解庫
 
 - **目標**:像 GTO Wizard 一樣，有一個「解庫」,每個遊戲設定(人數、有效籌碼深度)一份正式解。
-- **擁有**:`scripts/save_training_checkpoint.py`、新增的 `scripts/solve_library.py`、`solutions/manifest.json`(或類似的檔案)。
+- **擁有**:`scripts/save_training_checkpoint.py`、新增的 `scripts/solve_library.py`、`solutions/manifest.json`(或類似的檔案)、`solver/training_run.py`、`tests/test_training_run.py`(day59)。
 - **產出**:
   1. 設定矩陣：先做單挑 × {10, 20, 30, 50, 100} bb,實際深度由你決定。
   2. 每份解的 metadata:config、seed、迭代數、時間、節點數、峰值 RSS、A2 評估報告。
@@ -308,7 +308,7 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | **設計待核准**:`docs/C1_DESIGN.md`(訓練 script 盤點、可續跑訓練、解庫、單一訓練入口)。原型確認 pickle 整個 trainer 後續跑與連續訓練指紋相同 | day59 | `claude/sleepy-mendel-dpgv70` | 尚未改程式碼;待決事項見設計第 6 節 |
+| C1 | **第 1 步完成**:設計已核准(選項 A:另存訓練狀態檔,v3 不變);`--state-output` / `--resume` 已實作,T1–T4、T6 通過(續跑與連續訓練指紋相同、不加新參數時策略檔不變) | day59 | `ws-c1-training` | 下一步:你在筆電跑 T5(`full` 2k 存狀態檔的峰值 RSS),指令在 `docs/C1_DESIGN.md` 8.4 |
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |

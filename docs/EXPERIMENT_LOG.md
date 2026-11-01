@@ -200,3 +200,16 @@ Reading:
 - The 1e-6 near-uniform test (A2 Q3) understates how untrained a checkpoint is; a distance-from-uniform metric is proposed to A2.
 - v1 and v2 mistake rates are not comparable (different action sets).
 - Details and proposals: `docs/proposals/B2-draw-analysis.md`.
+
+## C1 resumable training, step 1 verification (day59)
+
+`save_training_checkpoint.py --state-output / --resume` (training state file, `solver/training_run.py`; v3 checkpoint unchanged). Windows, Python 3.12.
+
+| Check | Config | Result |
+|---|---|---|
+| Resume = uninterrupted (cross-process) | bucket, `max_draw=5`, fast, seed 42, 30 + 30 vs 60 | 13,209 nodes, identical sha256 node fingerprint |
+| Resume = uninterrupted (tests) | exact / sequential, exact / fixed, bucket / `max_draw=5`; 4 -> 7 -> 10 vs 10; RSS-guard stop at 2 -> 6 vs 6 | identical fingerprints and checkpoints |
+| No new flags, before vs after the change | bucket / `max_draw=5` / fast / 40 iters; exact / `max_draw=1` / full / fixed seed 7 / 30 iters | identical strategies (8,916 / 1,882); metadata differs only in `created_at_utc` |
+| Full test suite | | 874 passed |
+
+Not yet measured: peak RSS and file size of saving the state at `full` scale (T5, `docs/C1_DESIGN.md` 8.4).

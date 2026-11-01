@@ -34,10 +34,18 @@ from solver.memory_guard import (  # noqa: E402
     DEFAULT_MAX_RSS_GB,
     DEFAULT_RSS_CHECK_EVERY,
     RSSGuard,
+    bytes_to_gb,
     iteration_chunks,
+    peak_rss_bytes,
 )
-from solver.single_draw_game import (  # noqa: E402
-    SingleDrawGame,
+from solver.training_run import (  # noqa: E402
+    TrainingRunInfo,
+    TrainingState,
+    config_differences,
+    current_git_commit,
+    load_training_state,
+    make_game_factory,
+    save_training_state,
 )
 
 
@@ -45,8 +53,14 @@ DEFAULT_BATCH_SIZE = 500
 
 DEFAULT_MIN_FREE_MEMORY_GB = 2.0
 
+# Exit code when training stopped early (RSS / free memory) and a
+# training state was saved, so a wrapper can resume.
+EXIT_STOPPED_EARLY = 3
 
-def parse_args() -> argparse.Namespace:
+
+def parse_args(
+    argv: list[str] | None = None,
+) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Train the heads-up 2-7 Single "
@@ -204,7 +218,45 @@ def parse_args() -> argparse.Namespace:
         ),
     )
 
-    return parser.parse_args()
+    parser.add_argument(
+        "--state-output",
+        type=Path,
+        default=None,
+        help=(
+            "Also save the full training "
+            "state (regrets, strategy sums, "
+            "RNG) here so training can be "
+            "resumed. Defaults to --resume "
+            "when resuming."
+        ),
+    )
+
+    parser.add_argument(
+        "--resume",
+        type=Path,
+        default=None,
+        help=(
+            "Resume from this training state "
+            "file. --iterations is then the "
+            "target total, and every setting "
+            "that affects results must match "
+            "the state file."
+        ),
+    )
+
+    parser.add_argument(
+        "--state-every-batches",
+        type=int,
+        default=1,
+        help=(
+            "Save the training state every N "
+            "batches, in addition to the "
+            "final save. Set to 0 to save "
+            "only at the end."
+        ),
+    )
+
+    return parser.parse_args(argv)
 
 
 def validate_args(
@@ -270,6 +322,50 @@ def validate_args(
             "positive."
         )
 
+    if args.state_every_batches < 0:
+        raise ValueError(
+            "State-every-batches cannot "
+            "be negative."
+        )
+
+
+def training_config(
+    args: argparse.Namespace,
+    game_config: GameConfig,
+) -> dict[str, object]:
+    """
+    Every setting that changes training results. A resume must
+    match these exactly.
+    """
+    return {
+        "player_count": (
+            game_config.player_count
+        ),
+        "stack": (
+            game_config.starting_stack
+        ),
+        "small_blind": (
+            game_config.small_blind
+        ),
+        "big_blind": (
+            game_config.big_blind
+        ),
+        "big_blind_ante": (
+            game_config.big_blind_ante
+        ),
+        "max_draw": args.max_draw,
+        "abstraction": args.abstraction,
+        "traversal_mode": (
+            args.traversal_mode
+        ),
+        "draw_action_mode": (
+            args.draw_action_mode
+        ),
+        "bet_sizing": args.bet_sizing,
+        "seed": args.seed,
+        "seed_mode": args.seed_mode,
+    }
+
 
 def resolve_bet_sizing(
     mode: str,
@@ -307,8 +403,12 @@ def available_memory_gb() -> float:
     )
 
 
-def main() -> None:
-    args = parse_args()
+def main(
+    argv: list[str] | None = None,
+) -> None:
+    args = parse_args(
+        argv
+    )
 
     validate_args(
         args
@@ -329,47 +429,143 @@ def main() -> None:
         big_blind_ante=1.5,
     )
 
-    game_counter = 0
+    run_config = training_config(
+        args,
+        shared_game_config,
+    )
 
-    def game_factory() -> SingleDrawGame:
-        nonlocal game_counter
+    state_path: Path | None = (
+        args.state_output
+        if args.state_output is not None
+        else args.resume
+    )
 
-        if args.seed_mode == "fixed":
-            game_seed = args.seed
-        else:
-            game_seed = (
-                args.seed
-                + game_counter
-            )
+    run_info: TrainingRunInfo | None = None
 
-        game_counter += 1
-
-        return SingleDrawGame(
-            config=shared_game_config,
-            button_seat=0,
-            deck_seed=game_seed,
+    if args.resume is not None:
+        resumed_state = load_training_state(
+            args.resume
         )
 
-    abstraction: AbstractionMode = (
-        args.abstraction
+        differences = config_differences(
+            resumed_state.run.config,
+            run_config,
+        )
+
+        if differences:
+            raise ValueError(
+                "Cannot resume: settings that "
+                "affect results differ from the "
+                "training state:\n  "
+                + "\n  ".join(differences)
+            )
+
+        trainer = resumed_state.trainer
+
+        run_info = resumed_state.run
+
+        if (
+            trainer.completed_iterations
+            >= args.iterations
+        ):
+            raise ValueError(
+                f"Training state already has "
+                f"{trainer.completed_iterations:,} "
+                f"iterations; --iterations is the "
+                f"target total when resuming."
+            )
+
+    else:
+        abstraction: AbstractionMode = (
+            args.abstraction
+        )
+
+        trainer = CFRTrainer(
+            max_draw=args.max_draw,
+            raise_sizes=raise_sizes,
+            bet_sizing_policy=(
+                bet_sizing_policy
+            ),
+            abstraction=abstraction,
+            traversal_mode=(
+                args.traversal_mode
+            ),
+            draw_action_mode=(
+                args.draw_action_mode
+            ),
+            random_seed=args.seed,
+            game_config=shared_game_config,
+        )
+
+        if state_path is not None:
+            run_info = TrainingRunInfo(
+                config=run_config,
+                git_commit=(
+                    current_git_commit()
+                ),
+            )
+
+    # The game seed comes from completed_iterations, which equals
+    # the old per-call counter for a fresh trainer and continues
+    # the same sequence for a resumed one.
+    game_factory = make_game_factory(
+        trainer,
+        game_config=shared_game_config,
+        seed=args.seed,
+        seed_mode=args.seed_mode,
     )
 
-    trainer = CFRTrainer(
-        max_draw=args.max_draw,
-        raise_sizes=raise_sizes,
-        bet_sizing_policy=(
-            bet_sizing_policy
-        ),
-        abstraction=abstraction,
-        traversal_mode=(
-            args.traversal_mode
-        ),
-        draw_action_mode=(
-            args.draw_action_mode
-        ),
-        random_seed=args.seed,
-        game_config=shared_game_config,
+    segment_start_iteration = (
+        trainer.completed_iterations
     )
+
+    prior_segments = (
+        list(run_info.segments)
+        if run_info is not None
+        else []
+    )
+
+    def save_state(
+        stop_reason: str,
+        wall_seconds: float,
+    ) -> None:
+        assert state_path is not None
+        assert run_info is not None
+
+        peak = peak_rss_bytes()
+
+        run_info.segments = prior_segments + [
+            {
+                "start_iteration": (
+                    segment_start_iteration
+                ),
+                "end_iteration": (
+                    trainer.completed_iterations
+                ),
+                "wall_seconds": wall_seconds,
+                "peak_rss_gb": (
+                    bytes_to_gb(peak)
+                    if peak is not None
+                    else None
+                ),
+                "stop_reason": stop_reason,
+            }
+        ]
+
+        saved_path = save_training_state(
+            state_path,
+            TrainingState(
+                trainer=trainer,
+                run=run_info,
+            ),
+        )
+
+        print(
+            f"  Saved training state "
+            f"({trainer.completed_iterations:,} "
+            f"iterations) to "
+            f"{saved_path.resolve()}"
+        )
 
     print(
         "Training started:"
@@ -379,6 +575,20 @@ def main() -> None:
         f"  iterations: "
         f"{args.iterations:,}"
     )
+
+    if args.resume is not None:
+        print(
+            f"  resumed from: "
+            f"{args.resume} "
+            f"({trainer.completed_iterations:,} "
+            f"iterations done)"
+        )
+
+    if state_path is not None:
+        print(
+            f"  training state: "
+            f"{state_path}"
+        )
 
     print(
         f"  stack: "
@@ -480,7 +690,10 @@ def main() -> None:
 
     print()
 
-    remaining_iterations = args.iterations
+    remaining_iterations = (
+        args.iterations
+        - trainer.completed_iterations
+    )
 
     batch_number = 0
 
@@ -641,6 +854,24 @@ def main() -> None:
                 f"{checkpoint_path.resolve()}"
             )
 
+        # The last batch is covered by the final
+        # save below, so it is not saved twice.
+        should_save_state = (
+            state_path is not None
+            and not low_memory
+            and remaining_iterations > 0
+            and args.state_every_batches > 0
+            and batch_number
+            % args.state_every_batches
+            == 0
+        )
+
+        if should_save_state:
+            save_state(
+                "checkpoint",
+                elapsed_total,
+            )
+
         if low_memory:
             break
 
@@ -649,6 +880,15 @@ def main() -> None:
             args.output
         )
     )
+
+    if state_path is not None:
+        save_state(
+            stop_reason
+            if stopped_early
+            else "completed",
+            time.perf_counter()
+            - overall_start,
+        )
 
     print()
 
@@ -682,6 +922,20 @@ def main() -> None:
         f"  checkpoint: "
         f"{final_checkpoint_path.resolve()}"
     )
+
+    if (
+        stopped_early
+        and state_path is not None
+    ):
+        print(
+            f"  resume with: --resume "
+            f"{state_path} (same settings, "
+            f"--iterations {args.iterations})"
+        )
+
+        sys.exit(
+            EXIT_STOPPED_EARLY
+        )
 
 
 if __name__ == "__main__":

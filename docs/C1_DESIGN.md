@@ -1,6 +1,6 @@
 # C1 設計：可續跑訓練與解庫(solution library)
 
-狀態：**設計，待你核准**(day59)。尚未改任何程式碼。依據 `main` @ `6205caa`。
+狀態：**已核准**(day59,第 6 節 a–f 依建議:a = 選項 A,e = 不動)。第 7 節第 1 步已實作，紀錄見第 8 節;第 2 步(T5)待你在筆電跑。設計本文依據 `main` @ `6205caa`。
 
 標記：**[確認]** = 已用程式或實測驗證;**[推測]** = 推論。
 
@@ -187,3 +187,38 @@ python -m scripts.solve_library release <id> <iter>
 3. `scripts/solve_library.py` + `solutions/manifest.json`。
 4. 第一份解：分次訓練到 8k → A2 評估 → 依停止規則繼續。
 5. (另外提案給 A2)A2 讀狀態檔，補上 current-vs-average。
+
+## 8. 實作紀錄(day59,第 7 節第 1 步)
+
+### 8.1 檔案
+
+- **新增** `solver/training_run.py`(C1 擁有):`TRAINING_STATE_VERSION = 1`、`TrainingState` / `TrainingRunInfo`、`save_training_state`(`.tmp` → 舊檔改名 `.prev` → 新檔就位)、`load_training_state`、`make_game_factory`(game seed = `seed + trainer.completed_iterations`)、`config_differences`。
+- **修改** `scripts/save_training_checkpoint.py`:新增 `--state-output`、`--resume`、`--state-every-batches`(預設 1);`parse_args` / `main` 可傳 `argv`(給測試用);停止時存了狀態檔的話，結束碼 3。
+- **新增** `tests/test_training_run.py`(11 個測試)。
+
+### 8.2 和設計的差異
+
+- **訓練迴圈沒有搬到 `solver/training_run.py`**,仍留在 `save_training_checkpoint.py`。這一步只需要狀態檔的讀寫和 game factory,搬迴圈是較大的重構;等第 3 步 `solve_library.py` 真的需要共用時再搬(到時候再做一次 T2)。
+- `--iterations` 在續跑時是**目標總數**。從 0 開始時和原本的意思相同;中斷後用同一行指令加 `--resume` 就能接著跑。已達目標時會拒絕。
+- 續跑時比對的設定:`player_count`、`stack`、blinds、ante、`max_draw`、`abstraction`、`traversal_mode`、`draw_action_mode`、`bet_sizing`、`seed`、`seed_mode`。batch、記憶體門檻、輸出路徑可以改。Python 版本不同時目前**不警告**(只記在 `run.python_version`)。
+- 最後一個 batch 不另存中間狀態檔，只在結束時存一次(避免大規模時存兩次)。
+- 每次存檔都把這段的 `{start_iteration, end_iteration, wall_seconds, peak_rss_gb, stop_reason}` 寫進 `run.segments`;續跑會接在前面的 segment 後面。
+
+### 8.3 驗證
+
+| # | 結果 |
+|---|---|
+| T1 | **通過**。exact / sequential、exact / fixed(full sizing)、bucket / `max_draw=5`:4 次 → 續跑到 7 → 續跑到 10,和直接 10 次的節點指紋與策略檔完全相同;segments 為 (0,4)(4,7)(7,10)。另外:RSS guard 觸發(門檻 0.001 GB)→ 結束碼 3、狀態檔在 2 次 → 續跑到 6,和直接 6 次相同。跨 process 的手動檢查(30 + 30 vs 60,bucket、`max_draw=5`、fast、seed 42,Windows / Python 3.12):13,209 節點，sha256 相同。 |
+| T2 | **通過**。不加新參數，改動前後:bucket / `max_draw=5` / fast / 40 次 / batch 15(RSS guard 開)和 exact / `max_draw=1` / full / fixed seed 7 / 30 次 / batch 10(RSS guard 關),策略檔(8,916 / 1,882 個策略)完全相同，metadata 只差 `created_at_utc`,stdout 除了時間與記憶體數字外相同。 |
+| T3 | **通過**。改 `--stack`、`--seed`、`--bet-sizing`、`--seed-mode` 續跑都被拒絕，錯誤訊息列出差異。 |
+| T4 | **通過**。寫入途中中斷(在 `pickle.dump` 丟例外)→ 原狀態檔不變、沒有殘留 `.tmp`;下一次成功寫入後舊檔在 `.prev`。 |
+| T5 | **待你跑**(見下方指令)。 |
+| T6 | **通過**。`python -m pytest tests -q`:874 passed。 |
+
+### 8.4 T5 指令(筆電)
+
+```
+python -m scripts.save_training_checkpoint --iterations 2000 --max-draw 5 --abstraction bucket --bet-sizing full --seed 42 --batch-size 500 --max-rss-gb 0 --output experiments/c1/t5_full_2k.chk.gz --state-output experiments/c1/t5_full_2k.state.gz
+```
+
+要記的:每個 batch 的 `CFR_nodes`、最後的 `peak_rss_gb`(狀態檔裡 `run.segments[-1]`)、`.state.gz` 和 `.chk.gz` 的檔案大小、總時間。判斷：峰值 < 3 GiB 可接受;> 2 × 1.38 GiB 就先處理 2.5 節的備案。`--max-rss-gb 0` 是為了量到真正的峰值，不讓 guard 提前停。
