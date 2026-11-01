@@ -305,7 +305,7 @@
 | A1 | **完成**:interning 實測通過(存檔前 RSS -70%,存檔峰值 -62%),3.12 指紋前後相同;已合併進 `main`(PR #6) | day42 | `ws-a1-memory` | `full` 40k 預估峰值約 4 GiB、約 14 小時;後續候選(不急):存檔串流化、dict 改陣列 |
 | A2 | **完成**:單一評估入口 `scripts/evaluate_checkpoint.py`、門檻 gates v2(含 Q6)、分組 SBR(通過檢測力測試);v1 / v2 standard 報告(report v2)在 `experiments/eval/`,跨平台逐位重現 | day56 | `claude/lucid-ritchie-myhksz` | v1 下界 +1.57、v2 +2.47 chips/局，兩者都 FAIL;限制與用法見 `docs/A2_DESIGN.md` 第 13 節 |
 | B1 | 未開始 | | | |
-| B2 | **收尾中**:換牌對應與 `draw_count` 編碼驗證正確;v1 換牌錯誤分析完成;提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`;剩使用者跑 v2 的 `inspect_draw_decisions`。換牌勝率 oracle 只是「固定對手牌、忽略位置」的初步工具;考慮對手範圍與位置的選項價值分析延後，等 C1 有訓練足夠的 checkpoint 後，由 A2 以通用 LBR 實作 | day56 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節 |
+| B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
 | C1 | 未開始 | | | |
