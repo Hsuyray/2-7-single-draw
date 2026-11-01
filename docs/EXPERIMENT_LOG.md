@@ -212,4 +212,15 @@ Reading:
 | No new flags, before vs after the change | bucket / `max_draw=5` / fast / 40 iters; exact / `max_draw=1` / full / fixed seed 7 / 30 iters | identical strategies (8,916 / 1,882); metadata differs only in `created_at_utc` |
 | Full test suite | | 874 passed |
 
-Not yet measured: peak RSS and file size of saving the state at `full` scale (T5, `docs/C1_DESIGN.md` 8.4).
+
+T5 (day60, laptop): `full`, bucket, `max_draw=5`, seed 42, 2,000 iterations, batch 500, RSS guard off.
+
+| Item | Value |
+|---|---|
+| Nodes at 500 / 1,000 / 1,500 / 2,000 | 213,501 / 356,412 / 471,899 / 562,244 |
+| Wall time | 3,063 s (batch 4 took 1,010 s vs ~620-675 s for batches 1-3; not investigated) |
+| File sizes | `.chk.gz` 5.6 MB, `.state.gz` 16.4 MB |
+| Stored `peak_rss_gb` (read before the state write) | 1.42 GB at 2,000 |
+| Reload of the 2k state, then save both files | load 7.0 s, RSS 1.05 GB; checkpoint save 18.9 s, peak 1.535 GB; state save 13.8 s, peak unchanged |
+
+Reading: confirmed that saving the state does not raise the peak above the checkpoint save, so the 5-7 GiB concern in `docs/C1_DESIGN.md` 2.5 is refuted. The stored peak missed the state write itself; the script now also prints the peak after each state save.

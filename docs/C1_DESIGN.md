@@ -212,7 +212,7 @@ python -m scripts.solve_library release <id> <iter>
 | T2 | **通過**。不加新參數，改動前後:bucket / `max_draw=5` / fast / 40 次 / batch 15(RSS guard 開)和 exact / `max_draw=1` / full / fixed seed 7 / 30 次 / batch 10(RSS guard 關),策略檔(8,916 / 1,882 個策略)完全相同，metadata 只差 `created_at_utc`,stdout 除了時間與記憶體數字外相同。 |
 | T3 | **通過**。改 `--stack`、`--seed`、`--bet-sizing`、`--seed-mode` 續跑都被拒絕，錯誤訊息列出差異。 |
 | T4 | **通過**。寫入途中中斷(在 `pickle.dump` 丟例外)→ 原狀態檔不變、沒有殘留 `.tmp`;下一次成功寫入後舊檔在 `.prev`。 |
-| T5 | **待你跑**(見下方指令)。 |
+| T5 | **通過**(day60,筆電，見 8.5)。存狀態檔的峰值不超過存策略檔的峰值;`full` 2k 的整個 process 峰值約 1.5 GB,遠低於 3 GiB。 |
 | T6 | **通過**。`python -m pytest tests -q`:874 passed。 |
 
 ### 8.4 T5 指令(筆電)
@@ -222,3 +222,24 @@ python -m scripts.save_training_checkpoint --iterations 2000 --max-draw 5 --abst
 ```
 
 要記的:每個 batch 的 `CFR_nodes`、最後的 `peak_rss_gb`(狀態檔裡 `run.segments[-1]`)、`.state.gz` 和 `.chk.gz` 的檔案大小、總時間。判斷：峰值 < 3 GiB 可接受;> 2 × 1.38 GiB 就先處理 2.5 節的備案。`--max-rss-gb 0` 是為了量到真正的峰值，不讓 guard 提前停。
+
+### 8.5 T5 結果(day60,使用者筆電)
+
+`full` sizing、bucket、`max_draw=5`、seed 42、2,000 次、batch 500,RSS guard 關。
+
+| 項目 | 數值 |
+|---|---|
+| 節點數(每 500 次) | 213,501 / 356,412 / 471,899 / 562,244(和 A1 的 2k `full` 約 562k 一致) |
+| 訓練時間 | batch 1–3 約 620–675 秒,batch 4 為 1,010 秒;總共 3,063 秒 |
+| 檔案大小 | `.chk.gz` 5.6 MB、`.state.gz` 16.4 MB(1,500 次的 `.prev` 13.0 MB) |
+| 狀態檔裡的 `peak_rss_gb` | 500–1,500 次 1.20 GB,2,000 次 1.42 GB |
+| 另外量測(重新載入 2k 狀態後依序存檔) | 載入 7.0 秒、RSS 1.05 GB;存策略檔 18.9 秒，峰值升到 1.535 GB;**再存狀態檔 13.8 秒，峰值不變**(仍 1.535 GB) |
+
+解讀:
+- **[確認] 存狀態檔不是記憶體瓶頸。** 峰值來自存策略檔(和 A1 的 1.38 GiB 同一個量級);存狀態檔的暫時增量比較小。2.5 節的「峰值 5–7 GiB」推測被推翻，備案(dict 改陣列)不需要。
+- **[確認] 量測缺口：** 狀態檔裡的 `peak_rss_gb` 是在寫狀態檔**之前**讀的，不包含這次存檔本身的峰值。已改成存檔後在 stdout 多印一行 `peak RSS including this save`;檔案格式不變。上表的存檔峰值是另外重新載入後量的，和訓練中的 process 不完全相同(訓練中的 RSS 在存檔前已約 1.4 GB),所以訓練中實際峰值 **[推測]** 約 1.5–1.9 GB。
+- **[推測]** 節點上限 2.03M 時，依節點數線性外推：載入後約 3.8 GB,存檔峰值約 5.5 GB。可以在 16 GB 上跑，但不能同時跑 A2 評估(v2 規模約 8 GB)。
+- 狀態檔只有策略檔的約 3 倍大，存 / 讀各約 10–20 秒，和一個 batch 的 600 秒以上相比可以忽略，所以預設每個 batch 存一次沒問題。
+- batch 4 比前三個慢約 50%,節點成長反而變慢;原因未查(可能是筆電上其他負載)。不影響 T5 的結論。
+
+**結論**:第 7 節第 2 步完成，可以進第 3 步(`scripts/solve_library.py` + `solutions/manifest.json`)。

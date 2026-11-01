@@ -567,6 +567,18 @@ def main(
             f"{saved_path.resolve()}"
         )
 
+        # The stored peak_rss_gb is read before the state is
+        # written, so it misses this save's own peak; print the
+        # peak including it.
+        peak_after_save = peak_rss_bytes()
+
+        if peak_after_save is not None:
+            print(
+                f"  peak RSS including this "
+                f"save: "
+                f"{bytes_to_gb(peak_after_save):.2f}GB"
+            )
+
     print(
         "Training started:"
     )

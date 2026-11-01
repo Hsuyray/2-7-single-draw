@@ -12,3 +12,7 @@ __pycache__/
 # Scratch checkpoints produced by experiments (profiling / equivalence checks).
 # Production checkpoints live in checkpoints/ and are not ignored.
 experiments/**/*.chk.gz
+
+# Resumable training state files (WS C1) and their previous copies.
+experiments/**/*.state.gz
+experiments/**/*.state.gz.prev

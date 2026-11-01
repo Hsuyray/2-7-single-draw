@@ -308,7 +308,7 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | **第 1 步完成**:設計已核准(選項 A:另存訓練狀態檔,v3 不變);`--state-output` / `--resume` 已實作,T1–T4、T6 通過(續跑與連續訓練指紋相同、不加新參數時策略檔不變) | day59 | `ws-c1-training` | 下一步:你在筆電跑 T5(`full` 2k 存狀態檔的峰值 RSS),指令在 `docs/C1_DESIGN.md` 8.4 |
+| C1 | **第 1–2 步完成**:設計已核准(選項 A:另存訓練狀態檔,v3 不變);`--state-output` / `--resume` 已實作,T1–T6 通過。T5:`full` 2k 存狀態檔不提高峰值(約 1.5 GB),狀態檔 16 MB | day60 | `ws-c1-training` | 下一步：第 3 步 `scripts/solve_library.py` + `solutions/manifest.json` |
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |
