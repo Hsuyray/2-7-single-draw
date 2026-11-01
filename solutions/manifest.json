@@ -8,7 +8,21 @@
         "draw_action_mode": "auto",
         "traversal_mode": "external_sampling"
       },
-      "checkpoints": [],
+      "checkpoints": [
+        {
+          "cfr_nodes": 1068645,
+          "created_at_utc": "2026-11-01T14:36:08+00:00",
+          "evaluation": null,
+          "git_commit": "7b68973b56eb8417e9cc19448e8f1be5a93ba020",
+          "iterations": 8000,
+          "path": "hu_d5_full_bucket_s20/strategy_008000.chk.gz",
+          "peak_rss_gb_max": 2.8843231201171875,
+          "sha256": "939edfe92ac83b4c5476eb5ff802f7734a07746e9b8cfc46b65810507190627d",
+          "size_bytes": 13155066,
+          "training_segments": 1,
+          "wall_seconds_total": 27103.350335099996
+        }
+      ],
       "game": {
         "big_blind": 2.0,
         "big_blind_ante": 1.5,
@@ -26,7 +40,7 @@
       "released": null,
       "seed": 42,
       "seed_mode": "sequential",
-      "status": "planned"
+      "status": "training"
     }
   }
 }

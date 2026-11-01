@@ -224,3 +224,20 @@ T5 (day60, laptop): `full`, bucket, `max_draw=5`, seed 42, 2,000 iterations, bat
 | Reload of the 2k state, then save both files | load 7.0 s, RSS 1.05 GB; checkpoint save 18.9 s, peak 1.535 GB; state save 13.8 s, peak unchanged |
 
 Reading: confirmed that saving the state does not raise the peak above the checkpoint save, so the 5-7 GiB concern in `docs/C1_DESIGN.md` 2.5 is refuted. The stored peak missed the state write itself; the script now also prints the peak after each state save.
+
+## C1 first library solution, 8k (day63)
+
+`python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 8000` on the laptop: `full`, bucket, `max_draw=5`, seed 42 sequential, batch 500, RSS guard 10 GB. One segment, no interruption.
+
+| Item | Value |
+|---|---|
+| Nodes at 500 / 2,000 / 4,000 / 8,000 | 213,501 / 562,244 / 800,762 / 1,068,645 |
+| Wall time | 27,003 s (~7.5 h); 1,420-1,790 s per 500-iteration batch |
+| RSS | 1.39 GB while training; peak 2.88 GB in the last batch (checkpoint + state save) |
+| Files | checkpoint 13.2 MB, state 42.3 MB |
+
+Reading:
+- Confirmed: the 8k checkpoint has the same 1,068,645 strategies as `production_v2_maxdraw5.chk.gz`, all values identical; metadata differs only in `created_at_utc`. The library pipeline reproduces the v2 training exactly.
+- Confirmed: node counts for the first 2,000 iterations match T5.
+- Inference: the 8k standard evaluation will reproduce the v2 report (FAIL: Q1, Q2, Q3, Q6), since the benchmark is deterministic.
+- Not explained: the first 2,000 iterations took 6,200 s vs 3,063 s in T5 with identical node counts. Hypothesis: laptop power mode, thermals or other load; the training loop did not change between the two runs.
