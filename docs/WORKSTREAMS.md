@@ -308,7 +308,7 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | 未開始 | | | |
+| C1 | **設計待核准**:`docs/C1_DESIGN.md`(訓練 script 盤點、可續跑訓練、解庫、單一訓練入口)。原型確認 pickle 整個 trainer 後續跑與連續訓練指紋相同 | day59 | `claude/sleepy-mendel-dpgv70` | 尚未改程式碼;待決事項見設計第 6 節 |
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |
