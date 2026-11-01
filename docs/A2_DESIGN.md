@@ -374,4 +374,4 @@ A2 現在有可重現的報告和門檻，但缺一個可信的「離均衡多�
 - SBR 是下界，而且會隨 response 局數變大;只能在同一個 preset 下比較。小漏洞(遠小於 0.4 chips/局)在目前的 validation 局數下偵測不到。
 - current-vs-average 需要 checkpoint 存 regret(C1 範圍)。
 - 載入 v2 這種規模的 checkpoint 要 8 GB,兩份同時載入(`--previous`)放不下 16 GB。
-- 待決:Q6(SBR 門檻，第 12.4 節)。
+- Q6 已核准(day56),實作為 gates v2:v1 下界 0.82、v2 下界 1.53(mean gain − 2·SE),兩者都 > 0.2 → FAIL。v2 的新報告也和 day46 舊報告在 SBR 以外逐位相同(跨平台)。

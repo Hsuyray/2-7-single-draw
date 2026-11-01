@@ -21,19 +21,26 @@ A Python solver for **2-7 Single Draw poker** using **Counterfactual Regret Mini
 - Windows, PowerShell, Python 3.12 virtualenv. Install: `python -m pip install -r requirements.txt`.
 - All scripts run as modules from the repo root: `python -m scripts.<name>`. Tests: `python -m pytest tests -q`.
 - Hardware: i7-12700H (14 cores / 20 threads), 16 GB RAM. Training is single-threaded.
-- Git: day-numbered commit messages (`day33`, `day34`, ...). Push through the **`Hsuyray`** GitHub account (not `ray-askew`). Do not push unless asked.
+- Git: day-numbered commit messages (`day33`, `day34`, ...). Push through the **`Hsuyray`** GitHub account (not `ray-askew`). Pushing to the session's working branch is approved (user, day56); the user opens and merges PRs.
 - Working loop: run a script, read the full output, pick **one** highest-priority next step, change code only when diagnostics show a clear need.
+- Long runs (training, standard benchmark reports, multi-hour experiments) are run by the user on the laptop: hand over complete code and exact commands; quick checks may run in the cloud session.
 - When giving code or diffs, label each as **new file** or **overwrite existing file**.
 
 ### Key files (paths verified)
 `solver/game_state.py`, `solver/cfr_trainer.py`, `solver/cfr_node.py`, `solver/node_store.py`, `solver/strategy_checkpoint.py`, `solver/hand_strategy_resolver.py`, `solver/postdraw_strength_bucket.py`, `solver/best_response.py`, `solver/bet_sizing.py`, `solver/memory_guard.py`, `scripts/save_training_checkpoint.py` (production training entry point), `scripts/profile_memory.py`, `scripts/inspect_*.py`, `scripts/evaluate_strategy_profile.py`.
 
-## 3. State (see `docs/EXPERIMENT_LOG.md` and `docs/WORKSTREAMS.md` section 1 for numbers)
+Evaluation (A2 benchmark): `scripts/evaluate_checkpoint.py` (single entry point; `--compare`, `--gates`), `solver/checkpoint_evaluation.py`, `solver/benchmark_gates.py`, `solver/response_grouping.py`, `solver/exploitability_power.py`. Design and results: `docs/A2_DESIGN.md`.
 
-- v1 checkpoint: `max_draw=1`, 20,000 iters, ~98% coverage, `full` bet sizing. Rules-incomplete.
-- v2 checkpoint: `max_draw=5`, 8,000 iters, ~94% coverage. Two v2 files exist in `checkpoints/`; which is the 8k run is not recorded.
-- Checkpoint schema: v3 (`CHECKPOINT_FORMAT_VERSION`). Checkpoints hold the average strategy only (no regrets), so training cannot resume from one.
-- A 40k-iteration `max_draw=5` run exceeded ~2 GB and froze the machine. Cause not yet diagnosed (workstream A1). Training now has an RSS guard (`--max-rss-gb`, default 3, 0 disables).
+## 3. State (see `docs/EXPERIMENT_LOG.md` and `docs/WORKSTREAMS.md` section 1 for numbers; updated day56)
+
+- Checkpoint schema: v3 (`CHECKPOINT_FORMAT_VERSION`). Checkpoints hold the average strategy only (no regrets), so training cannot resume from one and current-vs-average cannot be measured from a checkpoint.
+- **Benchmark (A2):** `python -m scripts.evaluate_checkpoint <checkpoint>` (preset `standard`, seed 2027) writes a JSON / text report to `experiments/eval/` with gates (v2: hard H1-H4, quality Q1-Q6). Reports are bit-identical across runs and across platforms (Linux / Python 3.13 vs Windows / Python 3.12). Cost on the laptop: v1 ~26 min / 2 GB, v2 ~3.1 h / 8.1 GB.
+- v1 `production_v1.chk.gz`: `max_draw=1` (rules-incomplete), 20,000 iters, bucket, `full` sizing, 305,175 info sets. Coverage 96.8%; played decisions on a near-uniform strategy 11-23% by phase; grouped-SBR exploitability lower bound +1.57 chips/deal. Gates: FAIL (Q1, Q3, Q6).
+- v2 `production_v2_maxdraw5.chk.gz` is the 8k run: `max_draw=5`, `full` sizing, 1,068,645 info sets. Coverage 92.8%; near-uniform when played 19 / 46 / 27% (predraw / draw / postdraw); lower bound +2.47 chips/deal. Gates: FAIL (Q1, Q2, Q3, Q6). The other file, `production_v2_maxdraw5_v2.chk.gz`, could not be loaded within memory; its contents are unknown.
+- Earlier "~98% / ~94% coverage" figures are superseded: the old checkpoint coverage script alternated the button seat (fixed day45).
+- Main bottleneck: under-training. 70-93% of stored strategies are near-uniform, and the correctness checks (action-space consistency, zero-sum, draw mapping, draw_count encoding, reproducibility) pass. Because those checks were done first (principle 4.1), longer and resumable training (workstream C1) is now the justified next step; it is still not a substitute for diagnosing any new failure.
+- Training only uses `button_seat=0`, and `PublicNodeKey` stores the absolute button seat: every button-1 lookup misses (0% coverage). The game is seat-symmetric, so this needs player-relative keys or a query-layer seat relabelling (D1 / frozen-interface decision), not more training.
+- 40k-iteration memory (A1, done): a large state space (`full` cap 2,031,912 info sets) plus fat nodes, not a leak or float fragmentation. Node interning is merged (PR #6); `full` 40k is estimated at ~4 GiB peak and ~14 h single-threaded. Training has an RSS guard (`--max-rss-gb`, default 3, 0 disables).
 - Measured (1,000 iters, `max_draw=5`, bucket, fast, seed 42): 114,110 nodes, ~0.59 s/iter, RSS 0.465 GB.
 
 ### Fixed bugs (do not regress; covered by `tests/test_regression_fixed_bugs.py`)
@@ -41,8 +48,9 @@ A Python solver for **2-7 Single Draw poker** using **Counterfactual Regret Mini
 2. `hand_strategy_resolver.py` used the wrong bucket type for postdraw lookups (must be `PostdrawStrengthBucket`).
 3. Type-check error in the postdraw strength bucket inspection script.
 
-### Known limitation (do not "fix" without a new plan)
-SampledBestResponse (SBR) oscillates because action values reset every sweep. A cross-sweep accumulation fix was tried, made results worse, and was **reverted. Do not retry it.** SBR is sample-sensitive; treat it as a proxy, not true exploitability.
+### Known limitations (do not "fix" without a new plan)
+- SampledBestResponse (SBR) oscillates because action values reset every sweep. A cross-sweep accumulation fix was tried, made results worse, and was **reverted. Do not retry it.**
+- The original per-information-set SBR is sample-starved (~0.5 visits per learned state per sweep) and failed the power test. The benchmark uses **grouped SBR** (`response_grouping=coarse_grouping`, approved day51 as an exception to A2's "non-algorithmic changes only" rule), which passed the power test for both seats. It is a **lower bound** on exploitability and grows with the response budget, so SBR numbers are comparable only at the same preset. It cannot detect leaks much smaller than ~0.4 chips/deal at the standard validation size.
 
 ## 4. Non-negotiable engineering principles
 
@@ -89,4 +97,4 @@ Every experiment records: configuration (`max_draw`, bet sizing profile, bucket 
 - Never use exact float equality for chips/bets.
 - Multi-core training: propose options and trade-offs first (`docs/PARALLEL_TRAINING_DESIGN.md`); do not implement without approval.
 - End every task with a summary: what changed, why, how it was tested, the result.
-- Commit with the next day-numbered message; do not push unless asked. Never rewrite history, never delete tracked files without being asked.
+- Commit with the next day-numbered message and push to the session's working branch (approved day56). Never rewrite history, never delete tracked files without being asked.

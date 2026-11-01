@@ -2,7 +2,7 @@
 
 用途：每個 workstream(WS)對應一個獨立的 context window / Claude session。開新 session 時，把該 WS 的「開場 prompt」貼進去即可。
 
-依據:`main` @ `ff30393`(day31),含 `experiments/memory_profile/` 的實測數據。標 **[推測]** 的是推論，不是實測。
+依據:`main` @ `ff30393`(day31),含 `experiments/memory_profile/` 的實測數據;第 1 節有 A1(day35)與 A2 / B2(day56)的更新段落，較新的段落取代較舊的說法。標 **[推測]** 的是推論，不是實測。
 
 ---
 
@@ -42,7 +42,16 @@
 
 **更新(A1,day35)**:節點數有確定上限,`fast` 約 34.6 萬、`full` 約 203 萬;8k 的 `full` checkpoint 已有 1,068,645 個資訊集,且其 metadata 顯示用的是 `full` 下注比例。碎片化已排除。詳見 `docs/A1_REPORT.md`。下面這段是 A1 之前的推估,其中「節點數可能到 50 萬以上」「碎片化未排除」已被取代。
 
-**推估 [推測]**:
+**更新(A2 / B2,day56)**:
+- **評估基準**:`python -m scripts.evaluate_checkpoint <checkpoint>`(preset `standard`)是所有策略品質判斷的共同尺，報告含門檻判定(gates v2),可跨平台逐位重現。用法、指標與限制見 `docs/A2_DESIGN.md` 第 13 節。
+- **v1**:覆蓋率 96.8%,實際打到時是均勻策略 11–23%,可剝削度下界(分組 SBR)每局 +1.57 chips,門檻 FAIL。**v2**(8k、`max_draw=5`):覆蓋率 92.8%,draw 實際打到時 46% 是均勻策略，下界每局 +2.47 chips,門檻 FAIL。
+- 以前的「v1 約 98%、v2 約 94% 覆蓋率」已被取代：舊的覆蓋率 script 讓 button 交替 0 / 1(day45 已修)。
+- **目前的主要瓶頸是訓練不足**(已存策略 70–93% 是均勻的);正確性檢查(動作空間一致、零和、換牌對應、`draw_count` 編碼、重現性)都通過。
+- **button 位置**:訓練只用 `button_seat=0`,而 key 存絕對 button,所以 button 1 的查詢全部查不到。遊戲對座位對稱，要靠 player-relative key 或查詢層的座位對調解決(D1 / 凍結介面)，不是多訓練。
+- **行動順序**(程式碼確認):predraw button 先;換牌大盲先換、button 後換(看得到大盲換幾張);postdraw 大盲先行動。
+- 下一步依第 2 節的順序：先 C1(可續跑訓練與解庫),再依 A2 的評估一次合併一個 B 的改動。
+
+**推估 [推測]**(A1 之前，已被上面兩段取代):
 - **40k 次的時間**:約 6–7 小時。
 - **40k 次的記憶體**:節點數如果到 50 萬以上，乘 3.9 KB/節點就是 2 GB 以上，和「40k 跑爆 2 GB」吻合。看起來比較像**合理但很大的狀態空間 + 每節點太胖**,不像無上限的 cache 洩漏。但 float key 造成的碎片化(fragmentation)還沒排除，這正是你新增的 `scripts/inspect_node_composition.py` 要回答的。
 
@@ -63,7 +72,7 @@
 | ID | 名稱 | 類型 | 前置條件 | 可平行? |
 |---|---|---|---|---|
 | A0 | Repo 整理與共用規則 | 基礎 | 無 | 最先做，很短 |
-| A1 | **完成**:interning 實測通過(存檔前 RSS -70%,存檔峰值 -62%),3.12 指紋前後相同 | day42 | `ws-a1-memory` | `full` 40k 預估峰值約 4 GiB;待合併進 `main`。後續候選(不急):存檔串流化、dict 改陣列 |
+| A1 | 記憶體與規模(P0) | 基礎 | A0 | 和 A2 平行 |
 | A2 | 評估工具(收斂 / 可剝削度 / 覆蓋率) | 基礎 | A0 | 和 A1 平行 |
 | B1 | Predraw 策略品質 | 抽象 / phase | A2 | 分析可平行;改 code 要排隊 |
 | B2 | Draw(換牌)策略品質 | 抽象 / phase | A2 | 同上 |
@@ -138,7 +147,7 @@
 ### A2. 評估工具(所有策略品質判斷的基準)
 
 - **目標**:一套固定 seed、可重複的評估，讓 B / C 系列的每個改動都能用同一把尺比較。
-- **擁有**:`scripts/evaluate_strategy_profile.py`、`scripts/inspect_*convergence*.py`、`scripts/inspect_*coverage*.py`、`solver/strategy_profile_evaluator.py`;`solver/best_response.py` 只能做非演算法的改動(SBR 跨 sweep 累積已試過並還原，不要重試)。
+- **擁有**:`scripts/evaluate_strategy_profile.py`、`scripts/inspect_*convergence*.py`、`scripts/inspect_*coverage*.py`、`solver/strategy_profile_evaluator.py`;`solver/best_response.py` 只能做非演算法的改動(SBR 跨 sweep 累積已試過並還原，不要重試)。**例外**:分組 SBR(`response_grouping`)是使用者 day51 核准的演算法改動，不加 grouping 時行為與原版逐位相同。A2 另外新增並擁有 `scripts/evaluate_checkpoint.py`、`solver/checkpoint_evaluation.py`、`solver/benchmark_gates.py`、`solver/response_grouping.py`、`solver/exploitability_power.py`、`scripts/inspect_sbr_budget.py`、`scripts/inspect_sbr_power.py` 及對應測試。
 - **產出**:一個 `scripts/evaluate_checkpoint.py`(或整合現有的 script),一次輸出:
   - 各 phase 覆蓋率，以及加權後的缺失狀態(依 reach 排序)
   - current-vs-average 距離
@@ -168,6 +177,7 @@
   - 明顯錯誤的換牌(拆掉 pat 7-low、保留對子)出現的頻率。
   - 換幾張是公開資訊，會進入 postdraw 的 key:`draw_count` 在 key 中的編碼是否一致。
   - 32 個動作裡很多是明顯劣勢，是否可以安全地縮減(只能當 ablation,不保證行為不變)。
+- **擁有**(day56,比照 B1 的假設，使用者未另行指定):`docs/proposals/B2-*.md`、`tests/test_draw_mapping_properties.py`、`tests/test_draw_equity_oracle.py`、`scripts/inspect_draw_decisions.py`、`scripts/inspect_draw_equity.py`(皆為唯讀分析，不改 solver)。
 - **產出**:換牌 sanity 報告、動作縮減 ablation 提案。
 - **開場 prompt**:
   > 讀 CLAUDE.md、docs/WORKSTREAMS.md 第 0 節與 B2 節。驗證換牌動作對應的正確性，並用現有 checkpoint 分析換牌決策;只寫分析和提案。
@@ -292,10 +302,10 @@
 | ID | 狀態 | 最後更新 | 分支 | 備註 |
 |---|---|---|---|---|
 | A0 | 已完成,待你執行 `docs/A0_UNTRACK_COMMANDS.md` 的解除追蹤指令 | day33 | `ws-a0-repo-hygiene` | 新增 `.gitignore`、`requirements.txt`、`CLAUDE.md`;尚未執行任何 `git rm --cached` |
-| A1 | 進行中(已有 1k 次 profiling、`inspect_node_composition.py`) | day31 | | 碎片化尚未驗證 |
-| A2 | **進行中**:評估入口與門檻(v1)完成，v1 / v2 基準報告在 `experiments/eval/`;SBR 預算實驗完成：目前 SBR 樣本不足、量不出可剝削度;**benchmark 完成**:v1 / v2 report v2 已產出(跨平台逐位重現);可剝削度下界 v1 +1.57、v2 +2.47 chips/局;剩 Q6 門檻待核准 | day55 | `claude/lucid-ritchie-myhksz` | v1、v2 都沒過門檻;SBR fallback 會在均勻策略上 fold / pat,實驗見 `docs/A2_DESIGN.md` 第 11 節;v2 評估峰值 8.2 GB |
+| A1 | **完成**:interning 實測通過(存檔前 RSS -70%,存檔峰值 -62%),3.12 指紋前後相同;已合併進 `main`(PR #6) | day42 | `ws-a1-memory` | `full` 40k 預估峰值約 4 GiB、約 14 小時;後續候選(不急):存檔串流化、dict 改陣列 |
+| A2 | **完成**:單一評估入口 `scripts/evaluate_checkpoint.py`、門檻 gates v2(含 Q6)、分組 SBR(通過檢測力測試);v1 / v2 standard 報告(report v2)在 `experiments/eval/`,跨平台逐位重現 | day56 | `claude/lucid-ritchie-myhksz` | v1 下界 +1.57、v2 +2.47 chips/局，兩者都 FAIL;限制與用法見 `docs/A2_DESIGN.md` 第 13 節 |
 | B1 | 未開始 | | | |
-| B2 | 未開始 | | | |
+| B2 | **收尾中**:換牌對應與 `draw_count` 編碼驗證正確;v1 換牌錯誤分析完成;提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`;剩使用者跑 v2 的 `inspect_draw_decisions`。換牌勝率 oracle 只是「固定對手牌、忽略位置」的初步工具;考慮對手範圍與位置的選項價值分析延後，等 C1 有訓練足夠的 checkpoint 後，由 A2 以通用 LBR 實作 | day56 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
 | C1 | 未開始 | | | |

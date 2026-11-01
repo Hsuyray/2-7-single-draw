@@ -20,10 +20,16 @@ significant loss therefore proves the profile is exploitable;
 a win, however large, says little about how close it is to
 equilibrium. The margin is reported as information only.
 
-The SBR proxy is reported but not gated (see A2_DESIGN 11).
+Q6 (gates v2, approved day56) uses the grouped SBR lower bound on
+exploitability. Because SBR is a lower bound, Q6 can only reject a
+profile ("exploitable by more than the tolerance, with 2 SE
+confidence"); passing it does not show that exploitability is small.
+It applies only to grouped SBR ("coarse"); reports made with the
+original per-state SBR, including report version 1, give n/a.
 """
 
-GATES_VERSION = 1
+# 2 (day56): adds Q6, the SBR exploitability gate.
+GATES_VERSION = 2
 
 BENCHMARK_PRESET = "standard"
 
@@ -34,6 +40,12 @@ COVERAGE_PHASE_MIN = 0.95
 DEALS_WITH_MISS_MAX = 0.10
 NEAR_UNIFORM_PLAYED_MAX = 0.10
 NOT_LOSE_STANDARD_ERRORS = 2.0
+
+# Q6: chips per deal (0.2 = 0.1 BB/hand = 100 mbb/hand
+# at the 1 / 2 blinds of every current checkpoint).
+SBR_EXPLOITABILITY_TOLERANCE = 0.2
+SBR_STANDARD_ERRORS = 2.0
+SBR_GATED_GROUPING = "coarse"
 
 PASS = "pass"
 FAIL = "fail"
@@ -67,6 +79,7 @@ def evaluate_gates(
         _near_uniform_played(report),
         _baselines(report),
         _previous(report),
+        _sbr_exploitability(report),
     ]
 
     parameters = report.get(
@@ -490,6 +503,88 @@ def _previous(
                 match["standard_error"]
             ),
         },
+    )
+
+
+def _sbr_exploitability(
+    report: dict,
+) -> dict:
+    description = (
+        "SBR exploitability lower bound: "
+        f"mean gain - {SBR_STANDARD_ERRORS:g} SE "
+        f"<= {SBR_EXPLOITABILITY_TOLERANCE:g} "
+        "chips/deal (can only reject)"
+    )
+
+    sbr = report.get("sbr")
+
+    if sbr is None:
+        return _gate(
+            "Q6",
+            "quality",
+            description,
+            MISSING,
+        )
+
+    grouping = sbr.get(
+        "grouping",
+        "none",
+    )
+
+    if grouping != SBR_GATED_GROUPING:
+        return _gate(
+            "Q6",
+            "quality",
+            description,
+            NOT_APPLICABLE,
+            detail=(
+                f"SBR grouping {grouping!r}; Q6 is "
+                "defined for grouped SBR only"
+            ),
+        )
+
+    runs = [
+        run
+        for seat_runs in sbr["runs"].values()
+        for run in seat_runs
+    ]
+
+    mean_gain = sum(
+        run["gain"]
+        for run in runs
+    ) / len(runs)
+
+    # Conservative: repeats share the validation
+    # decks, so their errors are correlated; use
+    # the mean per-run se rather than se / sqrt(n).
+    standard_error = sum(
+        run["gain_standard_error"]
+        for run in runs
+    ) / len(runs)
+
+    lower_bound = (
+        mean_gain
+        - SBR_STANDARD_ERRORS
+        * standard_error
+    )
+
+    return _gate(
+        "Q6",
+        "quality",
+        description,
+        _status(
+            lower_bound
+            <= SBR_EXPLOITABILITY_TOLERANCE
+        ),
+        value={
+            "mean_gain": mean_gain,
+            "standard_error": standard_error,
+            "lower_bound": lower_bound,
+            "runs": len(runs),
+        },
+        threshold=(
+            f"<= {SBR_EXPLOITABILITY_TOLERANCE:g}"
+        ),
     )
 
 
