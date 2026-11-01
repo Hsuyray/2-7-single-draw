@@ -308,7 +308,7 @@
 | B2 | **收尾中**:換牌對應與 `draw_count` 編碼驗證正確;v1 換牌錯誤分析完成;提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`;剩使用者跑 v2 的 `inspect_draw_decisions`。換牌勝率 oracle 只是「固定對手牌、忽略位置」的初步工具;考慮對手範圍與位置的選項價值分析延後，等 C1 有訓練足夠的 checkpoint 後，由 A2 以通用 LBR 實作 | day56 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | 未開始 | | | |
+| C1 | **設計待核准**:`docs/C1_DESIGN.md`(訓練 script 盤點、可續跑訓練、解庫、單一訓練入口)。原型確認 pickle 整個 trainer 後續跑與連續訓練指紋相同 | day59 | `claude/sleepy-mendel-dpgv70` | 尚未改程式碼;待決事項見設計第 6 節 |
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |
