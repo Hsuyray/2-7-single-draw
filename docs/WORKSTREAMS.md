@@ -308,7 +308,7 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | **第 1–3 步完成，第 4 步 8k 訓練完成**:可續跑訓練(`--state-output` / `--resume`,v3 不變)、解庫 `scripts/solve_library.py` + `solutions/manifest.json`;`hu_d5_full_bucket_s20` 8k 訓練完成(7.5 小時),策略和 v2 完全相同;885 tests 通過 | day63 | `ws-c1-training` | 下一步：訓練到 16k;8k 評估可之後再補(結果會等於 v2 報告),見 `docs/C1_DESIGN.md` 8.8 |
+| C1 | **第 1–3 步完成，第 4 步 8k、16k 訓練完成**:可續跑訓練(`--state-output` / `--resume`,v3 不變)、解庫 `scripts/solve_library.py` + `solutions/manifest.json`;`hu_d5_full_bucket_s20` 8k(策略和 v2 完全相同)、16k(1.33M 節點)訓練完成，都還沒評估;885 tests 通過 | day64 | `ws-c1-training` | 下一步：評估 16k、8k,再訓練到 32k,見 `docs/C1_DESIGN.md` 8.9 |
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |

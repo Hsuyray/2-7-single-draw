@@ -241,3 +241,17 @@ Reading:
 - Confirmed: node counts for the first 2,000 iterations match T5.
 - Inference: the 8k standard evaluation will reproduce the v2 report (FAIL: Q1, Q2, Q3, Q6), since the benchmark is deterministic.
 - Not explained: the first 2,000 iterations took 6,200 s vs 3,063 s in T5 with identical node counts. Hypothesis: laptop power mode, thermals or other load; the training loop did not change between the two runs.
+
+## C1 library solution, 16k (day64)
+
+Resumed from the 8k state (second segment, no interruption).
+
+| Item | 8k | 16k |
+|---|---|---|
+| Nodes | 1,068,645 | 1,332,829 |
+| Segment wall time | 27,103 s | 16,197 s |
+| Peak RSS | 2.88 GB | 3.84 GB |
+| Stored strategies within 1e-6 of uniform (not visit-weighted) | 84.1% | 80.0% |
+| Invalid strategies | 0 | 0 |
+
+Reading: the 8k-16k segment ran at ~1,010 s per 500-iteration batch vs ~1,700 s at the end of the first segment, with more nodes, which supports the laptop-conditions hypothesis for the slow first run. Neither milestone has a standard evaluation yet.
