@@ -23,13 +23,15 @@ A Python solver for **2-7 Single Draw poker** using **Counterfactual Regret Mini
 - Hardware: i7-12700H (14 cores / 20 threads), 16 GB RAM. Training is single-threaded.
 - Git: day-numbered commit messages (`day33`, `day34`, ...). Push through the **`Hsuyray`** GitHub account (not `ray-askew`). Pushing to the session's working branch is approved (user, day56); the user opens and merges PRs.
 - Working loop: run a script, read the full output, pick **one** highest-priority next step, change code only when diagnostics show a clear need.
-- Long runs (training, standard benchmark reports, multi-hour experiments) are run by the user on the laptop: hand over complete code and exact commands; quick checks may run in the cloud session.
+- Long runs (training, standard benchmark reports, multi-hour experiments) are run by the user on the laptop: hand over complete code and exact commands; quick checks may run in the cloud session. **`docs/PENDING_RUNS.md` is the ordered list of runs waiting for the laptop**: add to it when handing over a run, remove an item once its results are committed.
 - When giving code or diffs, label each as **new file** or **overwrite existing file**.
 
 ### Key files (paths verified)
 `solver/game_state.py`, `solver/cfr_trainer.py`, `solver/cfr_node.py`, `solver/node_store.py`, `solver/strategy_checkpoint.py`, `solver/hand_strategy_resolver.py`, `solver/postdraw_strength_bucket.py`, `solver/best_response.py`, `solver/bet_sizing.py`, `solver/memory_guard.py`, `scripts/save_training_checkpoint.py` (production training entry point), `scripts/profile_memory.py`, `scripts/inspect_*.py`, `scripts/evaluate_strategy_profile.py`.
 
 Evaluation (A2 benchmark): `scripts/evaluate_checkpoint.py` (single entry point; `--compare`, `--gates`), `solver/checkpoint_evaluation.py`, `solver/benchmark_gates.py`, `solver/response_grouping.py`, `solver/exploitability_power.py`, `scripts/inspect_state_convergence.py`. Design and results: `docs/A2_DESIGN.md`.
+
+Hand classes for the range grid (D3, draft v0 awaiting review): `solver/hand_classes.py`, `docs/HAND_TAXONOMY.md`.
 
 Training and solution library (C1): `solver/training_run.py`, `solver/solution_library.py`, `scripts/solve_library.py`, `solutions/manifest.json`. Design and results: `docs/C1_DESIGN.md`.
 
@@ -42,6 +44,7 @@ Training and solution library (C1): `solver/training_run.py`, `solver/solution_l
 - v2 `production_v2_maxdraw5.chk.gz` is the 8k run: `max_draw=5`, `full` sizing, 1,068,645 info sets. Coverage 92.8%; near-uniform when played 19 / 46 / 27% (predraw / draw / postdraw); lower bound +2.47 chips/deal. Gates: FAIL (Q1, Q2, Q3, Q6). The other file, `production_v2_maxdraw5_v2.chk.gz`, could not be loaded within memory; its contents are unknown.
 - Earlier "~98% / ~94% coverage" figures are superseded: the old checkpoint coverage script alternated the button seat (fixed day45).
 - Main bottleneck: under-training. 70-93% of stored strategies are near-uniform, and the correctness checks (action-space consistency, zero-sum, draw mapping, draw_count encoding, reproducibility) pass. Because those checks were done first (principle 4.1), longer and resumable training (workstream C1) is now the justified next step; it is still not a substitute for diagnosing any new failure.
+- `PostdrawStrengthBucket` bucket 0 holds every postdraw hand from 7-5 up to part of 9-6 (confirmed structurally, D3 day66): postdraw betting cannot tell the nut 7-5-4-3-2 from a 9-6. Impact not yet measured (workstream B3).
 - Training only uses `button_seat=0`, and `PublicNodeKey` stores the absolute button seat: every button-1 lookup misses (0% coverage). The game is seat-symmetric, so this needs player-relative keys or a query-layer seat relabelling (D1 / frozen-interface decision), not more training.
 - 40k-iteration memory (A1, done): a large state space (`full` cap 2,031,912 info sets) plus fat nodes, not a leak or float fragmentation. Node interning is merged (PR #6); `full` 40k is estimated at ~4 GiB peak and ~14 h single-threaded. Training has an RSS guard (`--max-rss-gb`, default 3, 0 disables).
 - Measured (1,000 iters, `max_draw=5`, bucket, fast, seed 42): 114,110 nodes, ~0.59 s/iter, RSS 0.465 GB.

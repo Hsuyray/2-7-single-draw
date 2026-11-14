@@ -251,7 +251,7 @@
 ### D3. 2-7 手牌分類與顯示格(取代德州撲克的 13×13)
 
 - **目標**:定義產品裡的「range grid」。2-7 是 5 張牌的 lowball,沒有 13×13 的現成格子。
-- **擁有**:`docs/HAND_TAXONOMY.md`、新增的 `solver/hand_classes.py`(純函式，不碰訓練)。
+- **擁有**:`docs/HAND_TAXONOMY.md`、新增的 `solver/hand_classes.py`(純函式，不碰訓練)、`tests/test_hand_classes.py`。
 - **產出(提案)**:
   - **pat 手**:依最高牌 / 第二高牌分格，例如 7-5、8-6、9-x、T-x、對子以上。
   - **一張換牌手**:依保留 4 張的最高牌分格，例如「抽 7(2345 / 2346 / ...)」、「抽 8」。
@@ -312,7 +312,7 @@
 | C2 | 未開始 | | | |
 | D1 | 未開始 | | | |
 | D2 | 未開始 | | | |
-| D3 | 未開始 | | | |
+| D3 | **草案 v0,待審核**:`solver/hand_classes.py`(predraw 17 格、postdraw 18 格，每手牌恰好一格，組合數精確)、`docs/HAND_TAXONOMY.md`(6 個待決問題);19 tests | day66 | `claude/lucid-ritchie-myhksz` | 發現:postdraw bucket 0 合併了 7-5 到 9-6(交給 B3);審核前 D1 / E1 不要依賴 |
 | E1 | 未開始 | | | |
 | E2 | 未開始 | | | |
 | E3 | 未開始 | | | |
