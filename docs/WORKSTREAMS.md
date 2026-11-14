@@ -310,9 +310,9 @@
 | B4 | 未開始 | | | |
 | C1 | **第 1–3、5 步完成，第 4 步進行中**:可續跑訓練、解庫 `scripts/solve_library.py` + `solutions/manifest.json`;`hu_d5_full_bucket_s20` 8k(= v2)、16k 已訓練;第 5 步 `scripts/inspect_state_convergence.py` 從狀態檔量 current-vs-average(day65);889 tests 通過 | day65 | `claude/lucid-ritchie-myhksz`(已合併 `ws-c1-training`) | 下一步(筆電):評估 16k → 量 16k 收斂 → 訓練 32k → 量收斂 → 評估 32k,指令見 `docs/C1_DESIGN.md` 8.11 |
 | C2 | 未開始 | | | |
-| D1 | 未開始 | | | |
+| D1 | **API 草案 v0.1,待審核(未實作)**:`docs/API.md`(以公開節點為中心、路徑語法、BTN / BB 在查詢層對應 seat、SQLite 預先計算)、mock 在 `product/api/mock/` | day67 | `claude/lucid-ritchie-myhksz` | 發現:`checkpoint_browser` 沒傳下注尺寸設定(`fast` 的解會查錯);5 個待決問題見 API.md 第 8 節 |
 | D2 | 未開始 | | | |
-| D3 | **草案 v0,待審核**:`solver/hand_classes.py`(predraw 17 格、postdraw 18 格，每手牌恰好一格，組合數精確)、`docs/HAND_TAXONOMY.md`(6 個待決問題);19 tests | day66 | `claude/lucid-ritchie-myhksz` | 發現:postdraw bucket 0 合併了 7-5 到 9-6(交給 B3);審核前 D1 / E1 不要依賴 |
+| D3 | **草案 v0,使用者 day67 看過;6 個待決問題暫用預設值**:`solver/hand_classes.py`(predraw 17 格、postdraw 18 格，每手牌恰好一格，組合數精確)、`docs/HAND_TAXONOMY.md`(6 個待決問題);19 tests | day66 | `claude/lucid-ritchie-myhksz` | 發現:postdraw bucket 0 合併了 7-5 到 9-6(交給 B3);審核前 D1 / E1 不要依賴 |
 | E1 | 未開始 | | | |
 | E2 | 未開始 | | | |
 | E3 | 未開始 | | | |

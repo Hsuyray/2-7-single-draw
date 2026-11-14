@@ -1,0 +1,388 @@
+{
+  "api_version": "0.1-draft",
+  "taxonomy_version": "d3-v0",
+  "mock": true,
+  "note": "Mock data for E1: structure, labels, amounts, classes and combination counts are real; frequencies are random.",
+  "solution": "hu_d5_full_bucket_s20",
+  "iterations": 16000,
+  "path": "",
+  "history": [],
+  "phase": "predraw_betting",
+  "actor": "BTN",
+  "pot": 4.5,
+  "to_call": 1.0,
+  "stacks": {
+    "BTN": 19.0,
+    "BB": 16.5
+  },
+  "actions": [
+    {
+      "token": "F",
+      "label": "Fold",
+      "kind": "fold"
+    },
+    {
+      "token": "C",
+      "label": "Call",
+      "kind": "call"
+    },
+    {
+      "token": "R4.8",
+      "label": "50% Pot",
+      "kind": "raise",
+      "raise_to": 4.8,
+      "pot_fraction": 0.5,
+      "is_all_in": false
+    },
+    {
+      "token": "R5.6",
+      "label": "66% Pot",
+      "kind": "raise",
+      "raise_to": 5.6,
+      "pot_fraction": 0.66,
+      "is_all_in": false
+    },
+    {
+      "token": "R7",
+      "label": "90% Pot",
+      "kind": "raise",
+      "raise_to": 7.0,
+      "pot_fraction": 0.9,
+      "is_all_in": false
+    },
+    {
+      "token": "R7.5",
+      "label": "100% Pot",
+      "kind": "raise",
+      "raise_to": 7.5,
+      "pot_fraction": 1.0,
+      "is_all_in": false
+    },
+    {
+      "token": "R8.9",
+      "label": "125% Pot",
+      "kind": "raise",
+      "raise_to": 8.9,
+      "pot_fraction": 1.25,
+      "is_all_in": false
+    },
+    {
+      "token": "R20",
+      "label": "All-in",
+      "kind": "raise",
+      "raise_to": 20.0,
+      "pot_fraction": null,
+      "is_all_in": true
+    }
+  ],
+  "range": {
+    "weighting": "uniform_combos",
+    "taxonomy": "predraw",
+    "overall": {
+      "F": 0.654,
+      "C": 0.025,
+      "R4.8": 0.001,
+      "R5.6": 0.027,
+      "R7": 0.0,
+      "R7.5": 0.025,
+      "R8.9": 0.159,
+      "R20": 0.109
+    },
+    "classes": [
+      {
+        "key": "pat_75",
+        "label": "7-5 pat",
+        "group": "pat",
+        "combos": 1020,
+        "frequencies": {
+          "F": 0.009,
+          "C": 0.001,
+          "R4.8": 0.076,
+          "R5.6": 0.823,
+          "R7": 0.042,
+          "R7.5": 0.013,
+          "R8.9": 0.0,
+          "R20": 0.036
+        },
+        "trained_share": 0.32
+      },
+      {
+        "key": "pat_76",
+        "label": "7-6 pat",
+        "group": "pat",
+        "combos": 3060,
+        "frequencies": {
+          "F": 0.02,
+          "C": 0.0,
+          "R4.8": 0.0,
+          "R5.6": 0.773,
+          "R7": 0.142,
+          "R7.5": 0.0,
+          "R8.9": 0.003,
+          "R20": 0.062
+        },
+        "trained_share": 0.92
+      },
+      {
+        "key": "pat_85",
+        "label": "8-5 pat",
+        "group": "pat",
+        "combos": 1020,
+        "frequencies": {
+          "F": 0.04,
+          "C": 0.013,
+          "R4.8": 0.192,
+          "R5.6": 0.618,
+          "R7": 0.131,
+          "R7.5": 0.005,
+          "R8.9": 0.001,
+          "R20": 0.0
+        },
+        "trained_share": 0.5
+      },
+      {
+        "key": "pat_86",
+        "label": "8-6 pat",
+        "group": "pat",
+        "combos": 4080,
+        "frequencies": {
+          "F": 0.129,
+          "C": 0.001,
+          "R4.8": 0.047,
+          "R5.6": 0.772,
+          "R7": 0.012,
+          "R7.5": 0.039,
+          "R8.9": 0.0,
+          "R20": 0.0
+        },
+        "trained_share": 0.43
+      },
+      {
+        "key": "pat_87",
+        "label": "8-7 pat",
+        "group": "pat",
+        "combos": 9180,
+        "frequencies": {
+          "F": 0.069,
+          "C": 0.017,
+          "R4.8": 0.007,
+          "R5.6": 0.698,
+          "R7": 0.02,
+          "R7.5": 0.006,
+          "R8.9": 0.109,
+          "R20": 0.074
+        },
+        "trained_share": 0.46
+      },
+      {
+        "key": "pat_96",
+        "label": "9-6 or better pat",
+        "group": "pat",
+        "combos": 5100,
+        "frequencies": {
+          "F": 0.035,
+          "C": 0.027,
+          "R4.8": 0.123,
+          "R5.6": 0.625,
+          "R7": 0.004,
+          "R7.5": 0.173,
+          "R8.9": 0.0,
+          "R20": 0.013
+        },
+        "trained_share": 0.79
+      },
+      {
+        "key": "pat_97",
+        "label": "9-7 pat",
+        "group": "pat",
+        "combos": 10200,
+        "frequencies": {
+          "F": 0.001,
+          "C": 0.025,
+          "R4.8": 0.0,
+          "R5.6": 0.693,
+          "R7": 0.094,
+          "R7.5": 0.04,
+          "R8.9": 0.141,
+          "R20": 0.006
+        },
+        "trained_share": 0.75
+      },
+      {
+        "key": "pat_98",
+        "label": "9-8 pat",
+        "group": "pat",
+        "combos": 19380,
+        "frequencies": {
+          "F": 0.039,
+          "C": 0.037,
+          "R4.8": 0.018,
+          "R5.6": 0.673,
+          "R7": 0.158,
+          "R7.5": 0.02,
+          "R8.9": 0.055,
+          "R20": 0.0
+        },
+        "trained_share": 0.76
+      },
+      {
+        "key": "pat_t",
+        "label": "T pat",
+        "group": "pat",
+        "combos": 70380,
+        "frequencies": {
+          "F": 0.051,
+          "C": 0.185,
+          "R4.8": 0.105,
+          "R5.6": 0.572,
+          "R7": 0.011,
+          "R7.5": 0.057,
+          "R8.9": 0.0,
+          "R20": 0.019
+        },
+        "trained_share": 0.41
+      },
+      {
+        "key": "draw1_6",
+        "label": "1-card draw to a 6 or better",
+        "group": "one_card_draw",
+        "combos": 30284,
+        "frequencies": {
+          "F": 0.0,
+          "C": 0.715,
+          "R4.8": 0.108,
+          "R5.6": 0.001,
+          "R7": 0.004,
+          "R7.5": 0.014,
+          "R8.9": 0.158,
+          "R20": 0.0
+        },
+        "trained_share": 0.59
+      },
+      {
+        "key": "draw1_7s",
+        "label": "1-card draw to a smooth 7 (7-5 or better)",
+        "group": "one_card_draw",
+        "combos": 22576,
+        "frequencies": {
+          "F": 0.028,
+          "C": 0.626,
+          "R4.8": 0.094,
+          "R5.6": 0.11,
+          "R7": 0.004,
+          "R7.5": 0.012,
+          "R8.9": 0.008,
+          "R20": 0.118
+        },
+        "trained_share": 0.92
+      },
+      {
+        "key": "draw1_7r",
+        "label": "1-card draw to a rough 7 (7-6)",
+        "group": "one_card_draw",
+        "combos": 34884,
+        "frequencies": {
+          "F": 0.001,
+          "C": 0.891,
+          "R4.8": 0.004,
+          "R5.6": 0.004,
+          "R7": 0.034,
+          "R7.5": 0.061,
+          "R8.9": 0.005,
+          "R20": 0.0
+        },
+        "trained_share": 0.57
+      },
+      {
+        "key": "draw1_8s",
+        "label": "1-card draw to a smooth 8 (8-5 or better)",
+        "group": "one_card_draw",
+        "combos": 22560,
+        "frequencies": {
+          "F": 0.01,
+          "C": 0.623,
+          "R4.8": 0.169,
+          "R5.6": 0.064,
+          "R7": 0.027,
+          "R7.5": 0.046,
+          "R8.9": 0.061,
+          "R20": 0.0
+        },
+        "trained_share": 0.88
+      },
+      {
+        "key": "draw1_8r",
+        "label": "1-card draw to a rough 8 (8-6 / 8-7)",
+        "group": "one_card_draw",
+        "combos": 91260,
+        "frequencies": {
+          "F": 0.094,
+          "C": 0.729,
+          "R4.8": 0.101,
+          "R5.6": 0.012,
+          "R7": 0.013,
+          "R7.5": 0.0,
+          "R8.9": 0.051,
+          "R20": 0.0
+        },
+        "trained_share": 0.34
+      },
+      {
+        "key": "draw2_7",
+        "label": "2-card draw to a 7 or better",
+        "group": "two_card_draw",
+        "combos": 483600,
+        "frequencies": {
+          "F": 0.003,
+          "C": 0.968,
+          "R4.8": 0.013,
+          "R5.6": 0.0,
+          "R7": 0.0,
+          "R7.5": 0.001,
+          "R8.9": 0.0,
+          "R20": 0.015
+        },
+        "trained_share": 0.32
+      },
+      {
+        "key": "draw2_8",
+        "label": "2-card draw to an 8",
+        "group": "two_card_draw",
+        "combos": 363720,
+        "frequencies": {
+          "F": 0.145,
+          "C": 0.7,
+          "R4.8": 0.001,
+          "R5.6": 0.003,
+          "R7": 0.009,
+          "R7.5": 0.01,
+          "R8.9": 0.0,
+          "R20": 0.132
+        },
+        "trained_share": 0.95
+      },
+      {
+        "key": "draw3",
+        "label": "3-card draw or worse",
+        "group": "rough_draw",
+        "combos": 1426656,
+        "frequencies": {
+          "F": 0.807,
+          "C": 0.029,
+          "R4.8": 0.0,
+          "R5.6": 0.0,
+          "R7": 0.01,
+          "R7.5": 0.005,
+          "R8.9": 0.148,
+          "R20": 0.001
+        },
+        "trained_share": 0.32
+      }
+    ]
+  },
+  "coverage": {
+    "trained_share": 0.71,
+    "near_uniform_share": 0.24,
+    "missing_share": 0.05
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "api_version": "0.1-draft",
+  "taxonomy_version": "d3-v0",
+  "mock": true,
+  "note": "Mock data for E1: structure, labels, amounts, classes and combination counts are real; frequencies are random.",
+  "solutions": [
+    {
+      "id": "hu_d5_full_bucket_s20",
+      "players": 2,
+      "stack": 20.0,
+      "small_blind": 1.0,
+      "big_blind": 2.0,
+      "big_blind_ante": 1.5,
+      "max_draw": 5,
+      "bet_sizing": {
+        "pot_fractions": [
+          0.2,
+          0.33,
+          0.5,
+          0.66,
+          0.9,
+          1.0,
+          1.25
+        ],
+        "include_all_in": true,
+        "all_in_threshold": 0.9,
+        "chip_increment": 0.1
+      },
+      "abstraction": "bucket",
+      "checkpoints": [
+        {
+          "iterations": 8000,
+          "sha256": "939edfe92ac83b4c5476eb5ff802f7734a07746e9b8cfc46b65810507190627d",
+          "evaluation": {
+            "verdict": "FAIL",
+            "sbr_lower_bound_chips_per_deal": 2.47,
+            "coverage": 0.928
+          }
+        },
+        {
+          "iterations": 16000,
+          "sha256": "b50a8627fdffd394d76e69e8377bd7d8dd409ca084cb68f5a34803de11e50b1b",
+          "evaluation": null
+        }
+      ]
+    }
+  ]
+}

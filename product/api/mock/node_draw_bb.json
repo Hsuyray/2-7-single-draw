@@ -1,0 +1,341 @@
+{
+  "api_version": "0.1-draft",
+  "taxonomy_version": "d3-v0",
+  "mock": true,
+  "note": "Mock data for E1: structure, labels, amounts, classes and combination counts are real; frequencies are random.",
+  "solution": "hu_d5_full_bucket_s20",
+  "iterations": 16000,
+  "path": "R4.8/C",
+  "history": [
+    {
+      "position": "BTN",
+      "token": "R4.8",
+      "label": "50% Pot"
+    },
+    {
+      "position": "BB",
+      "token": "C",
+      "label": "Call"
+    }
+  ],
+  "phase": "draw",
+  "actor": "BB",
+  "pot": 11.1,
+  "to_call": 0.0,
+  "stacks": {
+    "BTN": 15.2,
+    "BB": 13.7
+  },
+  "actions": [
+    {
+      "token": "D0",
+      "label": "Stand Pat",
+      "kind": "draw",
+      "draw_count": 0
+    },
+    {
+      "token": "D1",
+      "label": "Draw 1",
+      "kind": "draw",
+      "draw_count": 1
+    },
+    {
+      "token": "D2",
+      "label": "Draw 2",
+      "kind": "draw",
+      "draw_count": 2
+    },
+    {
+      "token": "D3",
+      "label": "Draw 3",
+      "kind": "draw",
+      "draw_count": 3
+    },
+    {
+      "token": "D4",
+      "label": "Draw 4",
+      "kind": "draw",
+      "draw_count": 4
+    },
+    {
+      "token": "D5",
+      "label": "Draw 5",
+      "kind": "draw",
+      "draw_count": 5
+    }
+  ],
+  "range": {
+    "weighting": "uniform_combos",
+    "taxonomy": "predraw",
+    "overall": {
+      "D0": 0.018,
+      "D1": 0.606,
+      "D2": 0.021,
+      "D3": 0.16,
+      "D4": 0.066,
+      "D5": 0.129
+    },
+    "classes": [
+      {
+        "key": "pat_75",
+        "label": "7-5 pat",
+        "group": "pat",
+        "combos": 1020,
+        "frequencies": {
+          "D0": 0.831,
+          "D1": 0.004,
+          "D2": 0.012,
+          "D3": 0.001,
+          "D4": 0.114,
+          "D5": 0.038
+        },
+        "trained_share": 0.75
+      },
+      {
+        "key": "pat_76",
+        "label": "7-6 pat",
+        "group": "pat",
+        "combos": 3060,
+        "frequencies": {
+          "D0": 0.535,
+          "D1": 0.002,
+          "D2": 0.094,
+          "D3": 0.168,
+          "D4": 0.109,
+          "D5": 0.092
+        },
+        "trained_share": 0.77
+      },
+      {
+        "key": "pat_85",
+        "label": "8-5 pat",
+        "group": "pat",
+        "combos": 1020,
+        "frequencies": {
+          "D0": 0.946,
+          "D1": 0.003,
+          "D2": 0.039,
+          "D3": 0.012,
+          "D4": 0.0,
+          "D5": 0.0
+        },
+        "trained_share": 0.4
+      },
+      {
+        "key": "pat_86",
+        "label": "8-6 pat",
+        "group": "pat",
+        "combos": 4080,
+        "frequencies": {
+          "D0": 0.495,
+          "D1": 0.054,
+          "D2": 0.143,
+          "D3": 0.015,
+          "D4": 0.135,
+          "D5": 0.158
+        },
+        "trained_share": 0.87
+      },
+      {
+        "key": "pat_87",
+        "label": "8-7 pat",
+        "group": "pat",
+        "combos": 9180,
+        "frequencies": {
+          "D0": 0.915,
+          "D1": 0.003,
+          "D2": 0.004,
+          "D3": 0.002,
+          "D4": 0.003,
+          "D5": 0.073
+        },
+        "trained_share": 0.83
+      },
+      {
+        "key": "pat_96",
+        "label": "9-6 or better pat",
+        "group": "pat",
+        "combos": 5100,
+        "frequencies": {
+          "D0": 0.752,
+          "D1": 0.023,
+          "D2": 0.058,
+          "D3": 0.107,
+          "D4": 0.0,
+          "D5": 0.06
+        },
+        "trained_share": 0.84
+      },
+      {
+        "key": "pat_97",
+        "label": "9-7 pat",
+        "group": "pat",
+        "combos": 10200,
+        "frequencies": {
+          "D0": 0.766,
+          "D1": 0.093,
+          "D2": 0.024,
+          "D3": 0.001,
+          "D4": 0.108,
+          "D5": 0.008
+        },
+        "trained_share": 0.76
+      },
+      {
+        "key": "pat_98",
+        "label": "9-8 pat",
+        "group": "pat",
+        "combos": 19380,
+        "frequencies": {
+          "D0": 0.742,
+          "D1": 0.012,
+          "D2": 0.012,
+          "D3": 0.161,
+          "D4": 0.072,
+          "D5": 0.001
+        },
+        "trained_share": 0.29
+      },
+      {
+        "key": "pat_t",
+        "label": "T pat",
+        "group": "pat",
+        "combos": 70380,
+        "frequencies": {
+          "D0": 0.519,
+          "D1": 0.128,
+          "D2": 0.091,
+          "D3": 0.001,
+          "D4": 0.098,
+          "D5": 0.163
+        },
+        "trained_share": 0.66
+      },
+      {
+        "key": "draw1_6",
+        "label": "1-card draw to a 6 or better",
+        "group": "one_card_draw",
+        "combos": 30284,
+        "frequencies": {
+          "D0": 0.01,
+          "D1": 0.719,
+          "D2": 0.001,
+          "D3": 0.0,
+          "D4": 0.208,
+          "D5": 0.062
+        },
+        "trained_share": 0.57
+      },
+      {
+        "key": "draw1_7s",
+        "label": "1-card draw to a smooth 7 (7-5 or better)",
+        "group": "one_card_draw",
+        "combos": 22576,
+        "frequencies": {
+          "D0": 0.158,
+          "D1": 0.598,
+          "D2": 0.129,
+          "D3": 0.11,
+          "D4": 0.002,
+          "D5": 0.003
+        },
+        "trained_share": 0.41
+      },
+      {
+        "key": "draw1_7r",
+        "label": "1-card draw to a rough 7 (7-6)",
+        "group": "one_card_draw",
+        "combos": 34884,
+        "frequencies": {
+          "D0": 0.003,
+          "D1": 0.788,
+          "D2": 0.004,
+          "D3": 0.018,
+          "D4": 0.001,
+          "D5": 0.186
+        },
+        "trained_share": 0.45
+      },
+      {
+        "key": "draw1_8s",
+        "label": "1-card draw to a smooth 8 (8-5 or better)",
+        "group": "one_card_draw",
+        "combos": 22560,
+        "frequencies": {
+          "D0": 0.019,
+          "D1": 0.639,
+          "D2": 0.148,
+          "D3": 0.015,
+          "D4": 0.154,
+          "D5": 0.025
+        },
+        "trained_share": 0.57
+      },
+      {
+        "key": "draw1_8r",
+        "label": "1-card draw to a rough 8 (8-6 / 8-7)",
+        "group": "one_card_draw",
+        "combos": 91260,
+        "frequencies": {
+          "D0": 0.038,
+          "D1": 0.801,
+          "D2": 0.023,
+          "D3": 0.002,
+          "D4": 0.0,
+          "D5": 0.136
+        },
+        "trained_share": 0.32
+      },
+      {
+        "key": "draw2_7",
+        "label": "2-card draw to a 7 or better",
+        "group": "two_card_draw",
+        "combos": 483600,
+        "frequencies": {
+          "D0": 0.027,
+          "D1": 0.095,
+          "D2": 0.791,
+          "D3": 0.009,
+          "D4": 0.035,
+          "D5": 0.043
+        },
+        "trained_share": 0.75
+      },
+      {
+        "key": "draw2_8",
+        "label": "2-card draw to an 8",
+        "group": "two_card_draw",
+        "combos": 363720,
+        "frequencies": {
+          "D0": 0.0,
+          "D1": 0.046,
+          "D2": 0.793,
+          "D3": 0.006,
+          "D4": 0.121,
+          "D5": 0.034
+        },
+        "trained_share": 0.59
+      },
+      {
+        "key": "draw3",
+        "label": "3-card draw or worse",
+        "group": "rough_draw",
+        "combos": 1426656,
+        "frequencies": {
+          "D0": 0.092,
+          "D1": 0.159,
+          "D2": 0.018,
+          "D3": 0.676,
+          "D4": 0.027,
+          "D5": 0.028
+        },
+        "trained_share": 0.68
+      }
+    ]
+  },
+  "coverage": {
+    "trained_share": 0.48,
+    "near_uniform_share": 0.41,
+    "missing_share": 0.11
+  }
+}

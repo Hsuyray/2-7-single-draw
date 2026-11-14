@@ -1,0 +1,63 @@
+{
+  "api_version": "0.1-draft",
+  "taxonomy_version": "d3-v0",
+  "mock": true,
+  "note": "Mock data for E1: structure, labels, amounts, classes and combination counts are real; frequencies are random.",
+  "solution": "hu_d5_full_bucket_s20",
+  "iterations": 16000,
+  "path": "R4.8/C",
+  "phase": "draw",
+  "actor": "BB",
+  "cards": [
+    "8s",
+    "6h",
+    "4d",
+    "3c",
+    "Kd"
+  ],
+  "hand_class": {
+    "key": "draw1_8r",
+    "label": "1-card draw to a rough 8 (8-6 / 8-7)"
+  },
+  "hand_key": "draw|ranks:(0,1,2,3,5)|mult:(1,1,1,1,1)|pairs:()|trips:()|quads:()|unique:5|flush_risk:(F,F,F,F,F)|straight:F|flush:F",
+  "status": "trained",
+  "distance_from_uniform": 0.41,
+  "frequencies": {
+    "D0": 0.02,
+    "D1": 0.93,
+    "D2": 0.05,
+    "D3": 0.0,
+    "D4": 0.0,
+    "D5": 0.0
+  },
+  "discards": [
+    {
+      "draw_count": 1,
+      "throw": [
+        "Kd"
+      ],
+      "probability": 0.9
+    },
+    {
+      "draw_count": 1,
+      "throw": [
+        "8s"
+      ],
+      "probability": 0.03
+    },
+    {
+      "draw_count": 0,
+      "throw": [],
+      "probability": 0.02
+    },
+    {
+      "draw_count": 2,
+      "throw": [
+        "8s",
+        "Kd"
+      ],
+      "probability": 0.05
+    }
+  ],
+  "ev": null
+}
