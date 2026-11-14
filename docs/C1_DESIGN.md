@@ -1,6 +1,6 @@
 # C1 設計：可續跑訓練與解庫(solution library)
 
-狀態：**已核准**(day59,第 6 節 a–f 依建議:a = 選項 A,e = 不動)。第 7 節第 1–3 步已實作(紀錄見第 8 節);第 4 步(第一份解的訓練)待你在筆電跑。設計本文依據 `main` @ `6205caa`。
+狀態：**已核准**(day59,第 6 節 a–f 依建議:a = 選項 A,e = 不動)。第 7 節第 1–3 步與第 5 步已實作(紀錄見第 8 節);第 4 步：8k、16k 已訓練，待評估 16k、訓練 32k(8.10 的指令)。設計本文依據 `main` @ `6205caa`。
 
 標記：**[確認]** = 已用程式或實測驗證;**[推測]** = 推論。
 
@@ -186,7 +186,7 @@ python -m scripts.solve_library release <id> <iter>
 2. 你在筆電跑 T5(`full` 2k)。
 3. `scripts/solve_library.py` + `solutions/manifest.json`。
 4. 第一份解：分次訓練到 8k → A2 評估 → 依停止規則繼續。
-5. (另外提案給 A2)A2 讀狀態檔，補上 current-vs-average。
+5. (另外提案給 A2)A2 讀狀態檔，補上 current-vs-average。**已實作(day65,8.10)**。
 
 ## 8. 實作紀錄(day59,第 7 節第 1 步)
 
@@ -320,3 +320,42 @@ python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 8000
 - **[注意]** 接近均勻的比例是**以存下的策略計算**,不是以實際打到的決策加權;新增的 26 萬個節點大多還很少被訪問。真正的訓練程度要看 A2 評估(Q3 是按實際打到的決策算)。
 - **[推測]** 32k:節點約 1.5–1.6M,peak 約 4.5–5 GB,時間約 9 小時(以第 2 段的速度)。
 - 兩個里程碑都還沒評估;停止規則需要至少 3 個標準評估點(8k、16k、32k)。
+
+### 8.10 第 5 步:從狀態檔量 current-vs-average(day65,雲端 session)
+
+**新增** `scripts/inspect_state_convergence.py`(檔名符合 A2 擁有的 `inspect_*convergence*`)、`tests/test_state_convergence.py`(4 個測試)。
+
+- 讀 `training.state.gz`,用和 `evaluate_checkpoint` 的 coverage 區段**同一批牌、同一個 policy seed、同一條動作路徑**做 self-play,在實際打到的多動作決策上量:
+  - **current vs average**:regret matching 的 current 策略和 average 策略的 L1 距離(0–2)。大 = 策略還在移動。
+  - **average vs uniform**:average 策略和均勻的 total variation 距離(0 到 1 − 1/n)。這是 B2 建議的連續指標，取代 1e-6 的二元判定。
+  - **current vs uniform**:同上，對 current 策略。
+  - **strategy updates**:每個打到的資訊集累積了幾次策略(中位數、少於 10 次與 100 次的比例)。
+- 策略直接從 trainer 的節點表查(`node.average_strategy()`),**不載入 checkpoint**:checkpoint 本來就是每個節點的 `average_strategy()`,而 v2 規模載入 checkpoint 光這一步就要約 8 GB。
+- `--report <evaluate_checkpoint 報告>`:逐 phase 比對 matched / missing 決策數，必須和報告的 coverage 區段完全相同;不同就結束碼 1。
+
+**驗證**(雲端，小規模):
+- 節點表查到的策略和 checkpoint 存的**完全相同**(每個資訊集逐一比對)。
+- 和 `evaluate_checkpoint --sections coverage` 的報告比對:matched / missing 完全相同;牌數不同時會正確報錯。
+- `pytest tests -q`:889 passed。
+- **尚未在真正的 16k 狀態上跑過**(要在筆電上，見下)。[推測] 記憶體約等於訓練時的 RSS(16k 約 1.4–3.8 GB),時間約 5–10 分鐘。
+
+**流程上的限制(重要)**:狀態檔只保留最新一份(`.prev` 是上一次存檔，不是上一個 milestone)。8k 的狀態已被 16k 覆蓋，**8k 無法再補算**。之後每到一個 milestone,要在繼續訓練之前先跑本工具。
+
+**和停止規則的關係**:目前停止規則(8.6)只看 standard 評估的 SBR。本工具的數字先只記錄;等有 16k、32k 兩點後，再提案是否把 current-vs-average 或 average-vs-uniform 加進停止規則(需核准)。
+
+### 8.11 下一步指令(筆電，依序)
+
+```
+python -m pytest tests -q
+python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 16000
+python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20/training.state.gz --report solutions/hu_d5_full_bucket_s20/eval/strategy_016000__b50a8627__standard__s2027.json
+python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 32000
+python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20/training.state.gz
+python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 32000
+```
+
+- 第 2 行約 3 小時、8 GB;第 4 行 [推測] 約 9 小時、峰值 4.5–5 GB;第 6 行約 3 小時以上。評估和訓練不能同時跑。
+- 第 3 行一定要在第 4 行之前跑(16k 的狀態會被 32k 覆蓋)。第 5 行在第 6 行之前或之後都可以，但要在任何更多訓練之前。
+- 報告檔名中的 `b50a8627` 是 manifest 裡 16k checkpoint 的 sha256 前 8 碼。
+- 跑完 commit `solutions/manifest.json` 和 `solutions/hu_d5_full_bucket_s20/eval/`。
+- 8k 不需要評估：它的策略和 v2 完全相同(8.8),v2 的報告就是它的結果。
