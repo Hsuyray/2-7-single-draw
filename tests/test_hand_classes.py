@@ -157,3 +157,80 @@ def test_random_hands_match_rank_level_classification() -> None:
 
         assert predraw_class(hand).key == predraw_class_key(ranks, flush)
         assert postdraw_class(hand).key == postdraw_class_key(ranks, flush)
+
+
+# ---- exact draw outcomes (day68) ----
+
+from itertools import combinations
+
+from solver.hand_classes import (
+    draw_outcome_counts,
+    draw_outcome_distribution,
+)
+
+
+def brute_force_outcomes(hand: Hand, discards: tuple[int, ...]) -> dict:
+    deck = [rank + suit for rank in RANKS for suit in SUITS]
+    own = {card.rank + card.suit for card in hand.cards}
+    live = [card for card in deck if card not in own]
+    kept = [
+        card.rank + card.suit
+        for index, card in enumerate(hand.cards)
+        if index not in discards
+    ]
+
+    counts: dict[str, int] = {}
+
+    for drawn in combinations(live, len(discards)):
+        final = Hand.from_strings(*kept, *drawn)
+        key = postdraw_class(final).key
+        counts[key] = counts.get(key, 0) + 1
+
+    return counts
+
+
+def test_draw_outcomes_match_brute_force() -> None:
+    rng = random.Random(11)
+    deck = [rank + suit for rank in RANKS for suit in SUITS]
+
+    hands = [
+        Hand.from_strings(*rng.sample(deck, 5))
+        for _ in range(6)
+    ] + [
+        # Four-flush and a suited keep: flush combos matter.
+        Hand.from_strings("2s", "4s", "5s", "7s", "Kd"),
+        Hand.from_strings("2s", "2h", "5s", "7s", "Ks"),
+    ]
+
+    for hand in hands:
+        for size in (1, 2, 3):
+            discards = tuple(rng.sample(range(5), size))
+
+            counts, total = draw_outcome_counts(hand, discards)
+
+            assert counts == brute_force_outcomes(hand, discards)
+            assert sum(counts.values()) == total
+
+
+def test_known_draw_odds() -> None:
+    # 2-3-4-7 drawing one: 8 outs (any 5 or 6) to a 7-low.
+    hand = Hand.from_strings("2s", "3h", "4d", "7c", "Kd")
+    probabilities = draw_outcome_distribution(hand, (4,))
+
+    assert probabilities["made_75"] + probabilities["made_76"] == (
+        pytest.approx(8 / 47)
+    )
+    # 12 pairing cards (three each of 2, 3, 4, 7).
+    assert probabilities["pair"] == pytest.approx(12 / 47)
+
+    # Standing pat is certain.
+    assert draw_outcome_distribution(hand, ()) == {"made_k": 1.0}
+
+    # Every draw size sums to C(47, n).
+    for size, total in ((4, 178_365), (5, 1_533_939)):
+        counts, expected = draw_outcome_counts(
+            hand,
+            tuple(range(size)),
+        )
+        assert expected == total
+        assert sum(counts.values()) == total

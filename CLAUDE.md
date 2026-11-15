@@ -31,9 +31,9 @@ A Python solver for **2-7 Single Draw poker** using **Counterfactual Regret Mini
 
 Evaluation (A2 benchmark): `scripts/evaluate_checkpoint.py` (single entry point; `--compare`, `--gates`), `solver/checkpoint_evaluation.py`, `solver/benchmark_gates.py`, `solver/response_grouping.py`, `solver/exploitability_power.py`, `scripts/inspect_state_convergence.py`. Design and results: `docs/A2_DESIGN.md`.
 
-Hand classes for the range grid (D3, draft v0, seen by the user day67; open questions on defaults): `solver/hand_classes.py`, `docs/HAND_TAXONOMY.md`.
+Hand classes (D3: postdraw strength classes kept; draw classification moving to solver-strategy + conditioned-range cells, day68; exact draw outcomes in `draw_outcome_counts`): `solver/hand_classes.py`, `docs/HAND_TAXONOMY.md`.
 
-Query API (D1, draft v0.1 awaiting review, not implemented): `docs/API.md`, mock responses in `product/api/mock/`.
+Query API (D1, draft v0.2 with the user's day68 decisions, not implemented): `docs/API.md`, mock responses in `product/api/mock/`.
 
 Training and solution library (C1): `solver/training_run.py`, `solver/solution_library.py`, `scripts/solve_library.py`, `solutions/manifest.json`. Design and results: `docs/C1_DESIGN.md`.
 

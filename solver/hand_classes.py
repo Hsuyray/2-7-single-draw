@@ -337,3 +337,146 @@ def combination_counts(kind: str) -> dict[str, int]:
         counts[classify(ranks, False)] += plain_combos
 
     return counts
+
+
+# ----------------------------------------------------------------
+# Exact draw outcomes (D3 v1 basis, day68)
+# ----------------------------------------------------------------
+
+
+def draw_outcome_counts(
+    hand: Hand,
+    discard_indices: tuple[int, ...],
+) -> tuple[dict[str, int], int]:
+    """
+    Exact distribution of the final hand, by postdraw class,
+    after discarding the given Hand.cards indices and drawing
+    replacements from the 47 unseen cards (the player's own
+    five cards, discards included, are out of the deck; the
+    opponent's cards are unknown and not removed).
+
+    Returns ({postdraw class key: combinations}, total), where
+    total = C(47, number discarded). Every way a draw can pair,
+    make a straight or make a flush is counted.
+
+    Counting runs over rank multisets of the drawn cards with
+    the number of suit combinations for each, plus the flush
+    combinations separately, so even a five-card draw is exact
+    without enumerating 1,533,939 deals.
+    """
+    if len(hand.cards) != 5:
+        raise ValueError(
+            "Draw outcomes need exactly five cards."
+        )
+
+    discards = set(discard_indices)
+
+    if not discards <= set(range(5)):
+        raise ValueError(
+            "Discard index outside the hand."
+        )
+
+    own = [
+        (RANK_VALUES[card.rank], card.suit)
+        for card in hand.cards
+    ]
+
+    kept = [
+        card
+        for index, card in enumerate(own)
+        if index not in discards
+    ]
+
+    draw = len(discards)
+
+    if draw == 0:
+        ranks = tuple(sorted(rank for rank, _ in own))
+        flush = len({suit for _, suit in own}) == 1
+
+        return {postdraw_class_key(ranks, flush): 1}, 1
+
+    own_set = set(own)
+    suits = sorted({suit for _, suit in own} | set("shdc"))
+
+    available = {
+        rank: sum(
+            1
+            for suit in "shdc"
+            if (rank, suit) not in own_set
+        )
+        for rank in range(2, 15)
+    }
+
+    kept_ranks = [rank for rank, _ in kept]
+    kept_suits = {suit for _, suit in kept}
+
+    # Suits a flush could still use: the kept cards' single
+    # suit, or any suit when nothing is kept.
+    flush_suits = (
+        list(kept_suits)
+        if len(kept_suits) == 1
+        else (suits if not kept else [])
+    )
+
+    counts: dict[str, int] = {}
+
+    for drawn in combinations_with_replacement(range(2, 15), draw):
+        multiplicity = Counter(drawn)
+
+        combos = 1
+
+        for rank, count in multiplicity.items():
+            if count > available[rank]:
+                combos = 0
+                break
+
+            combos *= comb(available[rank], count)
+
+        if combos == 0:
+            continue
+
+        flush_combos = 0
+
+        if len(multiplicity) == draw:
+            for suit in flush_suits:
+                if all(
+                    (rank, suit) not in own_set
+                    for rank in drawn
+                ):
+                    flush_combos += 1
+
+        ranks = tuple(sorted(kept_ranks + list(drawn)))
+
+        if flush_combos:
+            key = postdraw_class_key(ranks, True)
+            counts[key] = counts.get(key, 0) + flush_combos
+
+        if combos > flush_combos:
+            key = postdraw_class_key(ranks, False)
+            counts[key] = (
+                counts.get(key, 0)
+                + combos
+                - flush_combos
+            )
+
+    return counts, comb(47, draw)
+
+
+def draw_outcome_distribution(
+    hand: Hand,
+    discard_indices: tuple[int, ...],
+) -> dict[str, float]:
+    """
+    draw_outcome_counts as probabilities, in postdraw display
+    order (classes with probability 0 omitted).
+    """
+    counts, total = draw_outcome_counts(
+        hand,
+        discard_indices,
+    )
+
+    return {
+        hand_class.key: counts[hand_class.key] / total
+        for hand_class in POSTDRAW_CLASSES
+        if hand_class.key in counts
+    }

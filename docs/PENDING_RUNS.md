@@ -2,7 +2,7 @@
 
 雲端 session 寫好程式、但需要在筆電上跑的東西，依順序列在這裡。跑完一項就刪掉那一項，並把結果檔 commit 進去。
 
-最後更新:day67。
+最後更新:day68。
 
 ## 0. 每次先跑
 
@@ -10,7 +10,7 @@
 git pull origin claude/lucid-ritchie-myhksz
 python -m pytest tests -q
 ```
-預期:**908 passed**(day66 在雲端的結果)。有失敗先停下來回報。
+預期:**910 passed**(day68 在雲端的結果)。有失敗先停下來回報。
 
 ## 1. C1 第 4 步：第一份解的 16k / 32k(依序，不能顛倒)
 
@@ -32,4 +32,4 @@ python -m pytest tests -q
 ## 2. 不需要跑、但需要你審核的
 
 - **D3 手牌分類草案 v0**:你 day67 看過;`docs/HAND_TAXONOMY.md` 第 5 節的 6 個待決問題暫用預設值，要改再說。
-- **D1 API 草案 v0.1**:`docs/API.md` 第 8 節有 5 個待決問題;審核通過才實作。實作後會有一項筆電上的建置(SQLite,約 8 GB),到時再加進第 1 節。
+- **D1 API 草案 v0.2**:`docs/API.md` 第 9 節;還差 HTTP 框架與「node lock」的意思兩個確認。實作後會有一項筆電上的建置(SQLite,約 8 GB),到時再加進第 1 節。
