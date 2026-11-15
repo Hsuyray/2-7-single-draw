@@ -2,34 +2,31 @@
 
 雲端 session 寫好程式、但需要在筆電上跑的東西，依順序列在這裡。跑完一項就刪掉那一項，並把結果檔 commit 進去。
 
-最後更新:day68。
+最後更新:day69。
 
 ## 0. 每次先跑
 
 ```powershell
 git pull origin claude/lucid-ritchie-myhksz
+python -m pip install -r requirements.txt
 python -m pytest tests -q
 ```
-預期:**910 passed**(day68 在雲端的結果)。有失敗先停下來回報。
+預期:**921 passed, 1 xfailed**(day69 在雲端的結果;那 1 個 xfail 是記錄引擎 bug 的測試，正常)。有其他失敗先停下來回報。`pip install` 這次會裝新的 `fastapi`、`uvicorn`、`httpx`。
 
-## 1. C1 第 4 步：第一份解的 16k / 32k(依序，不能顛倒)
+## 1. 暫停中:C1 第 4 步(等引擎 bug 決定)
 
-| # | 指令 | 時間 / 記憶體 | 產出 |
-|---|---|---|---|
-| 1 | `python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 16000` | 約 3 小時 / 8 GB | `solutions/hu_d5_full_bucket_s20/eval/strategy_016000__b50a8627__standard__s2027.json`,manifest 更新 |
-| 2 | `python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20/training.state.gz --report solutions/hu_d5_full_bucket_s20/eval/strategy_016000__b50a8627__standard__s2027.json` | [推測] 5–10 分鐘 / 約 2–4 GB | `.../eval/convergence__016000__s2027.json`;最後應印 `REPORT CHECK OK` |
-| 3 | `python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 32000` | [推測] 約 9 小時 / 峰值 4.5–5 GB | `strategy_032000.chk.gz`(不進 git)、manifest 更新 |
-| 4 | `python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20/training.state.gz` | [推測] 5–10 分鐘 | `.../eval/convergence__032000__s2027.json` |
-| 5 | `python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 32000` | 約 3 小時以上 / 8 GB | 32k 的 standard 報告，manifest 更新 |
+**先不要跑**。day69 發現遊戲引擎的 bug:面對 all-in 的玩家沒有機會跟注或棄牌(`docs/proposals/ENGINE-all-in-round.md`)。所有 checkpoint 都在這個錯誤規則下訓練，修正後要從 0 重訓;在舊規則上訓練到 32k(約 9 小時)沒有意義。
 
-注意:
-- **第 2 項一定要在第 3 項之前**:狀態檔只保留最新一份，訓練到 32k 會覆蓋 16k 的狀態。第 4 項要在任何更多訓練之前。
-- 評估和訓練不能同時跑(記憶體)。
-- 8k 不用評估(策略和 v2 完全相同，用 v2 的報告)。
-- 跑完 commit:`solutions/manifest.json`、`solutions/hu_d5_full_bucket_s20/eval/`。
-- 細節:`docs/C1_DESIGN.md` 8.10–8.11。
+核准修正後，這一節會改成「用新引擎從 0 訓練」的指令。原本的指令保留在 `docs/C1_DESIGN.md` 8.11 作紀錄。
 
-## 2. 不需要跑、但需要你審核的
+## 2. 可以跑(選擇性)
 
-- **D3 手牌分類草案 v0**:你 day67 看過;`docs/HAND_TAXONOMY.md` 第 5 節的 6 個待決問題暫用預設值，要改再說。
-- **D1 API 草案 v0.2**:`docs/API.md` 第 9 節;還差 HTTP 框架與「node lock」的意思兩個確認。實作後會有一項筆電上的建置(SQLite,約 8 GB),到時再加進第 1 節。
+| 指令 | 時間 / 記憶體 | 目的 |
+|---|---|---|
+| `python -m product.api.app --checkpoint checkpoints/production_v1.chk.gz --solution v1 --iterations 20000`,然後開 http://127.0.0.1:8000/docs | 載入約 30 秒 / 2 GB | 親手試 D1 的 API(Ctrl+C 結束) |
+
+## 3. 需要你決定 / 審核的(不用跑)
+
+- **[優先] 引擎 bug 修正**:`docs/proposals/ENGINE-all-in-round.md`。核准後我實作修正和測試，並給你重訓的指令。
+- **D3**:`docs/HAND_TAXONOMY.md` 第 6 節(v1 方向)。
+- **D1**:`docs/API.md` 第 10 節(第一階段已實作)。

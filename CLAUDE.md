@@ -33,12 +33,13 @@ Evaluation (A2 benchmark): `scripts/evaluate_checkpoint.py` (single entry point;
 
 Hand classes (D3: postdraw strength classes kept; draw classification moving to solver-strategy + conditioned-range cells, day68; exact draw outcomes in `draw_outcome_counts`): `solver/hand_classes.py`, `docs/HAND_TAXONOMY.md`.
 
-Query API (D1, draft v0.2 with the user's day68 decisions, not implemented): `docs/API.md`, mock responses in `product/api/mock/`.
+Query API (D1, slice 1 implemented day69): `product/api/` (`paths.py`, `service.py`, `app.py` FastAPI, `hand_data.py`), `docs/API.md` (section 10), mock responses in `product/api/mock/`.
 
 Training and solution library (C1): `solver/training_run.py`, `solver/solution_library.py`, `scripts/solve_library.py`, `solutions/manifest.json`. Design and results: `docs/C1_DESIGN.md`.
 
 ## 3. State (see `docs/EXPERIMENT_LOG.md` and `docs/WORKSTREAMS.md` section 1 for numbers; updated day56)
 
+- **Confirmed engine bug (day69, fix awaiting approval):** `BettingState._is_betting_round_complete` ends the betting round when at most one player is neither folded nor all-in, even if that player has not matched the bet. A player facing an all-in never gets to call or fold; the hand goes straight to the draw / showdown for the small committed amounts. Every checkpoint so far was trained on this rule. Proposal: `docs/proposals/ENGINE-all-in-round.md`; strict-xfail test `tests/test_known_bugs.py`. C1 training is on hold until it is decided.
 - Checkpoint schema: v3 (`CHECKPOINT_FORMAT_VERSION`). Checkpoints hold the average strategy only (no regrets). C1 training states (`--state-output`, `solutions/<id>/training.state.gz`) hold the whole trainer: training resumes from them (`--resume`) and `scripts/inspect_state_convergence.py` measures current-vs-average from them. Only the latest state is kept, so run it at each milestone before training further.
 - **Solution library (C1):** `python -m scripts.solve_library` with `solutions/manifest.json`. `hu_d5_full_bucket_s20` (`max_draw=5`, `full`, bucket, seed 42): 8k trained (strategies identical to v2), 16k trained (1,332,829 info sets), neither evaluated yet; next steps in `docs/C1_DESIGN.md` 8.11.
 - **Benchmark (A2):** `python -m scripts.evaluate_checkpoint <checkpoint>` (preset `standard`, seed 2027) writes a JSON / text report to `experiments/eval/` with gates (v2: hard H1-H4, quality Q1-Q6). Reports are bit-identical across runs and across platforms (Linux / Python 3.13 vs Windows / Python 3.12). Cost on the laptop: v1 ~26 min / 2 GB, v2 ~3.1 h / 8.1 GB.

@@ -1,6 +1,6 @@
 # D1 查詢 API(action 側)
 
-狀態:**草案 v0.2,尚未實作**(day67 草案;day68 依使用者回覆更新，見第 9 節)。審核通過後，這份 JSON 格式就是凍結介面(CLAUDE.md 第 6 節),E1 依它開發。
+狀態:**v0.2,第一階段已實作**(day69,見第 10 節);day67 草案、day68 依使用者回覆更新(第 9 節)。審核通過後，這份 JSON 格式就是凍結介面(CLAUDE.md 第 6 節),E1 依它開發。
 
 標記:**[確認]** = 程式或實測確認;**[推測]** = 推論;**[待決]** = 需要你決定。
 
@@ -183,3 +183,41 @@ v2 規模的 checkpoint 載入要約 8 GB [確認，A2],不能每個請求載入
 | 適合 | 正式給 E1 / 多人使用 | 本機開發、測試 |
 
 建議：查詢邏輯寫在不依賴框架的 `service.py`(第 6 節),HTTP 層很薄，兩種都能接;先用 FastAPI,因為 E1 要對著文件開發。這只影響第 6 節第 3 步，你確認後才加相依套件。
+
+## 10. 第一階段實作(day69)
+
+使用者 day69 回覆:node lock 的意思已解釋((a) range 隨路徑條件化，本 API 做的;(b) 改策略後重新求解，之後另提);HTTP 用 FastAPI;分格依「牌的種類 + 成好牌的機率」。
+
+**檔案**(全部新增):
+- `product/api/paths.py`:路徑 token(百分比)、在 button_seat=0 的遊戲上走路徑、不合法時回報合法 token。
+- `product/api/service.py`:節點查詢、Hand Mode(換牌節點附上要丟的實際牌)、雙方依路徑條件化的 range。
+- `product/api/hand_data.py` + `product/api/data/draw_bucket_combos.json`:每個 `DrawHandBucket` × 牌型的起手組合數(列舉 2,598,960 手，共 2,193 個 bucket;`python -m product.api.hand_data` 重產)。
+- `product/api/app.py`:FastAPI。
+- `tests/test_api.py`(11 個);`product/api/mock/*.json` 改由實作直接產生(結構和真實輸出完全一致;頻率來自 12 次的測試 checkpoint,沒有意義)。
+- `requirements.txt` 加 `fastapi`、`uvicorn`、`httpx`。
+
+**和第 4 節的差異(以實作為準)**:
+- `ranges` 雙方各一份(`BTN`、`BB`),每份有 `available`;行動者那份含各牌型的動作頻率。
+- 分組先用「目前 5 張牌的牌型」(D3 的 postdraw 牌型，例如 8-6、一對)。依成好牌機率細分是下一步(`docs/HAND_TAXONOMY.md` 6.3)。
+- Hand Mode 的欄位是 `hand_type`(不是 `hand_class`)。
+- 「接近均勻」用正規化距離 < 0.05(暫定，等收斂資料再定，見 9.1)。
+
+**驗證**:
+- 路徑 token 在每個節點唯一，且走得回原路徑。
+- 每個存下的策略都能對應到公開動作(加注金額精確還原，沒有浮點誤差)。
+- Hand Mode 算出的 key 和 solver 的 `InformationState` 完全相同(30 手實際發牌、每手 8 步)。
+- 根節點雙方 range 的組合數 = 2,598,960,各牌型 = D3 的組合數;BTN 下注後的 range = 逐 bucket 手算的結果。
+- HTTP:正常 200、不合法路徑 404(附合法 token)、壞的手牌 400、未知的解 404。
+
+**限制 / 下一步**:
+1. 玩家換牌之後的 range 標為不可用(需要換牌轉移，原 D2 範圍)。
+2. v2 規模的 checkpoint 要 8 GB 載入;SQLite 預先計算(第 5 節)是下一階段。
+3. 牌型內依成好牌機率細分。
+4. **遊戲引擎 bug**:面對 all-in 的玩家沒有機會行動(`docs/proposals/ENGINE-all-in-round.md`)。API 忠實反映引擎，所以 all-in 之後的節點目前會直接跳到換牌。修正後 API 不用改。
+
+**本機試用**(筆電，v1 約 2 GB):
+```
+python -m pip install -r requirements.txt
+python -m product.api.app --checkpoint checkpoints/production_v1.chk.gz --solution v1 --iterations 20000
+```
+然後開 http://127.0.0.1:8000/docs。
