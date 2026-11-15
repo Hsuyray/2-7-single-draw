@@ -255,3 +255,26 @@ Resumed from the 8k state (second segment, no interruption).
 | Invalid strategies | 0 | 0 |
 
 Reading: the 8k-16k segment ran at ~1,010 s per 500-iteration batch vs ~1,700 s at the end of the first segment, with more nodes, which supports the laptop-conditions hypothesis for the slow first run. Neither milestone has a standard evaluation yet.
+
+## Engine all-in fix: equivalence and tree size (day70)
+
+Change: a player facing an all-in can now call or fold, and no raise is legal unless another player can still respond (`docs/proposals/ENGINE-all-in-round.md` section 7).
+
+Fixed-seed training fingerprints (seed 42, stack 20, `scripts/fingerprint_node_store.fingerprint_trainer`):
+
+| Setting | Before | After |
+|---|---|---|
+| no raises, `max_draw=5`, bucket, 60 iters | 2,972 nodes, `285f49dfa430a9e2` | identical |
+| no raises, `max_draw=2`, exact, 30 iters | 1,165, `7387557d3e4ffcf8` | identical |
+| raise to 4 only (no all-in reachable), `max_draw=5`, bucket, 60 iters | 8,370, `b71f40c947fccdd8` | identical |
+| `fast` (includes all-in), `max_draw=5`, bucket, 40 iters | 8,916, `608d5430545dd459` | 11,259, `3adfdeef3c62e715` (expected change) |
+
+Public tree (`enumerate_public_tree --max-draw 5`, stack 20), info-set upper bound: `none` unchanged; `fast` 346,353 -> 498,681; `full` 2,031,912 -> 2,761,377 (+36%).
+
+Training (`full`, `max_draw=5`, bucket, seed 42, 300 iters, cloud, both runs concurrent): 142,215 -> 170,391 nodes (+20%), ~1.07 -> ~1.09 s/iter.
+
+Reading:
+- Confirmed: settings without a reachable all-in are bit-identical, so the fix changes only all-in situations.
+- Confirmed: every checkpoint trained before day70 (v1, v2, C1 8k / 16k) used the old rule; their benchmark results describe a different game.
+- Confirmed: the old `test_sbr_power` reference assertion (gain > 2 SE) held with or without the planted leak (1.26 vs 1.33 at 300 deals); it now checks leaky gain > clean gain on the same decks and seeds.
+- Inference: the A2 power-test results on v1 are old-rule results; rerun on the first new-rule checkpoint.

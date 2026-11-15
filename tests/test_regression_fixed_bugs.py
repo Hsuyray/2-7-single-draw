@@ -9,6 +9,11 @@ Regression tests for two previously fixed bugs.
 2. solver/hand_strategy_resolver.py used the wrong bucket
    type for postdraw lookups. Postdraw lookups must use
    PostdrawStrengthBucket, the same key training uses.
+
+3. (day70) solver/game_state.py ended a betting round when at
+   most one player was neither folded nor all-in, even if that
+   player still owed chips: a player facing an all-in never got
+   to call or fold. See section 3 at the bottom of this file.
 """
 
 from types import SimpleNamespace
@@ -244,3 +249,165 @@ def test_resolver_key_matches_training_key(
 
     assert lookup_key == training_key
     assert type(lookup_key) is type(training_key)
+
+
+# ---------------------------------------------------------------------------
+# 3. All-in round completion (day70, docs/proposals/ENGINE-all-in-round.md).
+#    BettingState._is_betting_round_complete ended the round when at most one
+#    player was neither folded nor all-in, even if that player had not matched
+#    the bet: a player facing an all-in never got to call or fold.
+# ---------------------------------------------------------------------------
+
+from solver.bet_sizing import FULL_BET_SIZING
+from solver.legal_actions import legal_actions as _game_legal_actions
+from solver.single_draw_game import GamePhase, SingleDrawGame
+from solver.terminal_utility import terminal_utilities
+
+
+def _all_in_game(
+    *,
+    player_count: int = 2,
+    starting_stacks: tuple[float, ...] | None = None,
+    deck_seed: int = 1,
+) -> SingleDrawGame:
+    return SingleDrawGame(
+        config=GameConfig(
+            player_count=player_count,
+            starting_stack=20.0,
+            starting_stacks=starting_stacks,
+            small_blind=1.0,
+            big_blind=2.0,
+            big_blind_ante=1.5,
+        ),
+        button_seat=0,
+        deck_seed=deck_seed,
+    )
+
+
+def _action_types(game: SingleDrawGame) -> set[ActionType]:
+    return {
+        action.action_type
+        for action in _game_legal_actions(
+            game,
+            max_draw=5,
+            raise_sizes=None,
+            bet_sizing_policy=FULL_BET_SIZING,
+        )
+    }
+
+
+def _play_out_draws_and_check(game: SingleDrawGame) -> None:
+    while game.phase == GamePhase.DRAW:
+        game.submit_draw(game.draw_acting_seat, [])
+
+    while game.phase == GamePhase.POSTDRAW_BETTING:
+        game.apply_betting_action(ActionType.CHECK)
+
+
+def test_player_facing_an_all_in_must_respond() -> None:
+    game = _all_in_game()
+
+    # BTN (seat 0) shoves: raise to 20 = all of its chips.
+    game.apply_betting_action(ActionType.RAISE, raise_to=20.0)
+
+    assert game.phase == GamePhase.PREDRAW_BETTING
+    assert game.acting_seat == 1
+    # Nobody could call a re-raise: only fold or call.
+    assert _action_types(game) == {ActionType.FOLD, ActionType.CALL}
+    assert game.betting_state.legal_actions() == {
+        ActionType.FOLD,
+        ActionType.CALL,
+    }
+
+
+def test_calling_an_all_in_plays_for_full_stacks() -> None:
+    for deck_seed in (1, 2, 3):
+        game = _all_in_game(deck_seed=deck_seed)
+        game.apply_betting_action(ActionType.RAISE, raise_to=20.0)
+        game.apply_betting_action(ActionType.CALL)
+
+        # Both all-in: both draw, then straight to showdown.
+        assert game.phase == GamePhase.DRAW
+        assert game.draw_order == [1, 0]
+        game.submit_draw(1, [])
+        game.submit_draw(0, [])
+        assert game.phase == GamePhase.COMPLETE
+
+        utilities = terminal_utilities(game)
+        assert abs(sum(utilities)) <= CHIP_EPSILON
+        # The whole effective stack is at stake, not just the blinds.
+        # BB's 20 = 1.5 ante (dead money) + 18.5 live; BTN's extra
+        # 1.5 is uncalled and returned. BTN wins 20 or loses 18.5.
+        assert any(
+            abs(utilities[0] - expected) <= CHIP_EPSILON
+            for expected in (20.0, -18.5, 0.75)
+        ), utilities
+
+
+def test_folding_to_an_all_in_gives_btn_the_pot() -> None:
+    game = _all_in_game()
+    game.apply_betting_action(ActionType.RAISE, raise_to=20.0)
+    game.apply_betting_action(ActionType.FOLD)
+
+    assert game.phase == GamePhase.COMPLETE
+    utilities = terminal_utilities(game)
+    # BTN wins the BB's blind + ante; its uncalled shove is returned.
+    assert abs(utilities[0] - 3.5) <= CHIP_EPSILON
+    assert abs(utilities[1] + 3.5) <= CHIP_EPSILON
+
+
+def test_bigger_stack_facing_short_all_in_can_only_call_or_fold() -> None:
+    # BTN has 10, BB has 30: BTN's shove cannot be re-raised.
+    game = _all_in_game(starting_stacks=(10.0, 30.0))
+    game.apply_betting_action(ActionType.RAISE, raise_to=10.0)
+
+    assert game.acting_seat == 1
+    assert _action_types(game) == {ActionType.FOLD, ActionType.CALL}
+
+    game.apply_betting_action(ActionType.CALL)
+    assert game.phase == GamePhase.DRAW
+    _play_out_draws_and_check(game)
+    utilities = terminal_utilities(game)
+    assert abs(sum(utilities)) <= CHIP_EPSILON
+    # The covered BTN can win or lose at most its own stack plus
+    # the BB's matching contribution.
+    assert abs(utilities[0]) <= 10.0 + 1.5 + CHIP_EPSILON
+
+
+def test_short_stack_calling_all_in_for_less_gets_excess_back() -> None:
+    # BTN 30 shoves; BB (20) calls all-in for less.
+    game = _all_in_game(starting_stacks=(30.0, 20.0))
+    game.apply_betting_action(ActionType.RAISE, raise_to=30.0)
+    assert _action_types(game) == {ActionType.FOLD, ActionType.CALL}
+    game.apply_betting_action(ActionType.CALL)
+
+    _play_out_draws_and_check(game)
+    utilities = terminal_utilities(game)
+    assert abs(sum(utilities)) <= CHIP_EPSILON
+    # BB can lose at most its own 20.
+    assert abs(utilities[1]) <= 20.0 + CHIP_EPSILON
+
+
+def test_three_handed_last_player_owing_chips_is_asked() -> None:
+    # Seats: 0 = BTN, 1 = SB, 2 = BB. BTN shoves, SB calls all-in;
+    # BB is the only player left who can act and still owes chips.
+    game = _all_in_game(player_count=3)
+    game.apply_betting_action(ActionType.RAISE, raise_to=20.0)
+    game.apply_betting_action(ActionType.CALL)
+
+    assert game.phase == GamePhase.PREDRAW_BETTING
+    assert game.acting_seat == 2
+    assert _action_types(game) == {ActionType.FOLD, ActionType.CALL}
+
+    game.apply_betting_action(ActionType.FOLD)
+    assert game.phase == GamePhase.DRAW
+    _play_out_draws_and_check(game)
+    assert abs(sum(terminal_utilities(game))) <= CHIP_EPSILON
+
+
+def test_normal_raise_still_allows_reraise() -> None:
+    game = _all_in_game()
+    game.apply_betting_action(ActionType.RAISE, raise_to=6.0)
+
+    assert game.acting_seat == 1
+    assert ActionType.RAISE in _action_types(game)

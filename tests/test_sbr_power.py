@@ -236,12 +236,31 @@ def test_full_leak_is_found_by_reference_and_grouped_sbr(
         random_seed=3,
     )
 
-    # The tiny checkpoint has low coverage, and
-    # unstored states are not leaky, so only a
-    # clear positive gain is required here.
-    assert reference.gain > (
-        2 * reference.gain_standard_error
+    clean = reference_exploit_gain(
+        plant_fold_leak(
+            index,
+            leaky_seat=1,
+            probability=0.0,
+        ),
+        setup,
+        responder_seat=0,
+        deals=300,
+        first_deck_seed=EVALUATION_DECK_SEED_BASE,
+        random_seed=3,
     )
+
+    # Same decks and seeds: the planted leak must
+    # raise the reference gain. This is a fixed-seed
+    # direction check, not a significance test: the
+    # 40-iteration checkpoint has low coverage and
+    # unstored states are not leaky. (Until day69
+    # this asserted gain > 2 SE, which held with or
+    # without the leak: 1.26 vs 1.33; the day70
+    # all-in fix made all-ins play for full stacks
+    # and removed that margin.) Statistical power is
+    # measured on real checkpoints by
+    # scripts.inspect_sbr_power.
+    assert reference.gain > clean.gain
 
     common = dict(
         seat=0,

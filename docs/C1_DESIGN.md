@@ -345,6 +345,8 @@ python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 8000
 
 ### 8.11 下一步指令(筆電，依序)
 
+**day70:本節作廢，只留作紀錄。** 引擎 all-in 規則修正後(`docs/proposals/ENGINE-all-in-round.md`),`hu_d5_full_bucket_s20` 是舊規則的解，不再往下訓練或評估;改為從 0 訓練 `hu_d5_full_bucket_s20_e70`,指令見 `docs/PENDING_RUNS.md` 第 1 節。
+
 ```
 python -m pytest tests -q
 python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 16000

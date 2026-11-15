@@ -49,11 +49,38 @@
         16000,
         32000
       ],
-      "note": "10 bb (blinds 1/2, ante 1.5); same game as production_v2_maxdraw5. Trained with button_seat=0 only; button 1 needs D1 seat relabelling.",
+      "note": "OLD ENGINE RULE (before day70): a player facing an all-in never got to call or fold (docs/proposals/ENGINE-all-in-round.md). Kept for comparison only; do not train further or release. Replaced by hu_d5_full_bucket_s20_e70. 10 bb (blinds 1/2, ante 1.5); same game as production_v2_maxdraw5. Trained with button_seat=0 only; button 1 needs D1 seat relabelling.",
       "released": null,
       "seed": 42,
       "seed_mode": "sequential",
       "status": "training"
+    },
+    "hu_d5_full_bucket_s20_e70": {
+      "abstraction": {
+        "abstraction": "bucket",
+        "bet_sizing": "full",
+        "draw_action_mode": "auto",
+        "traversal_mode": "external_sampling"
+      },
+      "checkpoints": [],
+      "game": {
+        "big_blind": 2.0,
+        "big_blind_ante": 1.5,
+        "max_draw": 5,
+        "player_count": 2,
+        "small_blind": 1.0,
+        "stack": 20.0
+      },
+      "milestones": [
+        8000,
+        16000,
+        32000
+      ],
+      "note": "Day70 engine (player facing an all-in can call or fold). Same game and settings as hu_d5_full_bucket_s20, which was trained on the old all-in rule. Trained with button_seat=0 only; button 1 needs D1 seat relabelling.",
+      "released": null,
+      "seed": 42,
+      "seed_mode": "sequential",
+      "status": "planned"
     }
   }
 }
