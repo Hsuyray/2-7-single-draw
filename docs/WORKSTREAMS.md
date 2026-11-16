@@ -309,7 +309,7 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | **第 1–3、5 步完成，第 4 步進行中**:可續跑訓練、解庫 `scripts/solve_library.py` + `solutions/manifest.json`;`hu_d5_full_bucket_s20` 8k(= v2)、16k 已訓練;第 5 步 `scripts/inspect_state_convergence.py` 從狀態檔量 current-vs-average(day65);889 tests 通過 | day65 | `claude/lucid-ritchie-myhksz`(已合併 `ws-c1-training`) | **day70:引擎 all-in 修正後從 0 重訓**,新解 `hu_d5_full_bucket_s20_e70`(舊的 `hu_d5_full_bucket_s20` 只留作對照);指令見 `docs/PENDING_RUNS.md` 第 1 節 |
+| C1 | **第 1–3、5 步完成，第 4 步進行中**:可續跑訓練、解庫 `scripts/solve_library.py` + `solutions/manifest.json`;`hu_d5_full_bucket_s20` 8k(= v2)、16k 已訓練;第 5 步 `scripts/inspect_state_convergence.py` 從狀態檔量 current-vs-average(day65);889 tests 通過 | day65 | `claude/lucid-ritchie-myhksz`(已合併 `ws-c1-training`) | **day70:引擎 all-in 修正後從 0 重訓**,新解 `hu_d5_full_bucket_s20_e70`(舊的 `hu_d5_full_bucket_s20` 只留作對照)。day71:8k 完成並評估(FAIL Q1 Q2 Q3 Q6,SBR 下界 +2.38,`docs/EXPERIMENT_LOG.md`);下一步 16k,指令見 `docs/PENDING_RUNS.md` 第 1 節 |
 | C2 | 未開始 | | | |
 | D1 | **第一階段已實作**(day69):`product/api/`(路徑、節點 / Hand Mode、雙方條件化 range(換牌前)、FastAPI),11 tests;下一步：換牌後的 range、SQLite、依成牌機率細分 | day69 | `claude/lucid-ritchie-myhksz` | **發現引擎 bug**:面對 all-in 的玩家沒有機會行動;day70 已修正(`docs/proposals/ENGINE-all-in-round.md`) |
 | D2 | 未開始 | | | |
