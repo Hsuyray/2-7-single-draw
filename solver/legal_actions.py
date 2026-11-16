@@ -341,6 +341,11 @@ def _raise_is_legal(
     ):
         return False
 
+    # The engine decides whether a raise is allowed at all (for
+    # example, not when every opponent is all-in); one source of truth.
+    if ActionType.RAISE not in state.legal_actions():
+        return False
+
     if raise_to <= state.current_bet:
         return False
 

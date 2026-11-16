@@ -200,3 +200,81 @@ Reading:
 - The 1e-6 near-uniform test (A2 Q3) understates how untrained a checkpoint is; a distance-from-uniform metric is proposed to A2.
 - v1 and v2 mistake rates are not comparable (different action sets).
 - Details and proposals: `docs/proposals/B2-draw-analysis.md`.
+
+## C1 resumable training, step 1 verification (day59)
+
+`save_training_checkpoint.py --state-output / --resume` (training state file, `solver/training_run.py`; v3 checkpoint unchanged). Windows, Python 3.12.
+
+| Check | Config | Result |
+|---|---|---|
+| Resume = uninterrupted (cross-process) | bucket, `max_draw=5`, fast, seed 42, 30 + 30 vs 60 | 13,209 nodes, identical sha256 node fingerprint |
+| Resume = uninterrupted (tests) | exact / sequential, exact / fixed, bucket / `max_draw=5`; 4 -> 7 -> 10 vs 10; RSS-guard stop at 2 -> 6 vs 6 | identical fingerprints and checkpoints |
+| No new flags, before vs after the change | bucket / `max_draw=5` / fast / 40 iters; exact / `max_draw=1` / full / fixed seed 7 / 30 iters | identical strategies (8,916 / 1,882); metadata differs only in `created_at_utc` |
+| Full test suite | | 874 passed |
+
+
+T5 (day60, laptop): `full`, bucket, `max_draw=5`, seed 42, 2,000 iterations, batch 500, RSS guard off.
+
+| Item | Value |
+|---|---|
+| Nodes at 500 / 1,000 / 1,500 / 2,000 | 213,501 / 356,412 / 471,899 / 562,244 |
+| Wall time | 3,063 s (batch 4 took 1,010 s vs ~620-675 s for batches 1-3; not investigated) |
+| File sizes | `.chk.gz` 5.6 MB, `.state.gz` 16.4 MB |
+| Stored `peak_rss_gb` (read before the state write) | 1.42 GB at 2,000 |
+| Reload of the 2k state, then save both files | load 7.0 s, RSS 1.05 GB; checkpoint save 18.9 s, peak 1.535 GB; state save 13.8 s, peak unchanged |
+
+Reading: confirmed that saving the state does not raise the peak above the checkpoint save, so the 5-7 GiB concern in `docs/C1_DESIGN.md` 2.5 is refuted. The stored peak missed the state write itself; the script now also prints the peak after each state save.
+
+## C1 first library solution, 8k (day63)
+
+`python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 8000` on the laptop: `full`, bucket, `max_draw=5`, seed 42 sequential, batch 500, RSS guard 10 GB. One segment, no interruption.
+
+| Item | Value |
+|---|---|
+| Nodes at 500 / 2,000 / 4,000 / 8,000 | 213,501 / 562,244 / 800,762 / 1,068,645 |
+| Wall time | 27,003 s (~7.5 h); 1,420-1,790 s per 500-iteration batch |
+| RSS | 1.39 GB while training; peak 2.88 GB in the last batch (checkpoint + state save) |
+| Files | checkpoint 13.2 MB, state 42.3 MB |
+
+Reading:
+- Confirmed: the 8k checkpoint has the same 1,068,645 strategies as `production_v2_maxdraw5.chk.gz`, all values identical; metadata differs only in `created_at_utc`. The library pipeline reproduces the v2 training exactly.
+- Confirmed: node counts for the first 2,000 iterations match T5.
+- Inference: the 8k standard evaluation will reproduce the v2 report (FAIL: Q1, Q2, Q3, Q6), since the benchmark is deterministic.
+- Not explained: the first 2,000 iterations took 6,200 s vs 3,063 s in T5 with identical node counts. Hypothesis: laptop power mode, thermals or other load; the training loop did not change between the two runs.
+
+## C1 library solution, 16k (day64)
+
+Resumed from the 8k state (second segment, no interruption).
+
+| Item | 8k | 16k |
+|---|---|---|
+| Nodes | 1,068,645 | 1,332,829 |
+| Segment wall time | 27,103 s | 16,197 s |
+| Peak RSS | 2.88 GB | 3.84 GB |
+| Stored strategies within 1e-6 of uniform (not visit-weighted) | 84.1% | 80.0% |
+| Invalid strategies | 0 | 0 |
+
+Reading: the 8k-16k segment ran at ~1,010 s per 500-iteration batch vs ~1,700 s at the end of the first segment, with more nodes, which supports the laptop-conditions hypothesis for the slow first run. Neither milestone has a standard evaluation yet.
+
+## Engine all-in fix: equivalence and tree size (day70)
+
+Change: a player facing an all-in can now call or fold, and no raise is legal unless another player can still respond (`docs/proposals/ENGINE-all-in-round.md` section 7).
+
+Fixed-seed training fingerprints (seed 42, stack 20, `scripts/fingerprint_node_store.fingerprint_trainer`):
+
+| Setting | Before | After |
+|---|---|---|
+| no raises, `max_draw=5`, bucket, 60 iters | 2,972 nodes, `285f49dfa430a9e2` | identical |
+| no raises, `max_draw=2`, exact, 30 iters | 1,165, `7387557d3e4ffcf8` | identical |
+| raise to 4 only (no all-in reachable), `max_draw=5`, bucket, 60 iters | 8,370, `b71f40c947fccdd8` | identical |
+| `fast` (includes all-in), `max_draw=5`, bucket, 40 iters | 8,916, `608d5430545dd459` | 11,259, `3adfdeef3c62e715` (expected change) |
+
+Public tree (`enumerate_public_tree --max-draw 5`, stack 20), info-set upper bound: `none` unchanged; `fast` 346,353 -> 498,681; `full` 2,031,912 -> 2,761,377 (+36%).
+
+Training (`full`, `max_draw=5`, bucket, seed 42, 300 iters, cloud, both runs concurrent): 142,215 -> 170,391 nodes (+20%), ~1.07 -> ~1.09 s/iter.
+
+Reading:
+- Confirmed: settings without a reachable all-in are bit-identical, so the fix changes only all-in situations.
+- Confirmed: every checkpoint trained before day70 (v1, v2, C1 8k / 16k) used the old rule; their benchmark results describe a different game.
+- Confirmed: the old `test_sbr_power` reference assertion (gain > 2 SE) held with or without the planted leak (1.26 vs 1.33 at 300 deals); it now checks leaky gain > clean gain on the same decks and seeds.
+- Inference: the A2 power-test results on v1 are old-rule results; rerun on the first new-rule checkpoint.

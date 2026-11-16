@@ -1,6 +1,6 @@
 # C1 設計：可續跑訓練與解庫(solution library)
 
-狀態：**設計，待你核准**(day59)。尚未改任何程式碼。依據 `main` @ `6205caa`。
+狀態：**已核准**(day59,第 6 節 a–f 依建議:a = 選項 A,e = 不動)。第 7 節第 1–3 步與第 5 步已實作(紀錄見第 8 節);第 4 步：8k、16k 已訓練，待評估 16k、訓練 32k(8.10 的指令)。設計本文依據 `main` @ `6205caa`。
 
 標記：**[確認]** = 已用程式或實測驗證;**[推測]** = 推論。
 
@@ -186,4 +186,178 @@ python -m scripts.solve_library release <id> <iter>
 2. 你在筆電跑 T5(`full` 2k)。
 3. `scripts/solve_library.py` + `solutions/manifest.json`。
 4. 第一份解：分次訓練到 8k → A2 評估 → 依停止規則繼續。
-5. (另外提案給 A2)A2 讀狀態檔，補上 current-vs-average。
+5. (另外提案給 A2)A2 讀狀態檔，補上 current-vs-average。**已實作(day65,8.10)**。
+
+## 8. 實作紀錄(day59,第 7 節第 1 步)
+
+### 8.1 檔案
+
+- **新增** `solver/training_run.py`(C1 擁有):`TRAINING_STATE_VERSION = 1`、`TrainingState` / `TrainingRunInfo`、`save_training_state`(`.tmp` → 舊檔改名 `.prev` → 新檔就位)、`load_training_state`、`make_game_factory`(game seed = `seed + trainer.completed_iterations`)、`config_differences`。
+- **修改** `scripts/save_training_checkpoint.py`:新增 `--state-output`、`--resume`、`--state-every-batches`(預設 1);`parse_args` / `main` 可傳 `argv`(給測試用);停止時存了狀態檔的話，結束碼 3。
+- **新增** `tests/test_training_run.py`(11 個測試)。
+
+### 8.2 和設計的差異
+
+- **訓練迴圈沒有搬到 `solver/training_run.py`**,仍留在 `save_training_checkpoint.py`。這一步只需要狀態檔的讀寫和 game factory,搬迴圈是較大的重構;等第 3 步 `solve_library.py` 真的需要共用時再搬(到時候再做一次 T2)。
+- `--iterations` 在續跑時是**目標總數**。從 0 開始時和原本的意思相同;中斷後用同一行指令加 `--resume` 就能接著跑。已達目標時會拒絕。
+- 續跑時比對的設定:`player_count`、`stack`、blinds、ante、`max_draw`、`abstraction`、`traversal_mode`、`draw_action_mode`、`bet_sizing`、`seed`、`seed_mode`。batch、記憶體門檻、輸出路徑可以改。Python 版本不同時目前**不警告**(只記在 `run.python_version`)。
+- 最後一個 batch 不另存中間狀態檔，只在結束時存一次(避免大規模時存兩次)。
+- 每次存檔都把這段的 `{start_iteration, end_iteration, wall_seconds, peak_rss_gb, stop_reason}` 寫進 `run.segments`;續跑會接在前面的 segment 後面。
+
+### 8.3 驗證
+
+| # | 結果 |
+|---|---|
+| T1 | **通過**。exact / sequential、exact / fixed(full sizing)、bucket / `max_draw=5`:4 次 → 續跑到 7 → 續跑到 10,和直接 10 次的節點指紋與策略檔完全相同;segments 為 (0,4)(4,7)(7,10)。另外:RSS guard 觸發(門檻 0.001 GB)→ 結束碼 3、狀態檔在 2 次 → 續跑到 6,和直接 6 次相同。跨 process 的手動檢查(30 + 30 vs 60,bucket、`max_draw=5`、fast、seed 42,Windows / Python 3.12):13,209 節點，sha256 相同。 |
+| T2 | **通過**。不加新參數，改動前後:bucket / `max_draw=5` / fast / 40 次 / batch 15(RSS guard 開)和 exact / `max_draw=1` / full / fixed seed 7 / 30 次 / batch 10(RSS guard 關),策略檔(8,916 / 1,882 個策略)完全相同，metadata 只差 `created_at_utc`,stdout 除了時間與記憶體數字外相同。 |
+| T3 | **通過**。改 `--stack`、`--seed`、`--bet-sizing`、`--seed-mode` 續跑都被拒絕，錯誤訊息列出差異。 |
+| T4 | **通過**。寫入途中中斷(在 `pickle.dump` 丟例外)→ 原狀態檔不變、沒有殘留 `.tmp`;下一次成功寫入後舊檔在 `.prev`。 |
+| T5 | **通過**(day60,筆電，見 8.5)。存狀態檔的峰值不超過存策略檔的峰值;`full` 2k 的整個 process 峰值約 1.5 GB,遠低於 3 GiB。 |
+| T6 | **通過**。`python -m pytest tests -q`:874 passed。 |
+
+### 8.4 T5 指令(筆電)
+
+```
+python -m scripts.save_training_checkpoint --iterations 2000 --max-draw 5 --abstraction bucket --bet-sizing full --seed 42 --batch-size 500 --max-rss-gb 0 --output experiments/c1/t5_full_2k.chk.gz --state-output experiments/c1/t5_full_2k.state.gz
+```
+
+要記的:每個 batch 的 `CFR_nodes`、最後的 `peak_rss_gb`(狀態檔裡 `run.segments[-1]`)、`.state.gz` 和 `.chk.gz` 的檔案大小、總時間。判斷：峰值 < 3 GiB 可接受;> 2 × 1.38 GiB 就先處理 2.5 節的備案。`--max-rss-gb 0` 是為了量到真正的峰值，不讓 guard 提前停。
+
+### 8.5 T5 結果(day60,使用者筆電)
+
+`full` sizing、bucket、`max_draw=5`、seed 42、2,000 次、batch 500,RSS guard 關。
+
+| 項目 | 數值 |
+|---|---|
+| 節點數(每 500 次) | 213,501 / 356,412 / 471,899 / 562,244(和 A1 的 2k `full` 約 562k 一致) |
+| 訓練時間 | batch 1–3 約 620–675 秒,batch 4 為 1,010 秒;總共 3,063 秒 |
+| 檔案大小 | `.chk.gz` 5.6 MB、`.state.gz` 16.4 MB(1,500 次的 `.prev` 13.0 MB) |
+| 狀態檔裡的 `peak_rss_gb` | 500–1,500 次 1.20 GB,2,000 次 1.42 GB |
+| 另外量測(重新載入 2k 狀態後依序存檔) | 載入 7.0 秒、RSS 1.05 GB;存策略檔 18.9 秒，峰值升到 1.535 GB;**再存狀態檔 13.8 秒，峰值不變**(仍 1.535 GB) |
+
+解讀:
+- **[確認] 存狀態檔不是記憶體瓶頸。** 峰值來自存策略檔(和 A1 的 1.38 GiB 同一個量級);存狀態檔的暫時增量比較小。2.5 節的「峰值 5–7 GiB」推測被推翻，備案(dict 改陣列)不需要。
+- **[確認] 量測缺口：** 狀態檔裡的 `peak_rss_gb` 是在寫狀態檔**之前**讀的，不包含這次存檔本身的峰值。已改成存檔後在 stdout 多印一行 `peak RSS including this save`;檔案格式不變。上表的存檔峰值是另外重新載入後量的，和訓練中的 process 不完全相同(訓練中的 RSS 在存檔前已約 1.4 GB),所以訓練中實際峰值 **[推測]** 約 1.5–1.9 GB。
+- **[推測]** 節點上限 2.03M 時，依節點數線性外推：載入後約 3.8 GB,存檔峰值約 5.5 GB。可以在 16 GB 上跑，但不能同時跑 A2 評估(v2 規模約 8 GB)。
+- 狀態檔只有策略檔的約 3 倍大，存 / 讀各約 10–20 秒，和一個 batch 的 600 秒以上相比可以忽略，所以預設每個 batch 存一次沒問題。
+- batch 4 比前三個慢約 50%,節點成長反而變慢;原因未查(可能是筆電上其他負載)。不影響 T5 的結論。
+
+**結論**:第 7 節第 2 步完成，可以進第 3 步(`scripts/solve_library.py` + `solutions/manifest.json`)。
+
+### 8.6 第 3 步:解庫(day62)
+
+**檔案**
+- **新增** `solver/solution_library.py`:manifest 讀寫(`.tmp` → replace)、`new_solution_entry`、`training_argv`、`checkpoint_record`、`evaluation_summary`、`stopping_advice`。
+- **新增** `scripts/solve_library.py`:`add` / `train` / `status` / `evaluate` / `release`。
+- **新增** `solutions/manifest.json`:第一份解 `hu_d5_full_bucket_s20`(10 bb、`max_draw=5`、`full`、bucket、seed 42,milestone 8k / 16k / 32k,狀態 `planned`)。
+- **修改** `solver/training_run.py`:存狀態檔後另寫 `<state>.json`(迭代數、節點數、segments),讀進度不必 unpickle 整個 trainer。
+- **修改** `scripts/save_training_checkpoint.py`:`main()` 回傳小的 summary dict(原本回傳 `None`)。
+- **修改** `.gitignore`:`solutions/` 下的 checkpoint 和狀態檔不進 git;manifest 和 eval 報告進 git。
+- **新增** `tests/test_solve_library.py`(11 個測試)。
+
+**和設計的差異**
+- **訓練迴圈仍沒有搬**。`train` 直接呼叫 `save_training_checkpoint.main()`,每個 milestone 一次(`--iterations <milestone> --resume`),所以不需要搬迴圈，也不用再證明一次等價。
+- 檔案名稱:`solutions/<id>/strategy_008000.chk.gz`、`training.state.gz`(+ `.prev`、`.json`)、`eval/`。訓練中先寫 `strategy_latest.chk.gz`,到達 milestone 才改名，所以有 milestone 名稱的檔案一定是完整的。訓練時 `--checkpoint-every-batches 0`,中間只存狀態檔。
+- 設計裡的 `training_log.jsonl` 沒做:每段的時間和峰值已經在狀態檔的 segments 裡。
+- manifest 的 `status`:`planned` → `training` → `trained` → `released`。設計寫的 `evaluated` 改成記在每個 checkpoint 的 `evaluation` 欄位，因為每個 milestone 各自評估。
+- `release` 要求有 `standard` preset 的評估;gates 不是 PASS 時要加 `--allow-fail`。released 之後 `train` 會拒絕。
+- `train` 預設 `--max-rss-gb 10`(訓練 script 預設 3,`full` 到約 2M 節點時會被擋)。
+- 停止規則(3.3)在 `status` / `evaluate` 只給建議，不會自動停：只看 `standard` 評估;最新一份 PASS → 停;最近兩次 milestone 間的 SBR mean gain 下降都不超過 2 × √(SE₁² + SE₂²) → 停(平台期)。
+- blinds 只支援 1 / 2 / 1.5(訓練 script 寫死);manifest 存了 blinds,不一樣時 `add` / `train` 會拒絕。要支援其他 blinds 要先改訓練 script。
+
+**驗證**
+- `pytest tests -q`:885 passed(新增 11 個)。
+- 每個 milestone 的策略檔和「直接訓練到同樣次數」完全相同(3 / 6 次，分兩次 `train`);記憶體停止(結束碼 3)後同一行指令續跑，結果仍相同;「訓練完但還沒記錄」的情況會直接補記錄，不重訓。
+- 用真的 v2 standard 報告測 `evaluation_summary`:verdict FAIL、Q6 下界 1.53(和 A2_DESIGN 13 節相同)。
+- T2 再做一次：不加新參數時兩組設定的策略檔仍和改動前完全相同。
+- CLI 實跑(scratchpad,bucket、`max_draw=1`、20 / 40 次 + `evaluate --preset quick`):檔案和 manifest 如上。
+
+### 8.7 第 4 步指令(筆電)
+
+```
+python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 8000
+python -m scripts.solve_library status
+python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 8000
+```
+
+- **[推測]** 時間:T5 的 2k 花了約 51 分鐘，每次迭代會隨節點變多而變慢，所以 8k 約 4–6 小時;評估約 3 小時、8 GB(v2 規模),不能和訓練同時跑。
+- 中斷(關機、記憶體不足)後再跑同一行 `train` 就會續跑。
+- 8k 的評估可以直接和 v2(同一個遊戲、也是 8k)比較：兩者應該是同一個量級;差很多就表示訓練流程有問題，要先查。
+- 評估完把 `solutions/manifest.json` 和 `solutions/hu_d5_full_bucket_s20/eval/` commit 進去。
+
+### 8.8 第 4 步結果:8k(day63,使用者筆電)
+
+`python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 8000`,一次跑完(1 段，沒有中斷)。
+
+| 項目 | 數值 |
+|---|---|
+| 節點數 500 / 2,000 / 4,000 / 8,000 | 213,501 / 562,244 / 800,762 / 1,068,645 |
+| 時間 | 27,003 s(約 7.5 小時);每批 500 次 1,420–1,790 s |
+| RSS | 訓練中 1.39 GB;最後一批(含 checkpoint 和狀態存檔)peak 2.88 GB |
+| 檔案 | `strategy_008000.chk.gz` 13.2 MB,`training.state.gz` 42.3 MB |
+
+- **[確認]** 8k checkpoint 和 v2 `production_v2_maxdraw5.chk.gz` 的策略**完全相同**:1,068,645 個策略，key 相同、數值一模一樣;metadata 只差 `created_at_utc`。所以新的訓練流程重現了舊的 v2 訓練。
+- **[確認]** 前 2,000 次的節點數和 T5 完全一樣(不同的執行、相同的結果)。
+- **[推論]** 因為策略相同、A2 基準是確定性的，8k 的標準評估會得到和 v2 報告一樣的數字(verdict FAIL;Q1、Q2、Q3、Q6)。跑它只是補上 manifest 的紀錄，不會帶來新資訊。
+- **[未查明]** 速度：前 2,000 次花了 6,200 s,T5 同樣的 2,000 次只花 3,063 s,節點數一樣。**[假設]** 筆電的電源模式、溫度或其他程式的負載;程式碼在 T5 和這次之間沒有改到訓練迴圈。要查的話：插電、高效能模式下重跑 500 次，比較時間。
+- 原本估計 4–6 小時，實際 7.5 小時。16k 的估計：再 16 批、每批約 1,800 s 以上，約 8–9 小時(在同樣的筆電狀態下)。
+
+### 8.9 第 4 步結果:16k(day64,使用者筆電)
+
+`train hu_d5_full_bucket_s20 --until 16000`,從 8k 的狀態續跑(第 2 段，沒有中斷)。
+
+| 項目 | 8k | 16k |
+|---|---|---|
+| 節點數 | 1,068,645 | 1,332,829(+25%) |
+| 這一段的時間 | 27,103 s(7.5 小時) | 16,197 s(4.5 小時) |
+| peak RSS | 2.88 GB | 3.84 GB |
+| 檔案 | chk 13.2 MB | chk 18.7 MB,state 61.7 MB |
+| 存下的策略中，接近均勻(1e-6)的比例 | 84.1% | 80.0% |
+| 無效策略(和不為 1、NaN、負值) | 0 | 0 |
+
+- **[確認]** 16k checkpoint 可以讀取，所有策略都合法。續跑和一次跑完相同已由測試確認(8.3),這次沒有另外再跑一次 16k 來比對(要 12 小時)。
+- **[觀察]** 8k→16k 每批約 1,010 s,比 0→8k 的後段(約 1,700 s)快，節點數還更多。這支持 8.8 的假設：第一次跑的時候筆電被拖慢(電源、溫度或其他負載),不是程式的問題。
+- **[注意]** 接近均勻的比例是**以存下的策略計算**,不是以實際打到的決策加權;新增的 26 萬個節點大多還很少被訪問。真正的訓練程度要看 A2 評估(Q3 是按實際打到的決策算)。
+- **[推測]** 32k:節點約 1.5–1.6M,peak 約 4.5–5 GB,時間約 9 小時(以第 2 段的速度)。
+- 兩個里程碑都還沒評估;停止規則需要至少 3 個標準評估點(8k、16k、32k)。
+
+### 8.10 第 5 步:從狀態檔量 current-vs-average(day65,雲端 session)
+
+**新增** `scripts/inspect_state_convergence.py`(檔名符合 A2 擁有的 `inspect_*convergence*`)、`tests/test_state_convergence.py`(4 個測試)。
+
+- 讀 `training.state.gz`,用和 `evaluate_checkpoint` 的 coverage 區段**同一批牌、同一個 policy seed、同一條動作路徑**做 self-play,在實際打到的多動作決策上量:
+  - **current vs average**:regret matching 的 current 策略和 average 策略的 L1 距離(0–2)。大 = 策略還在移動。
+  - **average vs uniform**:average 策略和均勻的 total variation 距離(0 到 1 − 1/n)。這是 B2 建議的連續指標，取代 1e-6 的二元判定。
+  - **current vs uniform**:同上，對 current 策略。
+  - **strategy updates**:每個打到的資訊集累積了幾次策略(中位數、少於 10 次與 100 次的比例)。
+- 策略直接從 trainer 的節點表查(`node.average_strategy()`),**不載入 checkpoint**:checkpoint 本來就是每個節點的 `average_strategy()`,而 v2 規模載入 checkpoint 光這一步就要約 8 GB。
+- `--report <evaluate_checkpoint 報告>`:逐 phase 比對 matched / missing 決策數，必須和報告的 coverage 區段完全相同;不同就結束碼 1。
+
+**驗證**(雲端，小規模):
+- 節點表查到的策略和 checkpoint 存的**完全相同**(每個資訊集逐一比對)。
+- 和 `evaluate_checkpoint --sections coverage` 的報告比對:matched / missing 完全相同;牌數不同時會正確報錯。
+- `pytest tests -q`:889 passed。
+- **尚未在真正的 16k 狀態上跑過**(要在筆電上，見下)。[推測] 記憶體約等於訓練時的 RSS(16k 約 1.4–3.8 GB),時間約 5–10 分鐘。
+
+**流程上的限制(重要)**:狀態檔只保留最新一份(`.prev` 是上一次存檔，不是上一個 milestone)。8k 的狀態已被 16k 覆蓋，**8k 無法再補算**。之後每到一個 milestone,要在繼續訓練之前先跑本工具。
+
+**和停止規則的關係**:目前停止規則(8.6)只看 standard 評估的 SBR。本工具的數字先只記錄;等有 16k、32k 兩點後，再提案是否把 current-vs-average 或 average-vs-uniform 加進停止規則(需核准)。
+
+### 8.11 下一步指令(筆電，依序)
+
+**day70:本節作廢，只留作紀錄。** 引擎 all-in 規則修正後(`docs/proposals/ENGINE-all-in-round.md`),`hu_d5_full_bucket_s20` 是舊規則的解，不再往下訓練或評估;改為從 0 訓練 `hu_d5_full_bucket_s20_e70`,指令見 `docs/PENDING_RUNS.md` 第 1 節。
+
+```
+python -m pytest tests -q
+python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 16000
+python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20/training.state.gz --report solutions/hu_d5_full_bucket_s20/eval/strategy_016000__b50a8627__standard__s2027.json
+python -m scripts.solve_library train hu_d5_full_bucket_s20 --until 32000
+python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20/training.state.gz
+python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 32000
+```
+
+- 第 2 行約 3 小時、8 GB;第 4 行 [推測] 約 9 小時、峰值 4.5–5 GB;第 6 行約 3 小時以上。評估和訓練不能同時跑。
+- 第 3 行一定要在第 4 行之前跑(16k 的狀態會被 32k 覆蓋)。第 5 行在第 6 行之前或之後都可以，但要在任何更多訓練之前。
+- 報告檔名中的 `b50a8627` 是 manifest 裡 16k checkpoint 的 sha256 前 8 碼。
+- 跑完 commit `solutions/manifest.json` 和 `solutions/hu_d5_full_bucket_s20/eval/`。
+- 8k 不需要評估：它的策略和 v2 完全相同(8.8),v2 的報告就是它的結果。

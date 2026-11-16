@@ -50,6 +50,7 @@
 - **button 位置**:訓練只用 `button_seat=0`,而 key 存絕對 button,所以 button 1 的查詢全部查不到。遊戲對座位對稱，要靠 player-relative key 或查詢層的座位對調解決(D1 / 凍結介面)，不是多訓練。
 - **行動順序**(程式碼確認):predraw button 先;換牌大盲先換、button 後換(看得到大盲換幾張);postdraw 大盲先行動。
 - 下一步依第 2 節的順序：先 C1(可續跑訓練與解庫),再依 A2 的評估一次合併一個 B 的改動。
+- **[確認] 引擎 bug(day69 發現,day70 修正)**:面對 all-in 的玩家沒有機會跟注或棄牌。day70 前訓練的所有 checkpoint(v1、v2、C1 8k / 16k)都是舊規則，只留作對照;C1 用新引擎從 0 重訓 `hu_d5_full_bucket_s20_e70`。見 `docs/proposals/ENGINE-all-in-round.md` 第 7 節。
 
 **推估 [推測]**(A1 之前，已被上面兩段取代):
 - **40k 次的時間**:約 6–7 小時。
@@ -208,7 +209,7 @@
 ### C1. 正式訓練流程與解庫
 
 - **目標**:像 GTO Wizard 一樣，有一個「解庫」,每個遊戲設定(人數、有效籌碼深度)一份正式解。
-- **擁有**:`scripts/save_training_checkpoint.py`、新增的 `scripts/solve_library.py`、`solutions/manifest.json`(或類似的檔案)。
+- **擁有**:`scripts/save_training_checkpoint.py`、新增的 `scripts/solve_library.py`、`solutions/manifest.json`(或類似的檔案)、`solver/training_run.py`、`solver/solution_library.py`、`solutions/`、`tests/test_training_run.py`、`tests/test_solve_library.py`(day59–62)。
 - **產出**:
   1. 設定矩陣：先做單挑 × {10, 20, 30, 50, 100} bb,實際深度由你決定。
   2. 每份解的 metadata:config、seed、迭代數、時間、節點數、峰值 RSS、A2 評估報告。
@@ -251,7 +252,7 @@
 ### D3. 2-7 手牌分類與顯示格(取代德州撲克的 13×13)
 
 - **目標**:定義產品裡的「range grid」。2-7 是 5 張牌的 lowball,沒有 13×13 的現成格子。
-- **擁有**:`docs/HAND_TAXONOMY.md`、新增的 `solver/hand_classes.py`(純函式，不碰訓練)。
+- **擁有**:`docs/HAND_TAXONOMY.md`、新增的 `solver/hand_classes.py`(純函式，不碰訓練)、`tests/test_hand_classes.py`。
 - **產出(提案)**:
   - **pat 手**:依最高牌 / 第二高牌分格，例如 7-5、8-6、9-x、T-x、對子以上。
   - **一張換牌手**:依保留 4 張的最高牌分格，例如「抽 7(2345 / 2346 / ...)」、「抽 8」。
@@ -308,11 +309,11 @@
 | B2 | **完成**(分析與提案):換牌對應與 `draw_count` 編碼正確;v1 / v2 換牌錯誤分析完成(v2:53% 的 draw 決策未訓練，已訓練的也接近均勻);提案 P1–P3 在 `docs/proposals/B2-draw-analysis.md`,等 C1 後再排;選項價值分析延後給 A2 的通用 LBR | day59 | `claude/lucid-ritchie-myhksz` | 擁有見 B2 節;對 A2 提了「離均勻距離」指標 |
 | B3 | 未開始 | | | |
 | B4 | 未開始 | | | |
-| C1 | **設計待核准**:`docs/C1_DESIGN.md`(訓練 script 盤點、可續跑訓練、解庫、單一訓練入口)。原型確認 pickle 整個 trainer 後續跑與連續訓練指紋相同 | day59 | `claude/sleepy-mendel-dpgv70` | 尚未改程式碼;待決事項見設計第 6 節 |
+| C1 | **第 1–3、5 步完成，第 4 步進行中**:可續跑訓練、解庫 `scripts/solve_library.py` + `solutions/manifest.json`;`hu_d5_full_bucket_s20` 8k(= v2)、16k 已訓練;第 5 步 `scripts/inspect_state_convergence.py` 從狀態檔量 current-vs-average(day65);889 tests 通過 | day65 | `claude/lucid-ritchie-myhksz`(已合併 `ws-c1-training`) | **day70:引擎 all-in 修正後從 0 重訓**,新解 `hu_d5_full_bucket_s20_e70`(舊的 `hu_d5_full_bucket_s20` 只留作對照);指令見 `docs/PENDING_RUNS.md` 第 1 節 |
 | C2 | 未開始 | | | |
-| D1 | 未開始 | | | |
+| D1 | **第一階段已實作**(day69):`product/api/`(路徑、節點 / Hand Mode、雙方條件化 range(換牌前)、FastAPI),11 tests;下一步：換牌後的 range、SQLite、依成牌機率細分 | day69 | `claude/lucid-ritchie-myhksz` | **發現引擎 bug**:面對 all-in 的玩家沒有機會行動;day70 已修正(`docs/proposals/ENGINE-all-in-round.md`) |
 | D2 | 未開始 | | | |
-| D3 | 未開始 | | | |
+| D3 | **v1 方向(day68)**:換牌分格的固定門檻取消，改依 solver 策略 + 條件化 range 分格;基礎 `draw_outcome_counts`(精確換牌結果)已實作並驗證;postdraw 牌力分格保留 | day68 | `claude/lucid-ritchie-myhksz` | 見 `docs/HAND_TAXONOMY.md` 第 6 節;依節點分格要等 D1 的條件化 range |
 | E1 | 未開始 | | | |
 | E2 | 未開始 | | | |
 | E3 | 未開始 | | | |

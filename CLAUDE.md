@@ -23,30 +23,40 @@ A Python solver for **2-7 Single Draw poker** using **Counterfactual Regret Mini
 - Hardware: i7-12700H (14 cores / 20 threads), 16 GB RAM. Training is single-threaded.
 - Git: day-numbered commit messages (`day33`, `day34`, ...). Push through the **`Hsuyray`** GitHub account (not `ray-askew`). Pushing to the session's working branch is approved (user, day56); the user opens and merges PRs.
 - Working loop: run a script, read the full output, pick **one** highest-priority next step, change code only when diagnostics show a clear need.
-- Long runs (training, standard benchmark reports, multi-hour experiments) are run by the user on the laptop: hand over complete code and exact commands; quick checks may run in the cloud session.
+- Long runs (training, standard benchmark reports, multi-hour experiments) are run by the user on the laptop: hand over complete code and exact commands; quick checks may run in the cloud session. **`docs/PENDING_RUNS.md` is the ordered list of runs waiting for the laptop**: add to it when handing over a run, remove an item once its results are committed.
 - When giving code or diffs, label each as **new file** or **overwrite existing file**.
 
 ### Key files (paths verified)
 `solver/game_state.py`, `solver/cfr_trainer.py`, `solver/cfr_node.py`, `solver/node_store.py`, `solver/strategy_checkpoint.py`, `solver/hand_strategy_resolver.py`, `solver/postdraw_strength_bucket.py`, `solver/best_response.py`, `solver/bet_sizing.py`, `solver/memory_guard.py`, `scripts/save_training_checkpoint.py` (production training entry point), `scripts/profile_memory.py`, `scripts/inspect_*.py`, `scripts/evaluate_strategy_profile.py`.
 
-Evaluation (A2 benchmark): `scripts/evaluate_checkpoint.py` (single entry point; `--compare`, `--gates`), `solver/checkpoint_evaluation.py`, `solver/benchmark_gates.py`, `solver/response_grouping.py`, `solver/exploitability_power.py`. Design and results: `docs/A2_DESIGN.md`.
+Evaluation (A2 benchmark): `scripts/evaluate_checkpoint.py` (single entry point; `--compare`, `--gates`), `solver/checkpoint_evaluation.py`, `solver/benchmark_gates.py`, `solver/response_grouping.py`, `solver/exploitability_power.py`, `scripts/inspect_state_convergence.py`. Design and results: `docs/A2_DESIGN.md`.
+
+Hand classes (D3: postdraw strength classes kept; draw classification moving to solver-strategy + conditioned-range cells, day68; exact draw outcomes in `draw_outcome_counts`): `solver/hand_classes.py`, `docs/HAND_TAXONOMY.md`.
+
+Query API (D1, slice 1 implemented day69): `product/api/` (`paths.py`, `service.py`, `app.py` FastAPI, `hand_data.py`), `docs/API.md` (section 10), mock responses in `product/api/mock/`.
+
+Training and solution library (C1): `solver/training_run.py`, `solver/solution_library.py`, `scripts/solve_library.py`, `solutions/manifest.json`. Design and results: `docs/C1_DESIGN.md`.
 
 ## 3. State (see `docs/EXPERIMENT_LOG.md` and `docs/WORKSTREAMS.md` section 1 for numbers; updated day56)
 
-- Checkpoint schema: v3 (`CHECKPOINT_FORMAT_VERSION`). Checkpoints hold the average strategy only (no regrets), so training cannot resume from one and current-vs-average cannot be measured from a checkpoint.
+- **Engine all-in rule fixed (day70):** until day69 a player facing an all-in never got to call or fold (fixed bug 4 below). **Every checkpoint trained before day70 (v1, v2, C1 `hu_d5_full_bucket_s20` 8k / 16k) is on the old rule**: keep them for comparison only. C1 retrains from 0 as `hu_d5_full_bucket_s20_e70` (`docs/PENDING_RUNS.md`). The `full` public tree grows from 2,031,912 to 2,761,377 info sets (upper bound); `none` sizing is unchanged.
+- Checkpoint schema: v3 (`CHECKPOINT_FORMAT_VERSION`). Checkpoints hold the average strategy only (no regrets). C1 training states (`--state-output`, `solutions/<id>/training.state.gz`) hold the whole trainer: training resumes from them (`--resume`) and `scripts/inspect_state_convergence.py` measures current-vs-average from them. Only the latest state is kept, so run it at each milestone before training further.
+- **Solution library (C1):** `python -m scripts.solve_library` with `solutions/manifest.json`. `hu_d5_full_bucket_s20` (`max_draw=5`, `full`, bucket, seed 42; old all-in rule): 8k (= v2) and 16k (1,332,829 info sets) trained, kept for comparison only. Its replacement `hu_d5_full_bucket_s20_e70` (same settings, day70 engine) is planned; commands in `docs/PENDING_RUNS.md`.
 - **Benchmark (A2):** `python -m scripts.evaluate_checkpoint <checkpoint>` (preset `standard`, seed 2027) writes a JSON / text report to `experiments/eval/` with gates (v2: hard H1-H4, quality Q1-Q6). Reports are bit-identical across runs and across platforms (Linux / Python 3.13 vs Windows / Python 3.12). Cost on the laptop: v1 ~26 min / 2 GB, v2 ~3.1 h / 8.1 GB.
 - v1 `production_v1.chk.gz`: `max_draw=1` (rules-incomplete), 20,000 iters, bucket, `full` sizing, 305,175 info sets. Coverage 96.8%; played decisions on a near-uniform strategy 11-23% by phase; grouped-SBR exploitability lower bound +1.57 chips/deal. Gates: FAIL (Q1, Q3, Q6).
 - v2 `production_v2_maxdraw5.chk.gz` is the 8k run: `max_draw=5`, `full` sizing, 1,068,645 info sets. Coverage 92.8%; near-uniform when played 19 / 46 / 27% (predraw / draw / postdraw); lower bound +2.47 chips/deal. Gates: FAIL (Q1, Q2, Q3, Q6). The other file, `production_v2_maxdraw5_v2.chk.gz`, could not be loaded within memory; its contents are unknown.
 - Earlier "~98% / ~94% coverage" figures are superseded: the old checkpoint coverage script alternated the button seat (fixed day45).
 - Main bottleneck: under-training. 70-93% of stored strategies are near-uniform, and the correctness checks (action-space consistency, zero-sum, draw mapping, draw_count encoding, reproducibility) pass. Because those checks were done first (principle 4.1), longer and resumable training (workstream C1) is now the justified next step; it is still not a substitute for diagnosing any new failure.
+- `PostdrawStrengthBucket` bucket 0 holds every postdraw hand from 7-5 up to part of 9-6 (confirmed structurally, D3 day66): postdraw betting cannot tell the nut 7-5-4-3-2 from a 9-6. Impact not yet measured (workstream B3).
 - Training only uses `button_seat=0`, and `PublicNodeKey` stores the absolute button seat: every button-1 lookup misses (0% coverage). The game is seat-symmetric, so this needs player-relative keys or a query-layer seat relabelling (D1 / frozen-interface decision), not more training.
-- 40k-iteration memory (A1, done): a large state space (`full` cap 2,031,912 info sets) plus fat nodes, not a leak or float fragmentation. Node interning is merged (PR #6); `full` 40k is estimated at ~4 GiB peak and ~14 h single-threaded. Training has an RSS guard (`--max-rss-gb`, default 3, 0 disables).
+- 40k-iteration memory (A1, done): a large state space (`full` cap 2,031,912 info sets on the old all-in rule; 2,761,377 since day70) plus fat nodes, not a leak or float fragmentation. Node interning is merged (PR #6); `full` 40k is estimated at ~4 GiB peak and ~14 h single-threaded. Training has an RSS guard (`--max-rss-gb`, default 3, 0 disables).
 - Measured (1,000 iters, `max_draw=5`, bucket, fast, seed 42): 114,110 nodes, ~0.59 s/iter, RSS 0.465 GB.
 
 ### Fixed bugs (do not regress; covered by `tests/test_regression_fixed_bugs.py`)
 1. Exact floating-point equality in `game_state.py` caused infinite betting loops and `RecursionError` under `full` bet sizing. **Never use exact float equality for chip/bet logic** (use `CHIP_EPSILON`).
 2. `hand_strategy_resolver.py` used the wrong bucket type for postdraw lookups (must be `PostdrawStrengthBucket`).
 3. Type-check error in the postdraw strength bucket inspection script.
+4. (day70) `BettingState._is_betting_round_complete` ended the round when at most one player was neither folded nor all-in, even if that player still owed chips: a player facing an all-in never got to call or fold. Now the round ends only when that player has matched the bet, and no raise is legal unless another player can still respond (`BettingState.legal_actions`, which `legal_actions._raise_is_legal` follows). `docs/proposals/ENGINE-all-in-round.md`.
 
 ### Known limitations (do not "fix" without a new plan)
 - SampledBestResponse (SBR) oscillates because action values reset every sweep. A cross-sweep accumulation fix was tried, made results worse, and was **reverted. Do not retry it.**

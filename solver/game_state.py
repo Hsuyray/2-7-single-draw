@@ -254,7 +254,20 @@ class GameState:
             self.acting_seat
         )
 
-        if maximum_raise_to > self.current_bet:
+        # A raise needs at least one other player who can still
+        # respond (not folded, not all-in); otherwise nobody could
+        # call it (day70, docs/proposals/ENGINE-all-in-round.md).
+        opponent_can_respond = any(
+            other.seat != player.seat
+            and not other.has_folded
+            and not other.is_all_in
+            for other in self.players
+        )
+
+        if (
+            maximum_raise_to > self.current_bet
+            and opponent_can_respond
+        ):
             actions.add(ActionType.RAISE)
 
         return actions
@@ -400,8 +413,18 @@ class GameState:
             if not player.has_folded and not player.is_all_in
         ]
 
-        if len(eligible_players) <= 1:
+        if not eligible_players:
             return True
+
+        if len(eligible_players) == 1:
+            # Everyone else is folded or all-in: the round ends only
+            # once the remaining player has matched the bet (day70).
+            player = eligible_players[0]
+
+            return (
+                player.committed_this_round
+                >= self.current_bet - CHIP_EPSILON
+            )
 
         for player in eligible_players:
             if not player.has_acted_since_last_raise:
