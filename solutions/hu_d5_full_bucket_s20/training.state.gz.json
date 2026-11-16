@@ -1,0 +1,37 @@
+{
+  "cfr_nodes": 1332829,
+  "completed_iterations": 16000,
+  "config": {
+    "abstraction": "bucket",
+    "bet_sizing": "full",
+    "big_blind": 2.0,
+    "big_blind_ante": 1.5,
+    "draw_action_mode": "auto",
+    "max_draw": 5,
+    "player_count": 2,
+    "seed": 42,
+    "seed_mode": "sequential",
+    "small_blind": 1.0,
+    "stack": 20.0,
+    "traversal_mode": "external_sampling"
+  },
+  "git_commit": "7b68973b56eb8417e9cc19448e8f1be5a93ba020",
+  "python_version": "3.12.9",
+  "segments": [
+    {
+      "end_iteration": 8000,
+      "peak_rss_gb": 2.8843231201171875,
+      "start_iteration": 0,
+      "stop_reason": "completed",
+      "wall_seconds": 27103.350335099996
+    },
+    {
+      "end_iteration": 16000,
+      "peak_rss_gb": 3.842376708984375,
+      "start_iteration": 8000,
+      "stop_reason": "completed",
+      "wall_seconds": 16197.280537499988
+    }
+  ],
+  "state_version": 1
+}
