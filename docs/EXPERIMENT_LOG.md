@@ -323,3 +323,41 @@ Reading:
 - Inference: the profile barely beats a calling station (+0.15 ± 0.14), which is consistent with that under-training.
 - Not explained: evaluation peak RSS 1.84 GB vs 8.1 GB for v2. Hypothesis: v2's figure included the loader on the older code or other processes; not investigated.
 - Next: 16k milestone (stopping rule: continue, too few evaluated milestones).
+
+## C1 new-engine solution, 16k (day72)
+
+`hu_d5_full_bucket_s20_e70` resumed from the 8k state (second segment, no interruption). Same settings as the 8k entry. Checkpoint sha256 `3d1a9887...`.
+
+| Item | 8k | 16k |
+|---|---|---|
+| Nodes | 1,342,329 | 1,691,842 (+26%) |
+| Segment wall time | 16,263 s (4.5 h) | 28,285 s (7.9 h) |
+| Batch time (500 iters) | ~1,030-1,110 s | ~1,420-1,820 s |
+| Peak RSS (incl. final state save) | 3.26 GB | 4.44 GB (2.53 GB before the save) |
+| Coverage overall / predraw / draw / postdraw | 92.35 / 93.85 / 86.81 / 96.63% | 95.65 / 96.37 / 92.57 / 98.75% |
+| Near-uniform when played (predraw / draw / postdraw) | 21.2 / 45.0 / 29.3% | 13.7 / 31.3 / 18.2% |
+| Deals with any miss | 21.79% | 13.22% |
+| Stored near-uniform (predraw / draw / postdraw) | 83.6 / 93.7 / 82.3% | 79.1 / 90.7 / 77.1% |
+| SBR gain seat 0 / seat 1 | +3.16 / +4.10 | +2.73 / +3.30 |
+| SBR mean over seats | +3.63 ± 0.31 | +3.01 ± 0.06 |
+| SBR lower bound (Q6 statistic) | +2.38 | +1.76 |
+| vs uniform / vs call station | +1.32 ± 0.12 / +0.15 ± 0.14 | +1.97 ± 0.12 / +0.72 ± 0.14 |
+| Gates | FAIL Q1 Q2 Q3 Q6 | FAIL Q1 (draw only) Q2 Q3 Q6 |
+| Evaluation time / peak RSS | 4.0 h / 1.84 GB | 5.6 h / 2.42 GB |
+
+Current-vs-average (20,000 self-play deals, seed 2027), weighted by played decisions:
+
+| Phase | cur-vs-avg 8k -> 16k | avg-vs-uniform | median updates | updates < 10 |
+|---|---|---|---|---|
+| predraw | 0.605 -> 0.582 | 0.297 -> 0.335 | 6 -> 12 | 59.8 -> 44.6% |
+| draw | 0.660 -> 0.687 | 0.213 -> 0.298 | 2 -> 4 | 88.0 -> 75.0% |
+| postdraw | 0.587 -> 0.553 | 0.290 -> 0.343 | 6 -> 12 | 63.5 -> 43.9% |
+| all | 0.618 -> 0.609 | 0.274 -> 0.325 | 5 -> 8 | 67.8 -> 53.3% |
+
+Reading:
+- Confirmed: every quality metric improved from 8k to 16k (coverage, near-uniform share, SBR, baselines); hard gates still pass.
+- Confirmed: the draw phase is the weakest: the only phase failing Q1's per-phase coverage, the highest near-uniform share (31%), median 4 regret updates, and the only phase whose current-vs-average distance grew.
+- Confirmed: the all-in branches are still among the most-missed public nodes ("BTN shoves" 98, "BTN shoves, BB calls" 69), down from 182 / 123.
+- Inference: the SBR mean fell by a factor of 0.83 over one doubling of iterations. A 1/sqrt(T) rate would give 0.71. At either rate, reaching the Q6 threshold (lower bound <= 0.2) needs several more doublings; single-threaded training alone does not get there in practical time. This is a trend from two points, not a measured rate.
+- Not explained: the segment ran ~55% slower per batch than the first segment with only ~26% more nodes. The test suite before training also took 284 s vs 129-138 s on earlier days, so the laptop was slower from the start. Hypothesis: power mode, thermals, other load, or OneDrive syncing the ~GB training state written every 500 iterations into a synced folder. The training code did not change between segments.
+- Next: 32k milestone (stopping rule: continue; needs a third evaluated point for the plateau rule).
