@@ -278,3 +278,48 @@ Reading:
 - Confirmed: every checkpoint trained before day70 (v1, v2, C1 8k / 16k) used the old rule; their benchmark results describe a different game.
 - Confirmed: the old `test_sbr_power` reference assertion (gain > 2 SE) held with or without the planted leak (1.26 vs 1.33 at 300 deals); it now checks leaky gain > clean gain on the same decks and seeds.
 - Inference: the A2 power-test results on v1 are old-rule results; rerun on the first new-rule checkpoint.
+
+## C1 new-engine solution, 8k (day71)
+
+`hu_d5_full_bucket_s20_e70`: day70 engine (all-in can be called or folded), stack 20, `max_draw=5`, bucket, `full` sizing (0.2-1.25 pot + all-in), external sampling, seed 42 sequential, 8,000 iterations, laptop (Windows, Python 3.12). Checkpoint sha256 `d222f14b...`.
+
+Training:
+
+| Item | old rule 8k (v2) | new rule 8k |
+|---|---|---|
+| Nodes | 1,068,645 | 1,342,329 (+26%) |
+| Wall time | 7.53 h (slow laptop run) | 4.54 h |
+| Peak RSS (incl. state save) | 2.88 GB | 3.26 GB (1.60 GB before the final save) |
+| Batch time, iters 2k-8k | n/a | ~1,030-1,110 s / 500 iters |
+
+Standard benchmark (preset `standard`, seed 2027; old-rule numbers describe a different game and are shown for scale only):
+
+| Metric | v2 (old rule) | new 8k |
+|---|---|---|
+| Coverage overall (button 0) | 92.8% | 92.35% |
+| Coverage predraw / draw / postdraw | | 93.85 / 86.81 / 96.63% |
+| Near-uniform when played (predraw / draw / postdraw) | 19 / 46 / 27% | 21.2 / 45.0 / 29.3% |
+| Deals with any miss | | 21.79% |
+| Stored near-uniform (predraw / draw / postdraw) | | 83.6 / 93.7 / 82.3% |
+| SBR gain seat 0 / seat 1 | | +3.16 / +4.10 |
+| SBR lower bound (Q6 statistic) | +2.47 | +2.38 |
+| vs uniform / vs call station | | +1.32 ± 0.12 / +0.15 ± 0.14 |
+| Gates | FAIL Q1 Q2 Q3 Q6 | FAIL Q1 Q2 Q3 Q6 |
+| Evaluation time / peak RSS | ~3.1 h / 8.1 GB | 4.0 h (SBR 3.9 h) / 1.84 GB |
+
+Current-vs-average (`inspect_state_convergence`, 20,000 self-play deals, seed 2027), weighted by played decisions:
+
+| Phase | Decisions | cur-vs-avg | share > 0.5 | avg-vs-uniform | median updates | updates < 10 |
+|---|---|---|---|---|---|---|
+| predraw | 48,301 | 0.605 | 61.7% | 0.297 | 6 | 59.8% |
+| draw | 21,252 | 0.660 | 67.5% | 0.213 | 2 | 88.0% |
+| postdraw | 9,822 | 0.587 | 53.0% | 0.290 | 6 | 63.5% |
+| all | 79,375 | 0.618 | 62.2% | 0.274 | 5 | 67.8% |
+
+Reading:
+- Confirmed: hard gates H1-H3 pass on the new engine (valid strategies, stored action sets equal rebuilt legal actions, zero-sum).
+- Confirmed: the new all-in branches are reached and under-trained: the second and fourth most-missed public nodes are "BTN shoves" (182 misses) and "BTN shoves, BB calls" (123).
+- Confirmed: the played information sets have a median of 5 regret updates (draw: 2), and current and average strategies still differ by 0.62 (total variation) on average. This is direct evidence of under-training, not only a near-uniform count.
+- Inference: the profile barely beats a calling station (+0.15 ± 0.14), which is consistent with that under-training.
+- Not explained: evaluation peak RSS 1.84 GB vs 8.1 GB for v2. Hypothesis: v2's figure included the loader on the older code or other processes; not investigated.
+- Next: 16k milestone (stopping rule: continue, too few evaluated milestones).

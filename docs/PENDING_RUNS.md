@@ -2,35 +2,41 @@
 
 雲端 session 寫好程式、但需要在筆電上跑的東西，依順序列在這裡。跑完一項就刪掉那一項，並把結果檔 commit 進去。
 
-最後更新:day70。
+最後更新:day71。
 
-## 0. 每次先跑
+## 0. 先 commit 8k 的結果(day71)
 
 ```powershell
 git pull origin claude/lucid-ritchie-myhksz
-python -m pip install -r requirements.txt
-python -m pytest tests -q
+git add solutions/manifest.json solutions/hu_d5_full_bucket_s20_e70/eval solutions/hu_d5_full_bucket_s20_e70/convergence__008000__s2027.json
+git commit -m "day71: hu_d5_full_bucket_s20_e70 8k trained and evaluated"
+git push origin claude/lucid-ritchie-myhksz
 ```
-預期:**928 passed**(day70 在雲端的結果;day69 那個 xfail 已因引擎修正變成一般的回歸測試)。有其他失敗先停下來回報。
+`day70_*.log` 不要 commit(可以刪)。
 
-## 1. C1:用修正後的引擎從 0 訓練(day70)
+## 1. C1:`hu_d5_full_bucket_s20_e70` 訓練到 16k
 
-引擎的 all-in 規則已修正(`docs/proposals/ENGINE-all-in-round.md` 第 7 節)。舊的 `hu_d5_full_bucket_s20` 是舊規則的解，**不要再訓練或評估它**;新解 `hu_d5_full_bucket_s20_e70` 已加進 `solutions/manifest.json`(同樣的設定:籌碼 20、`max_draw=5`、bucket、`full`、seed 42,milestones 8k / 16k / 32k)。
-
-依序跑:
+8k 的結果在 `docs/EXPERIMENT_LOG.md`「C1 new-engine solution, 8k (day71)」。依序跑(一步失敗就停):
 
 ```powershell
-python -m scripts.solve_library train hu_d5_full_bucket_s20_e70 --until 8000
-python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20_e70/training.state.gz
-python -m scripts.solve_library evaluate hu_d5_full_bucket_s20_e70 8000
-python -m scripts.solve_library status hu_d5_full_bucket_s20_e70
+powercfg /change standby-timeout-ac 0
+python -m pytest tests -q
+if ($LASTEXITCODE -ne 0) { Write-Host "=== TESTS FAILED ===" } else {
+  python -m scripts.solve_library train hu_d5_full_bucket_s20_e70 --until 16000 2>&1 | Tee-Object -FilePath day71_train.log
+  if ($LASTEXITCODE -ne 0) { Write-Host "=== TRAIN FAILED ===" } else {
+    python -m scripts.inspect_state_convergence solutions/hu_d5_full_bucket_s20_e70/training.state.gz 2>&1 | Tee-Object -FilePath day71_convergence.log
+    if ($LASTEXITCODE -ne 0) { Write-Host "=== CONVERGENCE FAILED ===" } else {
+      python -m scripts.solve_library evaluate hu_d5_full_bucket_s20_e70 16000 2>&1 | Tee-Object -FilePath day71_eval.log
+      python -m scripts.solve_library status hu_d5_full_bucket_s20_e70 2>&1 | Tee-Object -FilePath day71_status.log
+      Write-Host "=== ALL DONE ==="
+    }
+  }
+}
 ```
 
-- 第 1 行 [推測]:約 5–8 小時(舊規則 8k 是 7.5 小時，但當時筆電偏慢;每次迭代時間沒變，節點多約 20%)。峰值記憶體約 3.5 GB。中斷的話用同一行指令續跑。
-- 第 2 行一定要在**繼續訓練之前**跑(狀態檔只保留最新一份)。約 5–10 分鐘。
-- 第 3 行 [推測]:約 3–4 小時、9–10 GB(v2 是 3.1 小時、8.1 GB,節點更多)。訓練和評估不能同時跑。
-- 跑完 commit `solutions/manifest.json` 和 `solutions/hu_d5_full_bucket_s20_e70/eval/`,並把第 2 行的輸出貼給我。checkpoint 和狀態檔不要 commit(太大)。
-- 16k / 32k 等 8k 的結果出來再決定(依 `docs/C1_DESIGN.md` 8.6 的停止規則)。
+- [推測] 訓練 8k → 16k 約 4.5–5 小時、峰值約 4 GB;評估約 4 小時。合計約 9 小時。
+- 評估時第一行出現紅字 `NativeCommandError` 是 PowerShell 把 stderr 的「Loading ...」當成錯誤顯示，不影響結果(day71 那次也有)。
+- 跑完 commit `solutions/manifest.json`、`solutions/hu_d5_full_bucket_s20_e70/eval/` 和新的 `convergence__016000__s2027.json`,把 `day71_convergence.log`、`day71_status.log` 貼給我。
 
 ## 2. 可以跑(選擇性)
 
