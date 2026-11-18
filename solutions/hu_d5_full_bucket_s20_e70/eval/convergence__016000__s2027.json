@@ -1,0 +1,73 @@
+{
+  "by_phase": {
+    "draw": {
+      "average_vs_uniform_mean": 0.2979728344417626,
+      "current_vs_average_mean": 0.6868492157169721,
+      "current_vs_average_share_over_0.5": 0.7180056769097864,
+      "current_vs_uniform_mean": 0.5358815625077543,
+      "decisions": 24309,
+      "strategy_updates_median": 4,
+      "strategy_updates_share_below_10": 0.7498045991196676,
+      "strategy_updates_share_below_100": 1.0,
+      "visits_median": 40
+    },
+    "postdraw_betting": {
+      "average_vs_uniform_mean": 0.3430644020216389,
+      "current_vs_average_mean": 0.553424174707398,
+      "current_vs_average_share_over_0.5": 0.4959381810976818,
+      "current_vs_uniform_mean": 0.5028391325527618,
+      "decisions": 10094,
+      "strategy_updates_median": 12.0,
+      "strategy_updates_share_below_10": 0.4387755102040816,
+      "strategy_updates_share_below_100": 0.9992074499702793,
+      "visits_median": 41.0
+    },
+    "predraw_betting": {
+      "average_vs_uniform_mean": 0.3353860059730204,
+      "current_vs_average_mean": 0.582083981157582,
+      "current_vs_average_share_over_0.5": 0.5858577725891185,
+      "current_vs_uniform_mean": 0.5001857720055131,
+      "decisions": 49681,
+      "strategy_updates_median": 12,
+      "strategy_updates_share_below_10": 0.4457639741551096,
+      "strategy_updates_share_below_100": 0.9208349268331958,
+      "visits_median": 52
+    }
+  },
+  "completed_iterations": 16000,
+  "deals": 20000,
+  "definitions": {
+    "average_vs_uniform": "total variation distance from uniform, 0..1-1/n",
+    "current_vs_average": "L1 distance, 0..2, between regret-matching current and average strategy",
+    "weighting": "every multi-action decision reached in self-play counts once"
+  },
+  "elapsed_s": 295.5055148000247,
+  "information_sets": 1691842,
+  "matched": {
+    "draw": 24309,
+    "postdraw_betting": 13954,
+    "predraw_betting": 49681
+  },
+  "missing": {
+    "draw": 1951,
+    "postdraw_betting": 176,
+    "predraw_betting": 1869
+  },
+  "overall": {
+    "average_vs_uniform_mean": 0.32549148315014576,
+    "current_vs_average_mean": 0.6089314907978948,
+    "current_vs_average_share_over_0.5": 0.6132676846962561,
+    "current_vs_uniform_mean": 0.5108240859853774,
+    "decisions": 84084,
+    "strategy_updates_median": 8.0,
+    "strategy_updates_share_below_10": 0.5328243185386042,
+    "strategy_updates_share_below_100": 0.9531302031302031,
+    "visits_median": 46.0
+  },
+  "report_check": null,
+  "seed": 2027,
+  "single_action": {
+    "postdraw_betting": 3860
+  },
+  "state": "training.state.gz"
+}
