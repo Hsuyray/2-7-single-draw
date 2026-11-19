@@ -361,3 +361,40 @@ Reading:
 - Inference: the SBR mean fell by a factor of 0.83 over one doubling of iterations. A 1/sqrt(T) rate would give 0.71. At either rate, reaching the Q6 threshold (lower bound <= 0.2) needs several more doublings; single-threaded training alone does not get there in practical time. This is a trend from two points, not a measured rate.
 - Not explained: the segment ran ~55% slower per batch than the first segment with only ~26% more nodes. The test suite before training also took 284 s vs 129-138 s on earlier days, so the laptop was slower from the start. Hypothesis: power mode, thermals, other load, or OneDrive syncing the ~GB training state written every 500 iterations into a synced folder. The training code did not change between segments.
 - Next: 32k milestone (stopping rule: continue; needs a third evaluated point for the plateau rule).
+
+## C1 new-engine solution, 32k (day73)
+
+`hu_d5_full_bucket_s20_e70` resumed from the 16k state (third segment, no interruption). Same settings. Checkpoint sha256 `92196ad8...`.
+
+| Item | 8k | 16k | 32k |
+|---|---|---|---|
+| Nodes | 1,342,329 | 1,691,842 | 2,047,494 |
+| Segment wall time | 4.5 h | 7.9 h | 9.8 h (35,250 s) |
+| Batch time (500 iters) | ~1,060 s | ~1,650 s | ~1,050 s |
+| Peak RSS (final state save) | 3.26 GB | 4.44 GB | 5.70 GB (3.25 GB before the save) |
+| Coverage overall / predraw / draw / postdraw | 92.35 / 93.85 / 86.81 / 96.63% | 95.65 / 96.37 / 92.57 / 98.75% | 97.71 / 98.11 / 95.92 / 99.64% |
+| Near-uniform when played (predraw / draw / postdraw) | 21.2 / 45.0 / 29.3% | 13.7 / 31.3 / 18.2% | 8.1 / 21.2 / 10.4% |
+| Deals with any miss | 21.79% | 13.22% | 7.36% |
+| SBR gain seat 0 / seat 1 | +3.16 / +4.10 | +2.73 / +3.30 | +1.86 / +1.68 (seat 1 repeats +0.71 / +2.64) |
+| SBR mean over seats | +3.63 | +3.01 | +1.77 |
+| SBR SE used by Q6 / the stopping rule | 0.62 | 0.63 | 0.66 |
+| SBR lower bound (Q6 statistic) | +2.38 | +1.76 | +0.45 |
+| vs uniform / vs call station | +1.32 / +0.15 | +1.97 / +0.72 | +2.66 / +1.09 |
+| Gates | FAIL Q1 Q2 Q3 Q6 | FAIL Q1 Q2 Q3 Q6 | FAIL Q3 (draw, postdraw) Q6 |
+
+Current-vs-average (20,000 self-play deals, seed 2027), weighted by played decisions:
+
+| Phase | cur-vs-avg 8k / 16k / 32k | avg-vs-uniform | median updates | updates < 10 |
+|---|---|---|---|---|
+| predraw | 0.605 / 0.582 / 0.546 | 0.297 / 0.335 / 0.366 | 6 / 12 / 23 | 59.8 / 44.6 / 28.9% |
+| draw | 0.660 / 0.687 / 0.689 | 0.213 / 0.298 / 0.381 | 2 / 4 / 7 | 88.0 / 75.0 / 57.2% |
+| postdraw | 0.587 / 0.553 / 0.520 | 0.290 / 0.343 / 0.386 | 6 / 12 / 23 | 63.5 / 43.9 / 25.0% |
+| all | 0.618 / 0.609 / 0.586 | 0.274 / 0.325 / 0.373 | 5 / 8 / 16 | 67.8 / 53.3 / 37.0% |
+
+Reading:
+- Confirmed: Q1 and Q2 now pass; every quality metric improved again. Only Q3 (draw 21.2%, postdraw 10.4% vs 10%) and Q6 (lower bound +0.45 vs 0.2) fail.
+- **Confirmed: the stopping rule's "stop: plateaued" verdict contradicts the data.** The SBR mean fell at every milestone (3.63 -> 3.01 -> 1.77). The rule stops when neither of the last two drops exceeds 2 x combined SE. With SE ~0.63 per milestone, that threshold is ~1.8 chips per doubling: 8k->16k dropped 0.62 (threshold 1.77), 16k->32k dropped 1.25 (threshold 1.85). Over 8k->32k the drop is 1.87 vs threshold 1.81, which is significant. The rule treats "a drop too small to detect at this noise" as "no drop". The code implements the documented rule (C1_DESIGN 3.3) correctly; the rule itself has too little power. Proposal in C1_DESIGN 8.12.
+- Confirmed: the draw phase is the remaining bottleneck. Its median regret updates (7) lag the betting phases (23), its near-uniform share is twice the gate, and its current-vs-average distance did not fall (0.66 -> 0.69 -> 0.69) while the betting phases' did.
+- Inference: in external-sampling MCCFR the current strategy stays noisy even when the average converges, so cur-vs-avg is not expected to reach 0; its trend across phases is the signal, not its level.
+- Inference: the 16k segment's slowness was laptop conditions: this segment ran at ~1,050 s per batch again with more nodes, and the test suite took 133 s (vs 284 s before the 16k run).
+- Not explained: SBR seat 1 repeats disagree by 1.9 chips (+0.71 / +2.64), more than the per-run SE (0.65) suggests. Consistent with the known SBR oscillation (CLAUDE.md, known limitations); not investigated.
