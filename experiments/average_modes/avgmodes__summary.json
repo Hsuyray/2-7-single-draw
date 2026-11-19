@@ -1,0 +1,62 @@
+{
+  "arguments": {
+    "abstraction": "bucket",
+    "bet_sizing": "fast",
+    "iterations": "2000,4000,8000",
+    "label": "avgmodes",
+    "max_draw": 5,
+    "out_dir": "experiments/average_modes",
+    "seed": 42,
+    "stack": 20.0
+  },
+  "milestones": [
+    {
+      "elapsed_s": 1033.8,
+      "iterations": 2000,
+      "nodes": 216974,
+      "nodes_compared": 50220,
+      "unweighted": {
+        "current_vs_uniform": 0.17649860600115524,
+        "simple_vs_uniform": 0.3004636520260392,
+        "tv": 0.22943389853840845
+      },
+      "visit_weighted": {
+        "current_vs_uniform": 0.21865778188354562,
+        "simple_vs_uniform": 0.32586541640677497,
+        "tv": 0.22107536564095362
+      }
+    },
+    {
+      "elapsed_s": 2094.6,
+      "iterations": 4000,
+      "nodes": 287004,
+      "nodes_compared": 87631,
+      "unweighted": {
+        "current_vs_uniform": 0.2183313120159513,
+        "simple_vs_uniform": 0.3152201656155458,
+        "tv": 0.21400657119481556
+      },
+      "visit_weighted": {
+        "current_vs_uniform": 0.27551664087533684,
+        "simple_vs_uniform": 0.3480293019746471,
+        "tv": 0.19726254536167873
+      }
+    },
+    {
+      "elapsed_s": 4338.6,
+      "iterations": 8000,
+      "nodes": 358987,
+      "nodes_compared": 136891,
+      "unweighted": {
+        "current_vs_uniform": 0.25574712454982307,
+        "simple_vs_uniform": 0.32885089974470555,
+        "tv": 0.19507321063684285
+      },
+      "visit_weighted": {
+        "current_vs_uniform": 0.32730464161727574,
+        "simple_vs_uniform": 0.3721314382878429,
+        "tv": 0.16839209465129404
+      }
+    }
+  ]
+}
