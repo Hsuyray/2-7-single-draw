@@ -51,12 +51,17 @@ LATEST_CHECKPOINT_NAME = "strategy_latest.chk.gz"
 
 EVAL_DIR_NAME = "eval"
 
-# Stopping rule (C1_DESIGN 3.3): stop when the gates pass, or when
-# the SBR mean gain did not drop by more than this many combined
-# standard errors over each of the last two doublings.
+# Stopping rule (C1_DESIGN 3.3, revised day74 in 8.12): stop when the
+# gates pass, or when there is positive evidence of a plateau: over the
+# last PLATEAU_DOUBLINGS doublings the SBR mean gain fell by less than
+# PLATEAU_MATERIAL_DROP chips/deal even at the upper end of its
+# PLATEAU_STANDARD_ERRORS confidence bound. A drop too small to detect
+# at the current noise is reported as "continue", not as a plateau.
 PLATEAU_STANDARD_ERRORS = 2.0
 
 PLATEAU_DOUBLINGS = 2
+
+PLATEAU_MATERIAL_DROP = 0.3
 
 
 def empty_manifest() -> dict[str, Any]:
@@ -471,33 +476,24 @@ def stopping_advice(
         -(PLATEAU_DOUBLINGS + 1):
     ]
 
-    for earlier, later in zip(
-        window,
-        window[1:],
+    if any(
+        record["evaluation"]["sbr_mean_gain"] is None
+        for record in window
     ):
-        a = earlier["evaluation"]
-        b = later["evaluation"]
-
-        if (
-            a["sbr_mean_gain"] is None
-            or b["sbr_mean_gain"] is None
-        ):
-            return (
-                "continue: SBR missing in a "
-                "recent evaluation"
-            )
-
-        combined_se = math.sqrt(
-            a["sbr_standard_error"] ** 2
-            + b["sbr_standard_error"] ** 2
+        return (
+            "continue: SBR missing in a "
+            "recent evaluation"
         )
 
-        if (
-            a["sbr_mean_gain"]
-            - b["sbr_mean_gain"]
-            > PLATEAU_STANDARD_ERRORS
-            * combined_se
-        ):
+    # Consecutive pairs, then the whole window (first -> last): a
+    # steady decline can be significant only over several doublings.
+    pairs = list(zip(window, window[1:]))
+    pairs.append((window[0], window[-1]))
+
+    for earlier, later in pairs:
+        drop, combined_se = _sbr_drop(earlier, later)
+
+        if drop > PLATEAU_STANDARD_ERRORS * combined_se:
             return (
                 "continue: SBR gain dropped "
                 "significantly from "
@@ -505,9 +501,40 @@ def stopping_advice(
                 f"{later['iterations']:,}"
             )
 
+    drop, combined_se = _sbr_drop(window[0], window[-1])
+    upper = drop + PLATEAU_STANDARD_ERRORS * combined_se
+
+    if upper < PLATEAU_MATERIAL_DROP:
+        return (
+            "stop: SBR gain plateaued over the "
+            f"last {PLATEAU_DOUBLINGS} milestones "
+            f"(drop {drop:+.2f}, upper bound "
+            f"{upper:.2f} < {PLATEAU_MATERIAL_DROP}); "
+            "look for abstraction problems "
+            "instead of training longer"
+        )
+
     return (
-        "stop: SBR gain plateaued over the "
-        f"last {PLATEAU_DOUBLINGS} milestones; "
-        "look for abstraction problems "
-        "instead of training longer"
+        "continue: SBR too noisy to call a "
+        f"plateau (drop {drop:+.2f} over the last "
+        f"{PLATEAU_DOUBLINGS} milestones, upper "
+        f"bound {upper:.2f} >= "
+        f"{PLATEAU_MATERIAL_DROP}); judge by the "
+        "trend and the low-noise metrics"
+    )
+
+
+def _sbr_drop(
+    earlier: dict[str, Any],
+    later: dict[str, Any],
+) -> tuple[float, float]:
+    a = earlier["evaluation"]
+    b = later["evaluation"]
+
+    return (
+        a["sbr_mean_gain"] - b["sbr_mean_gain"],
+        math.sqrt(
+            a["sbr_standard_error"] ** 2
+            + b["sbr_standard_error"] ** 2
+        ),
     )

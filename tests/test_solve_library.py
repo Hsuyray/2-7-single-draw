@@ -268,12 +268,34 @@ def evaluated_entry(
             "continue: SBR gain dropped",
         ),
         (
+            # Small drops, but too noisy to rule out a material one:
+            # 0.15 + 2 x 0.14 = 0.43 >= 0.3 (day74 rule; was "stop").
             [
                 (8000, "FAIL", 2.5, 0.1),
                 (16000, "FAIL", 2.4, 0.1),
                 (32000, "FAIL", 2.35, 0.1),
             ],
+            "continue: SBR too noisy",
+        ),
+        (
+            # Flat and precise: upper bound 0.01 + 2 x 0.07 < 0.3.
+            [
+                (8000, "FAIL", 1.80, 0.05),
+                (16000, "FAIL", 1.78, 0.05),
+                (32000, "FAIL", 1.79, 0.05),
+            ],
             "stop: SBR gain plateaued",
+        ),
+        (
+            # hu_d5_full_bucket_s20_e70, day73: neither doubling is
+            # significant alone, the 8k -> 32k drop is (1.87 > 1.81).
+            # The day73 rule called this a plateau.
+            [
+                (8000, "FAIL", 3.6310, 0.6235),
+                (16000, "FAIL", 3.0149, 0.6270),
+                (32000, "FAIL", 1.7656, 0.6575),
+            ],
+            "continue: SBR gain dropped significantly from 8,000 to 32,000",
         ),
     ],
 )
