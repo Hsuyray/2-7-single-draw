@@ -262,7 +262,7 @@ python -m scripts.save_training_checkpoint --iterations 2000 --max-draw 5 --abst
 - manifest 的 `status`:`planned` → `training` → `trained` → `released`。設計寫的 `evaluated` 改成記在每個 checkpoint 的 `evaluation` 欄位，因為每個 milestone 各自評估。
 - `release` 要求有 `standard` preset 的評估;gates 不是 PASS 時要加 `--allow-fail`。released 之後 `train` 會拒絕。
 - `train` 預設 `--max-rss-gb 10`(訓練 script 預設 3,`full` 到約 2M 節點時會被擋)。
-- 停止規則(3.3)在 `status` / `evaluate` 只給建議，不會自動停：只看 `standard` 評估;最新一份 PASS → 停;最近兩次 milestone 間的 SBR mean gain 下降都不超過 2 × √(SE₁² + SE₂²) → 停(平台期)。
+- 停止規則(3.3)在 `status` / `evaluate` 只給建議，不會自動停：只看 `standard` 評估;最新一份 PASS → 停。**day74 起(8.12)**:最近兩次加倍中，任一相鄰兩點或頭尾兩點的下降超過 2 × √(SE₁² + SE₂²) → 繼續;頭尾下降的上界(下降 + 2 × 合併 SE)< 0.3 → 停(平台期);其他情況 → 「繼續:SBR 雜訊太大，無法判定平台期」。day73 以前的規則只看相鄰兩點、沒有正面證據就判停。
 - blinds 只支援 1 / 2 / 1.5(訓練 script 寫死);manifest 存了 blinds,不一樣時 `add` / `train` 會拒絕。要支援其他 blinds 要先改訓練 script。
 
 **驗證**
@@ -361,3 +361,26 @@ python -m scripts.solve_library evaluate hu_d5_full_bucket_s20 32000
 - 報告檔名中的 `b50a8627` 是 manifest 裡 16k checkpoint 的 sha256 前 8 碼。
 - 跑完 commit `solutions/manifest.json` 和 `solutions/hu_d5_full_bucket_s20/eval/`。
 - 8k 不需要評估：它的策略和 v2 完全相同(8.8),v2 的報告就是它的結果。
+
+### 8.12 停止規則的檢測力不足(day73 提案;day74 已實作第 1 點)
+
+**[確認] 現象**:32k 評估後,`status` 判定「stop: SBR gain plateaued」,但 SBR 平均值每個 milestone 都在下降(3.63 → 3.01 → 1.77),下界 2.38 → 1.76 → 0.45。
+
+**[確認] 原因**:規則(3.3、`solver/solution_library.stopping_advice`)是「最近兩次加倍，每次的下降都不超過 2 × √(SE₁² + SE₂²) 就停」。standard preset 的 SE 約 0.63,所以每次加倍要降超過約 1.8 chips 才算「有改善」。8k→16k 降 0.62(門檻 1.77)、16k→32k 降 1.25(門檻 1.85),都不顯著;但 8k→32k 降 1.87(門檻 1.81)是顯著的。規則把「雜訊太大、量不出下降」當成「沒有下降」。程式照文件實作，沒有錯;是規則本身檢測力不夠。
+
+**提案**(只改建議文字，不影響訓練或評估結果):
+1. 「平台期」要有**正面證據**:最近兩次加倍的總下降(第一點 → 最後一點)的上界(下降 + 2 × 合併 SE)要小於一個實質門檻(提案 0.3 chips/deal,約 Q6 門檻 0.2 加上量測誤差)。量不出來的時候回報「continue: SBR 雜訊太大，無法判定平台期」,不是「stop」。
+2. 同時看低雜訊的指標:Q3 的均勻策略比例、覆蓋率。它們的 SE 小於 0.1%,只要還在明顯下降就不算平台期。
+- 為什麼有效：規則只在「確實量到停止改善」時才建議停。
+- 怎麼測:`tests/test_solution_library.py` 加這三個 milestone 的真實數字，預期結果是「continue」;再加一組平坦的數字(例如 1.80 / 1.78 / 1.79,SE 0.05),預期是「stop」。
+- 什麼結果代表提案錯了：真實曲線在之後的 milestone 確實停住，但新規則仍然一直建議繼續(要看 64k)。
+
+**檢測力的限制**:SE 0.63 主要來自 1,000 局的驗證(per-run se 0.64–0.67)。要量出每次加倍 0.3 的變化，需要 SE 約 0.1,也就是驗證局數多約 40 倍，在筆電上不實際。所以接近門檻時，判斷主要要靠低雜訊指標和多個 milestone 的趨勢。
+
+**day74 實作(第 1 點)**:`solver/solution_library.stopping_advice`,常數 `PLATEAU_MATERIAL_DROP = 0.3`。
+- 測試(`tests/test_solve_library.py`):
+  - 真實數字(8k / 16k / 32k)→「continue: SBR gain dropped significantly from 8,000 to 32,000」。
+  - 平坦、精確的數字(1.80 / 1.78 / 1.79,SE 0.05)→「stop」。
+  - 原本判停的 2.5 / 2.4 / 2.35(SE 0.1)現在是「continue: SBR too noisy」,這是預期的行為改變。
+- 對 `solutions/manifest.json` 的 `hu_d5_full_bucket_s20_e70`:現在的建議是「continue」(day73 是誤判的「stop」)。
+- 第 2 點(低雜訊指標)還沒做：評估紀錄裡只存了 SBR 的摘要，要加均勻比例欄位才能用。
