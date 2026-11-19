@@ -398,3 +398,17 @@ Reading:
 - Inference: in external-sampling MCCFR the current strategy stays noisy even when the average converges, so cur-vs-avg is not expected to reach 0; its trend across phases is the signal, not its level.
 - Inference: the 16k segment's slowness was laptop conditions: this segment ran at ~1,050 s per batch again with more nodes, and the test suite took 133 s (vs 284 s before the 16k run).
 - Not explained: SBR seat 1 repeats disagree by 1.9 chips (+0.71 / +2.64), more than the per-run SE (0.65) suggests. Consistent with the known SBR oscillation (CLAUDE.md, known limitations); not investigated.
+
+## Average-strategy weighting: current vs simple averaging (day74, cloud)
+
+One external-sampling run recording both averages (`scripts/compare_average_modes.py`, fingerprint identical to the unmodified trainer): `max_draw=5`, bucket, `fast` sizing, stack 20, seed 42; 8,000 iterations in 4,339 s, 358,987 nodes; eval peak RSS 0.6–1.0 GB. A2 `standard`, seed 2027. Reports in `experiments/average_modes/eval/`; design and full table in `docs/proposals/CFR-average-weighting.md` section 7.
+
+| | current 8k | simple 8k |
+|---|---|---|
+| coverage | 94.29% | 94.73% |
+| near-uniform when played (pre / draw / post) | 14.8 / 36.1 / 16.4% | 8.4 / 26.1 / 12.1% |
+| SBR mean | 3.71 ± 0.12 | 3.76 ± 0.07 |
+| vs uniform / vs call_station | +1.48 / +0.46 | +1.82 / +0.73 (± 0.12–0.15) |
+| head-to-head (simple vs current) | | +0.08 ± 0.13 |
+
+Simple averaging is less uniform in every phase and better against the fixed baselines; SBR and head-to-head show no difference (SBR's per-run SE is ~0.6). Nothing got significantly worse. Not falsified; adoption pending.

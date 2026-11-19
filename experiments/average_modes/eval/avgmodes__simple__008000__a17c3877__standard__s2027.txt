@@ -1,0 +1,71 @@
+========================================================================
+CHECKPOINT EVALUATION
+========================================================================
+  checkpoint: avgmodes__simple__008000.chk.gz
+  sha256: a17c3877ce7c64f564c238f8255dc66fb82879dcedda5a27d77389759452e0db
+  format v3, 8,000 iterations, 358,987 strategies
+  abstraction=bucket max_draw=5 draw_action_mode=full bet_sizing=policy [0.33, 0.66, 1.0]
+  preset=standard seed=2027 overridden=-
+
+STATIC
+  invalid strategies: 0
+  predraw_betting   states=   14,482 public=     20 near-uniform= 64.05% deterministic=  6.48%
+  draw              states=   50,099 public=    133 near-uniform= 82.06% deterministic=  0.05%
+  postdraw_betting  states=  294,406 public=  3,168 near-uniform= 59.03% deterministic= 13.57%
+
+COVERAGE (self-play, 20,000 deals, button 0)
+  overall: 94.73% (se 0.08%, 80,878/85,377)
+  predraw_betting    95.12% (45,525/47,862)  near-uniform when played: 8.36%
+  draw               92.27% (23,764/25,754)  near-uniform when played: 26.07%
+  postdraw_betting   98.54% (11,589/11,761)  near-uniform when played: 12.13%
+  deals with any miss: 14.49%; first miss by phase: predraw_betting=1,894, draw=896, postdraw_betting=109
+  action-space mismatches: 0
+  self-play seat 0: +0.6058 ± 0.1014 chips/deal; max zero-sum error 3.55e-15
+  top missing public nodes:
+       790  pot=4.5 bet=2  (root)
+       242  pot=23.5 bet=20  pre: s0 raise 20
+       203  pot=5.5 bet=2  pre: s0 call
+       185  pot=11 bet=7.5  pre: s0 raise 7.5
+       148  pot=40 bet=20  pre: s0 raise 20, s1 call
+       144  pot=9.1 bet=5.6  pre: s0 raise 5.6
+       121  pot=5.5 bet=2  pre: s0 call, s1 check
+       107  pot=22 bet=18.5  pre: s0 call, s1 raise 18.5
+       101  pot=16.5 bet=7.5  pre: s0 raise 7.5, s1 call
+        94  pot=38.5 bet=18.5  pre: s0 raise 7.5, s1 raise 18.5, s0 call
+
+BUTTON 1 DIAGNOSTIC (2,000 deals): coverage 0.00%
+
+SBR PROXY (2 repeats/seat, 1,000 response deals, 1,000 validation deals, <= 3 sweeps, grouping coarse)
+  seat_0: mean gain +2.9961 sd 0.2611 [+2.8115, +3.1807]
+  seat_1: mean gain +4.5186 sd 0.0762 [+4.4648, +4.5725]
+  mean over seats: +3.7574 ± 0.0654 (se over repeats)
+  per-run gain se (validation noise): 0.6137..0.6567
+  responder validation decisions from fallback: 0.09%..0.94%
+  proxy only; NOT exploitability
+
+BASELINES (duplicate, 5,000 deal pairs)
+  vs uniform       +1.8244 ± 0.1225 chips/deal (profile coverage 95.07%)
+  vs call_station  +0.7340 ± 0.1466 chips/deal (profile coverage 93.74%)
+
+PREVIOUS: avgmodes__current__008000.chk.gz
+  visit-weighted L1: 0.20480960878470367
+  predraw_betting   weighted=0.15918682901722214 median=0.0 shared=14,482
+  draw              weighted=0.23154758816709042 median=0.0 shared=50,099
+  postdraw_betting  weighted=0.3292013342891957 median=0.0 shared=294,406
+  head-to-head: +0.0844 ± 0.1333 chips/deal for the current checkpoint
+
+current-vs-average: unavailable (checkpoint has no regrets)
+
+GATES v2: FAIL
+  H1  PASS     No NaN, inf, negative or non-normalized stored strategy
+  H2  PASS     Stored action sets equal the rebuilt legal actions at every played state
+  H3  PASS     Every simulated deal is zero-sum
+  H4  EXTERNAL Same checkpoint and arguments give an identical report
+  Q1  FAIL     Self-play coverage (button 0): overall >= 97%, every phase >= 95%  failing: draw
+  Q2  FAIL     Deals with any missing decision <= 10%
+  Q3  FAIL     Played decisions using a near-uniform stored strategy, every phase <= 10%  failing: draw, postdraw_betting
+  Q4  PASS     Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only
+  Q5  PASS     Does not lose to the previous compatible checkpoint (utility >= -2 SE)
+  Q6  FAIL     SBR exploitability lower bound: mean gain - 2 SE <= 0.2 chips/deal (can only reject)
+
+TIMING  load_s=5.4  static_s=1.3  coverage_s=70.8  button1_s=5.8  sbr_s=3362.1  baselines_s=81.0  previous_load_s=6.5  previous_s=38.8  peak_rss_gb=1.012
