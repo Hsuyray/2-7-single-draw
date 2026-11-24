@@ -23,6 +23,7 @@ from solver.bet_sizing import (  # noqa: E402
 )
 from solver.cfr_trainer import (  # noqa: E402
     AVERAGE_MODES,
+    ITERATION_WEIGHTINGS,
     CFRTrainer,
 )
 from solver.game_state import (  # noqa: E402
@@ -130,6 +131,19 @@ def parse_args(
             "(Lanctot et al. 2009; "
             "docs/proposals/"
             "CFR-average-weighting.md)."
+        ),
+    )
+
+    parser.add_argument(
+        "--iteration-weighting",
+        choices=ITERATION_WEIGHTINGS,
+        default="uniform",
+        help=(
+            "uniform (the original, default) "
+            "or linear: iteration t adds t "
+            "times its regrets and average "
+            "weight (Linear CFR; docs/"
+            "proposals/CFR-linear-weighting.md)."
         ),
     )
 
@@ -387,6 +401,15 @@ def training_config(
             if args.average_mode != "reach"
             else {}
         ),
+        **(
+            {
+                "iteration_weighting": (
+                    args.iteration_weighting
+                )
+            }
+            if args.iteration_weighting != "uniform"
+            else {}
+        ),
     }
 
 
@@ -523,6 +546,9 @@ def main(
             ),
             random_seed=args.seed,
             average_mode=args.average_mode,
+            iteration_weighting=(
+                args.iteration_weighting
+            ),
             game_config=shared_game_config,
         )
 
@@ -649,6 +675,11 @@ def main(
     print(
         f"  average mode: "
         f"{args.average_mode}"
+    )
+
+    print(
+        f"  iteration weighting: "
+        f"{args.iteration_weighting}"
     )
 
     print(

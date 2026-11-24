@@ -49,6 +49,13 @@ CONFIGS = {
         "--bet-sizing", "fast",
         "--average-mode", "simple",
     ],
+    "bucket_maxdraw5_linear_cfr": [
+        "--max-draw", "5",
+        "--abstraction", "bucket",
+        "--bet-sizing", "fast",
+        "--average-mode", "simple",
+        "--iteration-weighting", "linear",
+    ],
 }
 
 
@@ -220,6 +227,7 @@ def test_rss_stop_saves_state_and_resume_matches(
         ["--bet-sizing", "full"],
         ["--seed-mode", "fixed"],
         ["--average-mode", "simple"],
+        ["--iteration-weighting", "linear"],
     ],
 )
 def test_resume_with_different_settings_is_refused(

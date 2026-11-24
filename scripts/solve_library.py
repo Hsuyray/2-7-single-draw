@@ -144,6 +144,10 @@ def parse_args(
         choices=("reach", "simple"),
     )
     add.add_argument(
+        "--iteration-weighting", default="uniform",
+        choices=("uniform", "linear"),
+    )
+    add.add_argument(
         "--note", default="",
     )
 
@@ -261,6 +265,7 @@ def command_add(
         traversal_mode=args.traversal_mode,
         draw_action_mode=args.draw_action_mode,
         average_mode=args.average_mode,
+        iteration_weighting=args.iteration_weighting,
         note=args.note,
     )
 
@@ -635,7 +640,9 @@ def format_solution(
             f"{abstraction['traversal_mode']}, "
             f"draw {abstraction['draw_action_mode']}, "
             f"average "
-            f"{abstraction.get('average_mode', 'reach')}; "
+            f"{abstraction.get('average_mode', 'reach')}, "
+            f"weighting "
+            f"{abstraction.get('iteration_weighting', 'uniform')}; "
             f"seed {entry['seed']} "
             f"({entry['seed_mode']})"
         ),

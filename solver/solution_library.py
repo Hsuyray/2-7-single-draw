@@ -149,6 +149,7 @@ def new_solution_entry(
     traversal_mode: str = "external_sampling",
     draw_action_mode: str = "auto",
     average_mode: str = "reach",
+    iteration_weighting: str = "uniform",
     note: str = "",
 ) -> dict[str, Any]:
     if stack <= 0:
@@ -187,6 +188,7 @@ def new_solution_entry(
             "traversal_mode": traversal_mode,
             "draw_action_mode": draw_action_mode,
             "average_mode": average_mode,
+            "iteration_weighting": iteration_weighting,
         },
         "seed": seed,
         "seed_mode": seed_mode,
@@ -282,6 +284,8 @@ def training_argv(
         # they were trained with "reach".
         "--average-mode",
         abstraction.get("average_mode", "reach"),
+        "--iteration-weighting",
+        abstraction.get("iteration_weighting", "uniform"),
     ]
 
 

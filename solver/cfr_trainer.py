@@ -98,6 +98,27 @@ AVERAGE_MODES: tuple[str, ...] = (
 )
 
 
+# How much each iteration counts (docs/proposals/
+# CFR-linear-weighting.md):
+#
+# "uniform": every iteration's regrets and average-strategy
+#            contributions count the same. The original behaviour
+#            and the default.
+#
+# "linear":  iteration t (1-based) contributes t times its regrets
+#            and t times its average-strategy weight (Linear CFR,
+#            Brown & Sandholm 2019).
+IterationWeighting = Literal[
+    "uniform",
+    "linear",
+]
+
+ITERATION_WEIGHTINGS: tuple[str, ...] = (
+    "uniform",
+    "linear",
+)
+
+
 @dataclass
 class CFRTrainer:
     max_draw: int = 3
@@ -131,6 +152,8 @@ class CFRTrainer:
     random_seed: int | None = None
 
     average_mode: AverageMode = "reach"
+
+    iteration_weighting: IterationWeighting = "uniform"
 
     game_config: (
         GameConfig
@@ -193,6 +216,26 @@ class CFRTrainer:
                 "external sampling: full "
                 "traversal has no sampled "
                 "opponent nodes."
+            )
+
+        if (
+            self.iteration_weighting
+            not in ITERATION_WEIGHTINGS
+        ):
+            raise ValueError(
+                "Iteration weighting must be "
+                "'uniform' or 'linear'."
+            )
+
+        if (
+            self.iteration_weighting == "linear"
+            and self.traversal_mode
+            != "external_sampling"
+        ):
+            raise ValueError(
+                "Linear iteration weighting is "
+                "only implemented for external "
+                "sampling."
             )
 
         if self.max_draw < 0:
@@ -499,7 +542,9 @@ class CFRTrainer:
         ):
             if self.average_mode == "simple":
                 node.accumulate_strategy(
-                    realization_weight=1.0
+                    realization_weight=(
+                        self._iteration_weight()
+                    )
                 )
 
             sampled_action = (
@@ -531,7 +576,8 @@ class CFRTrainer:
         if self.average_mode == "reach":
             node.accumulate_strategy(
                 realization_weight=(
-                    traverser_reach
+                    self._iteration_weight()
+                    * traverser_reach
                 )
             )
 
@@ -572,8 +618,10 @@ class CFRTrainer:
                 * action_utility
             )
 
+        weight = self._iteration_weight()
+
         regrets = {
-            action: (
+            action: weight * (
                 action_utilities[action]
                 - node_utility
             )
@@ -585,6 +633,20 @@ class CFRTrainer:
         )
 
         return node_utility
+
+    def _iteration_weight(self) -> float:
+        """
+        Weight of the iteration in progress: 1.0 under uniform
+        weighting (multiplying by 1.0 is exact, so the original
+        results are unchanged), t = completed_iterations + 1 under
+        linear weighting.
+        """
+        if self.iteration_weighting == "linear":
+            return float(
+                self.completed_iterations + 1
+            )
+
+        return 1.0
 
     def _legal_actions(
         self,
