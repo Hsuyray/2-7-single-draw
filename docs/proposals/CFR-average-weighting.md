@@ -88,3 +88,21 @@ A2 評估:
 1. 在 trainer 加 `average_mode`("reach" = 目前，"simple"),預設維持 "reach",所以既有指紋和測試不變;C1 manifest 記錄這個設定。
 2. 加單元測試(第 5 節第 1 點)和指紋測試(兩種模式 regret 表相同)。
 3. 不為了這一項單獨重訓 C1;先在雲端用同樣的小實驗做 Linear CFR(第 2 項),兩者都通過後，C1 用新設定重訓一次。
+
+## 9. 已實作(day75,使用者 day75 同意採用)
+- `CFRTrainer.average_mode`:`"reach"`(原本的方式，預設)或 `"simple"`。`"simple"` 只能配 external sampling(full traversal 沒有抽樣的對手節點，會直接報錯)。
+- `scripts/save_training_checkpoint.py --average-mode {reach,simple}`。只有非預設值才寫進 training state 的 config,所以 day75 之前存的 state(全部是 reach)照樣能續跑;用不同的 average mode 續跑會被拒絕。
+- C1:`solve_library add --average-mode`,manifest 的 `abstraction.average_mode`。舊的 entry 沒有這個欄位，視為 `reach`。
+- checkpoint 格式(v3,凍結)**沒有改**,所以 checkpoint 檔本身不記錄 average mode;看 manifest 或 training state。
+- 預設維持 `reach`:預設路徑的固定 seed 指紋和修改前完全相同(`scripts.fingerprint_node_store`:md5_bucket_40 11,259 節點 `3adfdeef…`,md2_exact_15 1,604 節點 `d2a3031b…`)。
+- `simple` 模式下 `strategy_update_count` 數的是「當對手被走到的次數」,不是 traverser 的次數。
+
+測試(`tests/test_average_mode.py`,`tests/test_training_run.py`):
+- 明確指定 `reach` 和預設的指紋相同。
+- `simple` 的 regret 表、節點和順序和 `reach` 完全相同，只有平均不同。
+- `simple` 的 strategy sums 和 day74 實驗腳本的旁表**逐位元相同**(所以第 7 節的實驗結果就是這個實作的結果)。
+- `simple` 每次累積權重 1:`strategy_weight_sum == strategy_update_count`。
+- `--average-mode simple` 中斷再續跑 = 一次跑完;換 average mode 續跑會被拒絕。
+- 第 5 節第 1 點(手算期望權重的小例子)沒有做：遊戲沒有夠小的子樹可以手算;改用上面「和實驗旁表逐位元相同」加上推導(第 2–3 節)。
+
+下一步：第 2 項 Linear CFR,用同樣的雲端小實驗、以 `simple` 為基準比較。兩項都有結論後，C1 才新增一個解從 0 重訓。

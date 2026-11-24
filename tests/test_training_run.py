@@ -43,6 +43,12 @@ CONFIGS = {
         "--abstraction", "bucket",
         "--bet-sizing", "fast",
     ],
+    "bucket_maxdraw5_simple_average": [
+        "--max-draw", "5",
+        "--abstraction", "bucket",
+        "--bet-sizing", "fast",
+        "--average-mode", "simple",
+    ],
 }
 
 
@@ -213,6 +219,7 @@ def test_rss_stop_saves_state_and_resume_matches(
         ["--seed", "43"],
         ["--bet-sizing", "full"],
         ["--seed-mode", "fixed"],
+        ["--average-mode", "simple"],
     ],
 )
 def test_resume_with_different_settings_is_refused(

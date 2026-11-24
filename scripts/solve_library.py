@@ -140,6 +140,10 @@ def parse_args(
         choices=("auto", "full", "candidate"),
     )
     add.add_argument(
+        "--average-mode", default="reach",
+        choices=("reach", "simple"),
+    )
+    add.add_argument(
         "--note", default="",
     )
 
@@ -256,6 +260,7 @@ def command_add(
         seed_mode=args.seed_mode,
         traversal_mode=args.traversal_mode,
         draw_action_mode=args.draw_action_mode,
+        average_mode=args.average_mode,
         note=args.note,
     )
 
@@ -628,7 +633,9 @@ def format_solution(
             f"{abstraction['abstraction']}, "
             f"sizing {abstraction['bet_sizing']}, "
             f"{abstraction['traversal_mode']}, "
-            f"draw {abstraction['draw_action_mode']}; "
+            f"draw {abstraction['draw_action_mode']}, "
+            f"average "
+            f"{abstraction.get('average_mode', 'reach')}; "
             f"seed {entry['seed']} "
             f"({entry['seed_mode']})"
         ),

@@ -22,6 +22,7 @@ from solver.bet_sizing import (  # noqa: E402
     BetSizingPolicy,
 )
 from solver.cfr_trainer import (  # noqa: E402
+    AVERAGE_MODES,
     CFRTrainer,
 )
 from solver.game_state import (  # noqa: E402
@@ -116,6 +117,20 @@ def parse_args(
             "external_sampling",
         ),
         default="external_sampling",
+    )
+
+    parser.add_argument(
+        "--average-mode",
+        choices=AVERAGE_MODES,
+        default="reach",
+        help=(
+            "How external sampling accumulates "
+            "the average strategy: reach (the "
+            "original, default) or simple "
+            "(Lanctot et al. 2009; "
+            "docs/proposals/"
+            "CFR-average-weighting.md)."
+        ),
     )
 
     parser.add_argument(
@@ -364,6 +379,14 @@ def training_config(
         "bet_sizing": args.bet_sizing,
         "seed": args.seed,
         "seed_mode": args.seed_mode,
+        # Only recorded when not the default, so training states
+        # saved before the option existed (all "reach") still
+        # resume.
+        **(
+            {"average_mode": args.average_mode}
+            if args.average_mode != "reach"
+            else {}
+        ),
     }
 
 
@@ -499,6 +522,7 @@ def main(
                 args.draw_action_mode
             ),
             random_seed=args.seed,
+            average_mode=args.average_mode,
             game_config=shared_game_config,
         )
 
@@ -620,6 +644,11 @@ def main(
     print(
         f"  traversal: "
         f"{args.traversal_mode}"
+    )
+
+    print(
+        f"  average mode: "
+        f"{args.average_mode}"
     )
 
     print(

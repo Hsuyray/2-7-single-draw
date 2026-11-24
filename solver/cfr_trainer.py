@@ -75,6 +75,29 @@ DrawActionModeSetting = Literal[
 ]
 
 
+# How external sampling accumulates the average strategy
+# (docs/proposals/CFR-average-weighting.md):
+#
+# "reach":  at the traverser's own nodes, weight = own reach.
+#           Its expected weight also carries the opponent's reach.
+#           The original behaviour and the default.
+#
+# "simple": at the opponent's (sampled) nodes, add the current
+#           strategy with weight 1 (Lanctot et al. 2009 simple
+#           averaging). Expected weight = own reach x chance, the
+#           weighting CFR's average-strategy guarantee assumes.
+#           Regrets, sampling and node creation are unchanged.
+AverageMode = Literal[
+    "reach",
+    "simple",
+]
+
+AVERAGE_MODES: tuple[str, ...] = (
+    "reach",
+    "simple",
+)
+
+
 @dataclass
 class CFRTrainer:
     max_draw: int = 3
@@ -106,6 +129,8 @@ class CFRTrainer:
     ) = "auto"
 
     random_seed: int | None = None
+
+    average_mode: AverageMode = "reach"
 
     game_config: (
         GameConfig
@@ -150,6 +175,24 @@ class CFRTrainer:
                 "Draw action mode must be "
                 "'auto', 'full', or "
                 "'candidate'."
+            )
+
+        if self.average_mode not in AVERAGE_MODES:
+            raise ValueError(
+                "Average mode must be "
+                "'reach' or 'simple'."
+            )
+
+        if (
+            self.average_mode == "simple"
+            and self.traversal_mode
+            != "external_sampling"
+        ):
+            raise ValueError(
+                "Simple averaging needs "
+                "external sampling: full "
+                "traversal has no sampled "
+                "opponent nodes."
             )
 
         if self.max_draw < 0:
@@ -454,6 +497,11 @@ class CFRTrainer:
             acting_seat
             != traversing_seat
         ):
+            if self.average_mode == "simple":
+                node.accumulate_strategy(
+                    realization_weight=1.0
+                )
+
             sampled_action = (
                 self._sample_action(
                     actions=actions,
@@ -480,11 +528,12 @@ class CFRTrainer:
                 )
             )
 
-        node.accumulate_strategy(
-            realization_weight=(
-                traverser_reach
+        if self.average_mode == "reach":
+            node.accumulate_strategy(
+                realization_weight=(
+                    traverser_reach
+                )
             )
-        )
 
         action_utilities: dict[
             SolverAction,

@@ -148,6 +148,7 @@ def new_solution_entry(
     seed_mode: str = "sequential",
     traversal_mode: str = "external_sampling",
     draw_action_mode: str = "auto",
+    average_mode: str = "reach",
     note: str = "",
 ) -> dict[str, Any]:
     if stack <= 0:
@@ -185,6 +186,7 @@ def new_solution_entry(
             "bet_sizing": bet_sizing,
             "traversal_mode": traversal_mode,
             "draw_action_mode": draw_action_mode,
+            "average_mode": average_mode,
         },
         "seed": seed,
         "seed_mode": seed_mode,
@@ -276,6 +278,10 @@ def training_argv(
         abstraction["draw_action_mode"],
         "--seed", str(entry["seed"]),
         "--seed-mode", entry["seed_mode"],
+        # Entries written before day75 have no average_mode:
+        # they were trained with "reach".
+        "--average-mode",
+        abstraction.get("average_mode", "reach"),
     ]
 
 
