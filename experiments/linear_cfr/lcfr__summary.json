@@ -1,0 +1,26 @@
+{
+  "arguments": {
+    "abstraction": "bucket",
+    "average_mode": "simple",
+    "bet_sizing": "fast",
+    "iteration_weighting": "linear",
+    "iterations": "2000,8000",
+    "label": "lcfr",
+    "max_draw": 5,
+    "out_dir": "experiments/linear_cfr",
+    "seed": 42,
+    "stack": 20.0
+  },
+  "milestones": [
+    {
+      "elapsed_s": 1209.0,
+      "iterations": 2000,
+      "nodes": 217834
+    },
+    {
+      "elapsed_s": 5252.9,
+      "iterations": 8000,
+      "nodes": 364825
+    }
+  ]
+}

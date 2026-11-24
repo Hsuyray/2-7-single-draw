@@ -1,0 +1,71 @@
+========================================================================
+CHECKPOINT EVALUATION
+========================================================================
+  checkpoint: lcfr__002000.chk.gz
+  sha256: e22d2713de4eb8d02e9ff7bb2aca6e7bc94da25b4e710ee87cb0f59bc37da17e
+  format v3, 2,000 iterations, 217,834 strategies
+  abstraction=bucket max_draw=5 draw_action_mode=full bet_sizing=policy [0.33, 0.66, 1.0]
+  preset=standard seed=2027 overridden=-
+
+STATIC
+  invalid strategies: 0
+  predraw_betting   states=    7,620 public=     20 near-uniform= 71.96% deterministic=  5.43%
+  draw              states=   22,728 public=    133 near-uniform= 89.78% deterministic=  0.03%
+  postdraw_betting  states=  187,486 public=  3,160 near-uniform= 79.11% deterministic=  8.49%
+
+COVERAGE (self-play, 20,000 deals, button 0)
+  overall: 83.36% (se 0.13%, 67,599/81,097)
+  predraw_betting    85.22% (40,456/47,471)  near-uniform when played: 20.56%
+  draw               76.28% (17,250/22,614)  near-uniform when played: 49.82%
+  postdraw_betting   89.84% (9,893/11,012)  near-uniform when played: 49.58%
+  deals with any miss: 38.30%; first miss by phase: predraw_betting=5,428, draw=1,887, postdraw_betting=344
+  action-space mismatches: 0
+  self-play seat 0: +0.7361 ± 0.0943 chips/deal; max zero-sum error 3.55e-15
+  top missing public nodes:
+     2,530  pot=4.5 bet=2  (root)
+       790  pot=23.5 bet=20  pre: s0 raise 20
+       589  pot=11 bet=7.5  pre: s0 raise 7.5
+       562  pot=5.5 bet=2  pre: s0 call
+       530  pot=40 bet=20  pre: s0 raise 20, s1 call
+       483  pot=9.1 bet=5.6  pre: s0 raise 5.6
+       364  pot=27.5 bet=18.5  pre: s0 raise 7.5, s1 raise 18.5
+       350  pot=16.5 bet=7.5  pre: s0 raise 7.5, s1 call
+       282  pot=5.5 bet=2  pre: s0 call, s1 check
+       254  pot=38.5 bet=18.5  pre: s0 raise 7.5, s1 raise 18.5, s0 call
+
+BUTTON 1 DIAGNOSTIC (2,000 deals): coverage 0.00%
+
+SBR PROXY (2 repeats/seat, 1,000 response deals, 1,000 validation deals, <= 3 sweeps, grouping coarse)
+  seat_0: mean gain +3.4642 sd 0.0410 [+3.4352, +3.4932]
+  seat_1: mean gain +4.4968 sd 0.7111 [+3.9940, +4.9997]
+  mean over seats: +3.9805 ± 0.2659 (se over repeats)
+  per-run gain se (validation noise): 0.5940..0.6358
+  responder validation decisions from fallback: 0.14%..1.03%
+  proxy only; NOT exploitability
+
+BASELINES (duplicate, 5,000 deal pairs)
+  vs uniform       +1.0398 ± 0.1172 chips/deal (profile coverage 83.90%)
+  vs call_station  -0.0446 ± 0.1445 chips/deal (profile coverage 76.16%)
+
+PREVIOUS: avgmodes__simple__002000.chk.gz
+  visit-weighted L1: 0.6645732996663649
+  predraw_betting   weighted=0.7045456795011215 median=0.0 shared=6,106
+  draw              weighted=0.5820222363895914 median=0.0 shared=11,259
+  postdraw_betting  weighted=0.6216598293546555 median=0.0 shared=129,100
+  head-to-head: +0.1132 ± 0.1301 chips/deal for the current checkpoint
+
+current-vs-average: unavailable (checkpoint has no regrets)
+
+GATES v2: FAIL
+  H1  PASS     No NaN, inf, negative or non-normalized stored strategy
+  H2  PASS     Stored action sets equal the rebuilt legal actions at every played state
+  H3  PASS     Every simulated deal is zero-sum
+  H4  EXTERNAL Same checkpoint and arguments give an identical report
+  Q1  FAIL     Self-play coverage (button 0): overall >= 97%, every phase >= 95%  failing: predraw_betting, draw, postdraw_betting
+  Q2  FAIL     Deals with any missing decision <= 10%
+  Q3  FAIL     Played decisions using a near-uniform stored strategy, every phase <= 10%  failing: predraw_betting, draw, postdraw_betting
+  Q4  PASS     Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only
+  Q5  PASS     Does not lose to the previous compatible checkpoint (utility >= -2 SE)
+  Q6  FAIL     SBR exploitability lower bound: mean gain - 2 SE <= 0.2 chips/deal (can only reject)
+
+TIMING  load_s=2.8  static_s=0.8  coverage_s=78.2  button1_s=6.7  sbr_s=3927.0  baselines_s=96.5  previous_load_s=4.0  previous_s=43.1  peak_rss_gb=0.577
