@@ -44,4 +44,24 @@ LCFR 的理論收斂界和 CFR 同階，實務上(文獻的 poker 實驗)比 CFR
 - 中斷再續跑 = 一次跑完;換 iteration weighting 續跑會被拒絕。
 
 ## 7. 實驗結果
-(跑完後填。)設定:fast sizing、`max_draw=5`、bucket、stack 20、seed 42,`simple + linear`,2k / 8k;基準 = day74 的 `avgmodes__simple__*`(同樣牌局序列)。
+設定:fast sizing、`max_draw=5`、bucket、stack 20、seed 42,`simple + linear`,2k / 8k;基準 = day74 的 `avgmodes__simple__*`(同樣牌局序列)。
+
+訓練(雲端):2k 1,209 s / 217,834 節點;8k 5,253 s / 364,825 節點(simple + uniform 8k:358,987)。A2 `standard`、seed 2027,報告在 `experiments/linear_cfr/eval/`;對打用 `--previous` = 同迭代數的 simple + uniform(正值 = linear 贏)。
+
+| | simple 2k | linear 2k | simple 8k | linear 8k |
+|---|---|---|---|---|
+| coverage | 83.21% | 83.36% | 94.73% | 94.88% |
+| 近均勻(實際打到;pre / draw / post) | 20.7 / 50.8 / 48.8% | 20.6 / 49.8 / 49.6% | 8.36 / 26.07 / 12.13% | 8.38 / 25.84 / 11.46% |
+| deals with any miss | | | 14.49% | 14.34% |
+| SBR mean over seats | 3.96 ± 0.08 | 3.98 ± 0.27 | 3.76 ± 0.07 | 2.84 ± 0.97 |
+| vs uniform | +0.84 | +1.04 | +1.82 ± 0.12 | +1.80 ± 0.12 |
+| vs call_station | +0.28 | −0.04 | +0.73 ± 0.15 | +0.61 ± 0.15 |
+| 對打(linear vs simple) | | +0.11 ± 0.13 | | −0.06 ± 0.14 |
+
+判讀:
+- **證據**:8k 時近均勻比例只差 0.0 / −0.2 / −0.7 個百分點(postdraw 約 12,500 個決策，比例 SE 約 0.3 點，所以 −0.7 也只在 2 SE 邊緣)。baselines 和對打的差都在 1 SE 內。
+- SBR 8k 低了 0.9,但 linear 的 seat_1 兩次重複差很多(sd 1.89),SE 0.97,差異不到 1 SE;SBR 每次執行本身的驗證雜訊約 0.6。不能算比較好。
+- 沒有任何一項顯著變差(> 2 SE)。
+- **結論(依第 5 節)**:近均勻沒有實質降低，而且 SBR / 對打 / baselines 都沒有可偵測的改善 → **不採用**(在 8k 的規模)。程式保留，預設仍是 uniform。
+- **可能原因(假說)**:linear 的好處是把早期雜訊的 regret 降權；但 draw 節點在 8k 時被更新的次數很少(e70 32k 的中位數也只有 7),權重 t 對只被訪問幾次的節點幾乎沒有作用。瓶頸是「每個節點的取樣次數」,不是「早期迭代的權重」。這是假說，未驗證。
+- 長訓練(32k 以上)下 linear 可能才有差，但要成對再訓練兩個 32k(各約 6 小時以上)才能判斷，目前不值得。

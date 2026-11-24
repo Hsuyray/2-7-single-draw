@@ -1,3 +1,85 @@
 Loading experiments/linear_cfr/lcfr__008000.chk.gz ...
 Static statistics ...
 Coverage (20,000 deals, button 0) ...
+Coverage diagnostic (2,000 deals, button 1) ...
+Sampled best response (2 repeats per seat) ...
+  SBR seat 0 repeat 0: gain +3.1630 (se 0.6127) in 982.5s
+  SBR seat 1 repeat 0: gain +4.4727 (se 0.6339) in 1220.3s
+  SBR seat 0 repeat 1: gain +1.9494 (se 0.6486) in 966.7s
+  SBR seat 1 repeat 1: gain +1.7943 (se 0.6392) in 1162.5s
+Baselines (5,000 deal pairs each) ...
+Loading experiments/average_modes/avgmodes__simple__008000.chk.gz ...
+Distance to previous ...
+Head-to-head (5,000 deal pairs) ...
+========================================================================
+CHECKPOINT EVALUATION
+========================================================================
+  checkpoint: lcfr__008000.chk.gz
+  sha256: f5b7cc2834cc7ac12ee9ced78b84f699aa5d749ca6e8d1281b02a8799293dc66
+  format v3, 8,000 iterations, 364,825 strategies
+  abstraction=bucket max_draw=5 draw_action_mode=full bet_sizing=policy [0.33, 0.66, 1.0]
+  preset=standard seed=2027 overridden=-
+
+STATIC
+  invalid strategies: 0
+  predraw_betting   states=   14,594 public=     20 near-uniform= 62.35% deterministic=  7.22%
+  draw              states=   52,075 public=    133 near-uniform= 81.04% deterministic=  0.08%
+  postdraw_betting  states=  298,156 public=  3,168 near-uniform= 56.50% deterministic= 14.37%
+
+COVERAGE (self-play, 20,000 deals, button 0)
+  overall: 94.88% (se 0.07%, 82,803/87,272)
+  predraw_betting    95.28% (45,886/48,158)  near-uniform when played: 8.38%
+  draw               92.31% (24,512/26,554)  near-uniform when played: 25.84%
+  postdraw_betting   98.77% (12,405/12,560)  near-uniform when played: 11.46%
+  deals with any miss: 14.34%; first miss by phase: predraw_betting=1,848, draw=930, postdraw_betting=89
+  action-space mismatches: 0
+  self-play seat 0: +0.7265 ± 0.1025 chips/deal; max zero-sum error 3.55e-15
+  top missing public nodes:
+       790  pot=4.5 bet=2  (root)
+       219  pot=23.5 bet=20  pre: s0 raise 20
+       186  pot=11 bet=7.5  pre: s0 raise 7.5
+       186  pot=9.1 bet=5.6  pre: s0 raise 5.6
+       184  pot=5.5 bet=2  pre: s0 call
+       140  pot=40 bet=20  pre: s0 raise 20, s1 call
+       118  pot=16.5 bet=7.5  pre: s0 raise 7.5, s1 call
+       106  pot=5.5 bet=2  pre: s0 call, s1 check
+       100  pot=38.5 bet=18.5  pre: s0 raise 7.5, s1 raise 18.5, s0 call
+        97  pot=22 bet=18.5  pre: s0 call, s1 raise 18.5
+
+BUTTON 1 DIAGNOSTIC (2,000 deals): coverage 0.00%
+
+SBR PROXY (2 repeats/seat, 1,000 response deals, 1,000 validation deals, <= 3 sweeps, grouping coarse)
+  seat_0: mean gain +2.5562 sd 0.8581 [+1.9494, +3.1630]
+  seat_1: mean gain +3.1335 sd 1.8939 [+1.7943, +4.4727]
+  mean over seats: +2.8448 ± 0.9730 (se over repeats)
+  per-run gain se (validation noise): 0.6127..0.6486
+  responder validation decisions from fallback: 0.31%..0.68%
+  proxy only; NOT exploitability
+
+BASELINES (duplicate, 5,000 deal pairs)
+  vs uniform       +1.8044 ± 0.1225 chips/deal (profile coverage 95.14%)
+  vs call_station  +0.6113 ± 0.1485 chips/deal (profile coverage 93.65%)
+
+PREVIOUS: avgmodes__simple__008000.chk.gz
+  visit-weighted L1: 0.7733691297068788
+  predraw_betting   weighted=0.7534453914506813 median=0.10033887930899218 shared=12,302
+  draw              weighted=0.8236123295489762 median=0.0 shared=31,258
+  postdraw_betting  weighted=0.7543550174075766 median=0.23076923076923078 shared=253,009
+  head-to-head: -0.0575 ± 0.1357 chips/deal for the current checkpoint
+
+current-vs-average: unavailable (checkpoint has no regrets)
+
+GATES v2: FAIL
+  H1  PASS     No NaN, inf, negative or non-normalized stored strategy
+  H2  PASS     Stored action sets equal the rebuilt legal actions at every played state
+  H3  PASS     Every simulated deal is zero-sum
+  H4  EXTERNAL Same checkpoint and arguments give an identical report
+  Q1  FAIL     Self-play coverage (button 0): overall >= 97%, every phase >= 95%  failing: draw
+  Q2  FAIL     Deals with any missing decision <= 10%
+  Q3  FAIL     Played decisions using a near-uniform stored strategy, every phase <= 10%  failing: draw, postdraw_betting
+  Q4  PASS     Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only
+  Q5  PASS     Does not lose to the previous compatible checkpoint (utility >= -2 SE)
+  Q6  FAIL     SBR exploitability lower bound: mean gain - 2 SE <= 0.2 chips/deal (can only reject)
+
+TIMING  load_s=5.9  static_s=1.7  coverage_s=90.4  button1_s=7.6  sbr_s=4332.0  baselines_s=99.5  previous_load_s=7.2  previous_s=46.4  peak_rss_gb=1.026
+Wrote experiments/linear_cfr/eval/lcfr__008000__f5b7cc28__standard__s2027.json and experiments/linear_cfr/eval/lcfr__008000__f5b7cc28__standard__s2027.txt

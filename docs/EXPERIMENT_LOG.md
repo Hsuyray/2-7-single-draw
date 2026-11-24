@@ -411,4 +411,18 @@ One external-sampling run recording both averages (`scripts/compare_average_mode
 | vs uniform / vs call_station | +1.48 / +0.46 | +1.82 / +0.73 (± 0.12–0.15) |
 | head-to-head (simple vs current) | | +0.08 ± 0.13 |
 
-Simple averaging is less uniform in every phase and better against the fixed baselines; SBR and head-to-head show no difference (SBR's per-run SE is ~0.6). Nothing got significantly worse. Not falsified; adoption pending.
+Simple averaging is less uniform in every phase and better against the fixed baselines; SBR and head-to-head show no difference (SBR's per-run SE is ~0.6). Nothing got significantly worse. Not falsified; adopted (user, day75).
+
+## Linear CFR: simple + linear vs simple + uniform (day75, cloud)
+
+`scripts/train_weighting_variant.py` (same deal sequence as the day74 run, so simple + uniform is the day74 simple checkpoint): `max_draw=5`, bucket, `fast` sizing, stack 20, seed 42, `--average-mode simple --iteration-weighting linear`. 2k in 1,209 s / 217,834 nodes; 8k in 5,253 s / 364,825 nodes (uniform: 358,987); eval peak RSS 1.03 GB. A2 `standard`, seed 2027, `--previous` = simple + uniform at the same iteration count. Reports in `experiments/linear_cfr/eval/`; full table in `docs/proposals/CFR-linear-weighting.md` section 7.
+
+| 8k | simple + uniform | simple + linear |
+|---|---|---|
+| coverage | 94.73% | 94.88% |
+| near-uniform when played (pre / draw / post) | 8.36 / 26.07 / 12.13% | 8.38 / 25.84 / 11.46% |
+| SBR mean | 3.76 ± 0.07 | 2.84 ± 0.97 |
+| vs uniform / vs call_station | +1.82 / +0.73 | +1.80 / +0.61 (± 0.12–0.15) |
+| head-to-head (linear vs uniform) | | −0.06 ± 0.14 |
+
+No metric differs by more than ~1 SE except postdraw near-uniform (−0.7 points, ~2 SE). The lower SBR mean comes with one very noisy seat (sd 1.89) and is within 1 SE. 2k was also within noise. By the proposal's falsification rule: **not adopted** at this scale; the code stays (default `uniform`). Hypothesis (untested): linear weighting discounts early regrets, but draw nodes get only a handful of updates by 8k, so per-node sample count, not early-iteration weight, is the bottleneck.
