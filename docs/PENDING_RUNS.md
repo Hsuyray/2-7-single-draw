@@ -4,18 +4,29 @@
 
 最後更新:day75。
 
-目前沒有長時間的訓練要跑(day74:使用者暫停長時間訓練，先改邏輯)。C1 下一次重訓要等 Linear CFR 的實驗有結論(`docs/proposals/CFR-average-weighting.md` 第 9 節)。
+## 1. C1 重訓:`hu_d5_full_bucket_s20_e70s` 到 8k(約 4.5–5 小時，峰值約 3.3 GB)
 
-## 1. 有空時跑一次測試(約 3–5 分鐘)
-
-day75 加了 `--average-mode`(simple averaging)。預設行為沒變，雲端已經跑過全部測試;這裡只是在 Windows / Python 3.12 上再確認一次。
+和 `hu_d5_full_bucket_s20_e70` 只差一個變數:`--average-mode simple`(day75 採用)。Linear CFR 沒有採用(`docs/proposals/CFR-linear-weighting.md` 第 7 節),所以 iteration weighting 維持 uniform。manifest 項目已經在雲端加好，並用 3 次迭代試跑過。
 
 ```powershell
 git pull origin claude/lucid-ritchie-myhksz
 python -m pytest tests -q
+python -m scripts.solve_library train hu_d5_full_bucket_s20_e70s --until 8000
 ```
 
-全部通過就好，不用 commit 任何東西。有失敗的話把輸出貼給我。
+- 測試約 3–5 分鐘;有失敗就先不要訓練，把輸出貼給我。
+- 參考時間:e70 的 8k 在筆電上是 16,341 秒(約 4.5 小時)、峰值 3.26 GB。
+- 要中途停止(Ctrl+C)或被中斷的話，再跑一次同一行 `train` 就會從最後存的狀態續跑(每個 batch 存一次狀態)。
+- 跑完後把下面這些 commit 並 push(checkpoint 本身不進 git):
+
+```powershell
+python -m scripts.solve_library status
+git add solutions/manifest.json
+git commit -m "day76: C1 e70s 8k trained"
+git push origin claude/lucid-ritchie-myhksz
+```
+
+評估(A2,約 3 小時)等訓練完再說，不用接著跑。
 
 ## 2. 可以跑(選擇性)
 

@@ -173,6 +173,35 @@
       "seed": 42,
       "seed_mode": "sequential",
       "status": "trained"
+    },
+    "hu_d5_full_bucket_s20_e70s": {
+      "abstraction": {
+        "abstraction": "bucket",
+        "average_mode": "simple",
+        "bet_sizing": "full",
+        "draw_action_mode": "auto",
+        "iteration_weighting": "uniform",
+        "traversal_mode": "external_sampling"
+      },
+      "checkpoints": [],
+      "game": {
+        "big_blind": 2.0,
+        "big_blind_ante": 1.5,
+        "max_draw": 5,
+        "player_count": 2,
+        "small_blind": 1.0,
+        "stack": 20.0
+      },
+      "milestones": [
+        8000,
+        16000,
+        32000
+      ],
+      "note": "Day75 retrain of hu_d5_full_bucket_s20_e70 with simple averaging (docs/proposals/CFR-average-weighting.md); one variable changed vs e70. Linear CFR not adopted (docs/proposals/CFR-linear-weighting.md). Trained with button_seat=0 only; button 1 needs D1 seat relabelling.",
+      "released": null,
+      "seed": 42,
+      "seed_mode": "sequential",
+      "status": "planned"
     }
   }
 }
