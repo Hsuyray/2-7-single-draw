@@ -148,6 +148,20 @@ def parse_args(
     )
 
     parser.add_argument(
+        "--draw-action-sampling",
+        type=int,
+        default=0,
+        help=(
+            "0 (the original, default): explore "
+            "every draw action of the traverser. "
+            "k > 0: explore about k draw actions, "
+            "importance weighted; needs "
+            "--average-mode simple (docs/proposals/"
+            "CFR-draw-action-sampling.md)."
+        ),
+    )
+
+    parser.add_argument(
         "--draw-action-mode",
         choices=(
             "auto",
@@ -410,6 +424,15 @@ def training_config(
             if args.iteration_weighting != "uniform"
             else {}
         ),
+        **(
+            {
+                "draw_action_sampling": (
+                    args.draw_action_sampling
+                )
+            }
+            if args.draw_action_sampling != 0
+            else {}
+        ),
     }
 
 
@@ -549,6 +572,9 @@ def main(
             iteration_weighting=(
                 args.iteration_weighting
             ),
+            draw_action_sampling=(
+                args.draw_action_sampling
+            ),
             game_config=shared_game_config,
         )
 
@@ -680,6 +706,11 @@ def main(
     print(
         f"  iteration weighting: "
         f"{args.iteration_weighting}"
+    )
+
+    print(
+        f"  draw action sampling: "
+        f"{args.draw_action_sampling}"
     )
 
     print(

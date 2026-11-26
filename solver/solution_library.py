@@ -150,6 +150,7 @@ def new_solution_entry(
     draw_action_mode: str = "auto",
     average_mode: str = "reach",
     iteration_weighting: str = "uniform",
+    draw_action_sampling: int = 0,
     note: str = "",
 ) -> dict[str, Any]:
     if stack <= 0:
@@ -189,6 +190,7 @@ def new_solution_entry(
             "draw_action_mode": draw_action_mode,
             "average_mode": average_mode,
             "iteration_weighting": iteration_weighting,
+            "draw_action_sampling": draw_action_sampling,
         },
         "seed": seed,
         "seed_mode": seed_mode,
@@ -286,6 +288,10 @@ def training_argv(
         abstraction.get("average_mode", "reach"),
         "--iteration-weighting",
         abstraction.get("iteration_weighting", "uniform"),
+        # Entries written before day76 have no draw_action_sampling:
+        # they explore every draw action (0).
+        "--draw-action-sampling",
+        str(abstraction.get("draw_action_sampling", 0)),
     ]
 
 

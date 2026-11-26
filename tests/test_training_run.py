@@ -56,6 +56,13 @@ CONFIGS = {
         "--average-mode", "simple",
         "--iteration-weighting", "linear",
     ],
+    "bucket_maxdraw5_draw_sampling": [
+        "--max-draw", "5",
+        "--abstraction", "bucket",
+        "--bet-sizing", "fast",
+        "--average-mode", "simple",
+        "--draw-action-sampling", "4",
+    ],
 }
 
 
@@ -254,6 +261,34 @@ def test_resume_with_different_settings_is_refused(
             tmp_path,
             "run",
             config + changed,
+            "--iterations", "4",
+            "--resume", str(state),
+        )
+
+
+def test_resume_with_different_draw_sampling_is_refused(
+    tmp_path: Path,
+) -> None:
+    config = CONFIGS["bucket_maxdraw5_simple_average"]
+
+    state = tmp_path / "run.state.gz"
+
+    train(
+        tmp_path,
+        "run",
+        config,
+        "--iterations", "2",
+        "--state-output", str(state),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="draw_action_sampling",
+    ):
+        train(
+            tmp_path,
+            "run",
+            config + ["--draw-action-sampling", "4"],
             "--iterations", "4",
             "--resume", str(state),
         )

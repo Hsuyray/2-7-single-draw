@@ -148,6 +148,9 @@ def parse_args(
         choices=("uniform", "linear"),
     )
     add.add_argument(
+        "--draw-action-sampling", type=int, default=0,
+    )
+    add.add_argument(
         "--note", default="",
     )
 
@@ -266,6 +269,7 @@ def command_add(
         draw_action_mode=args.draw_action_mode,
         average_mode=args.average_mode,
         iteration_weighting=args.iteration_weighting,
+        draw_action_sampling=args.draw_action_sampling,
         note=args.note,
     )
 
@@ -642,7 +646,9 @@ def format_solution(
             f"average "
             f"{abstraction.get('average_mode', 'reach')}, "
             f"weighting "
-            f"{abstraction.get('iteration_weighting', 'uniform')}; "
+            f"{abstraction.get('iteration_weighting', 'uniform')}, "
+            f"draw sampling "
+            f"{abstraction.get('draw_action_sampling', 0)}; "
             f"seed {entry['seed']} "
             f"({entry['seed_mode']})"
         ),

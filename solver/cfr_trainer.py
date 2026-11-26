@@ -119,6 +119,21 @@ ITERATION_WEIGHTINGS: tuple[str, ...] = (
 )
 
 
+# Draw-action sampling at the traverser's draw nodes
+# (docs/proposals/CFR-draw-action-sampling.md):
+#
+# 0 (default): external sampling explores every draw action of the
+#     traverser (32 with max_draw=5). The original behaviour.
+#
+# k > 0: each draw action a is explored independently with
+#     probability q(a) = min(1, max(DRAW_SAMPLE_FLOOR, k * sigma(a))),
+#     sigma = the current (regret-matching) strategy, so about k
+#     actions are explored. Values and regrets are importance
+#     weighted by 1 / q(a), which keeps every regret and
+#     average-strategy increment unbiased.
+DRAW_SAMPLE_FLOOR = 0.05
+
+
 @dataclass
 class CFRTrainer:
     max_draw: int = 3
@@ -154,6 +169,8 @@ class CFRTrainer:
     average_mode: AverageMode = "reach"
 
     iteration_weighting: IterationWeighting = "uniform"
+
+    draw_action_sampling: int = 0
 
     game_config: (
         GameConfig
@@ -236,6 +253,33 @@ class CFRTrainer:
                 "Linear iteration weighting is "
                 "only implemented for external "
                 "sampling."
+            )
+
+        if (
+            not isinstance(
+                self.draw_action_sampling,
+                int,
+            )
+            or self.draw_action_sampling < 0
+        ):
+            raise ValueError(
+                "Draw action sampling must be "
+                "a non-negative integer."
+            )
+
+        if (
+            self.draw_action_sampling > 0
+            and (
+                self.traversal_mode
+                != "external_sampling"
+                or self.average_mode
+                != "simple"
+            )
+        ):
+            raise ValueError(
+                "Draw action sampling needs "
+                "external sampling with simple "
+                "averaging."
             )
 
         if self.max_draw < 0:
@@ -501,7 +545,12 @@ class CFRTrainer:
         game: SingleDrawGame,
         traversing_seat: int,
         traverser_reach: float,
+        sample_weight: float = 1.0,
     ) -> float:
+        """
+        sample_weight is 1 / (probability that draw-action sampling
+        kept this path); it is exactly 1.0 when sampling is off.
+        """
         if game.phase == GamePhase.COMPLETE:
             return terminal_utility(
                 game,
@@ -544,6 +593,7 @@ class CFRTrainer:
                 node.accumulate_strategy(
                     realization_weight=(
                         self._iteration_weight()
+                        * sample_weight
                     )
                 )
 
@@ -570,7 +620,30 @@ class CFRTrainer:
                     traverser_reach=(
                         traverser_reach
                     ),
+                    sample_weight=(
+                        sample_weight
+                    ),
                 )
+            )
+
+        if (
+            self.draw_action_sampling > 0
+            and game.phase == GamePhase.DRAW
+        ):
+            return self._sampled_draw_node(
+                game=game,
+                node=node,
+                actions=actions,
+                strategy=strategy,
+                traversing_seat=(
+                    traversing_seat
+                ),
+                traverser_reach=(
+                    traverser_reach
+                ),
+                sample_weight=(
+                    sample_weight
+                ),
             )
 
         if self.average_mode == "reach":
@@ -606,6 +679,9 @@ class CFRTrainer:
                         traverser_reach
                         * strategy[action]
                     ),
+                    sample_weight=(
+                        sample_weight
+                    ),
                 )
             )
 
@@ -618,7 +694,10 @@ class CFRTrainer:
                 * action_utility
             )
 
-        weight = self._iteration_weight()
+        weight = (
+            self._iteration_weight()
+            * sample_weight
+        )
 
         regrets = {
             action: weight * (
@@ -630,6 +709,101 @@ class CFRTrainer:
 
         node.add_regrets(
             regrets
+        )
+
+        return node_utility
+
+    def _sampled_draw_node(
+        self,
+        *,
+        game: SingleDrawGame,
+        node,
+        actions: tuple[
+            SolverAction,
+            ...,
+        ],
+        strategy: dict[
+            SolverAction,
+            float,
+        ],
+        traversing_seat: int,
+        traverser_reach: float,
+        sample_weight: float,
+    ) -> float:
+        """
+        Traverser draw node with draw-action sampling: explore each
+        action independently with probability q(a) (draw_inclusion_
+        probabilities) and return the importance-weighted estimates
+        of sampled_draw_estimates. The subtree below a kept action
+        carries sample_weight / q(a).
+        """
+        inclusion = draw_inclusion_probabilities(
+            actions=actions,
+            strategy=strategy,
+            target=self.draw_action_sampling,
+        )
+
+        sampled_utilities: dict[
+            SolverAction,
+            float,
+        ] = {}
+
+        for action in actions:
+            probability = inclusion[action]
+
+            if (
+                probability < 1.0
+                and self._random.random()
+                >= probability
+            ):
+                continue
+
+            next_game = (
+                self._apply_node_action(
+                    game=game,
+                    action=action,
+                )
+            )
+
+            sampled_utilities[action] = (
+                self._external_sampling_cfr(
+                    game=next_game,
+                    traversing_seat=(
+                        traversing_seat
+                    ),
+                    traverser_reach=(
+                        traverser_reach
+                        * strategy[action]
+                    ),
+                    sample_weight=(
+                        sample_weight
+                        / probability
+                    ),
+                )
+            )
+
+        node_utility, raw_regrets = (
+            sampled_draw_estimates(
+                actions=actions,
+                strategy=strategy,
+                inclusion=inclusion,
+                sampled_utilities=(
+                    sampled_utilities
+                ),
+            )
+        )
+
+        weight = (
+            self._iteration_weight()
+            * sample_weight
+        )
+
+        node.add_regrets(
+            {
+                action: weight * regret
+                for action, regret
+                in raw_regrets.items()
+            }
         )
 
         return node_utility
@@ -930,3 +1104,68 @@ class CFRTrainer:
                 "during pre-draw betting "
                 "or the draw phase."
             )
+
+def draw_inclusion_probabilities(
+    *,
+    actions: tuple[SolverAction, ...],
+    strategy: dict[SolverAction, float],
+    target: int,
+) -> dict[SolverAction, float]:
+    """
+    q(a) = min(1, max(DRAW_SAMPLE_FLOOR, target * sigma(a))).
+    Every action keeps a positive probability, so the estimates of
+    sampled_draw_estimates stay unbiased.
+    """
+    return {
+        action: min(
+            1.0,
+            max(
+                DRAW_SAMPLE_FLOOR,
+                target * strategy[action],
+            ),
+        )
+        for action in actions
+    }
+
+
+def sampled_draw_estimates(
+    *,
+    actions: tuple[SolverAction, ...],
+    strategy: dict[SolverAction, float],
+    inclusion: dict[SolverAction, float],
+    sampled_utilities: dict[SolverAction, float],
+) -> tuple[float, dict[SolverAction, float]]:
+    """
+    Importance-weighted estimates for one traverser draw node whose
+    actions were kept independently with probability inclusion[a]:
+
+        v_hat(a) = v(a) / q(a) if a was kept, else 0
+        u_hat    = sum_a sigma(a) * v_hat(a)
+        r_hat(a) = v_hat(a) - u_hat
+
+    E[v_hat(a)] = v(a), so u_hat and r_hat are unbiased estimates of
+    the node value and the instantaneous regrets.
+    """
+    action_values = {
+        action: (
+            sampled_utilities[action]
+            / inclusion[action]
+            if action in sampled_utilities
+            else 0.0
+        )
+        for action in actions
+    }
+
+    node_utility = sum(
+        strategy[action]
+        * action_values[action]
+        for action in actions
+    )
+
+    return node_utility, {
+        action: (
+            action_values[action]
+            - node_utility
+        )
+        for action in actions
+    }

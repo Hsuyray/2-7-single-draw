@@ -61,6 +61,7 @@ def build_trainer(args: argparse.Namespace) -> tuple[CFRTrainer, GameConfig]:
         random_seed=args.seed,
         average_mode=args.average_mode,
         iteration_weighting=args.iteration_weighting,
+        draw_action_sampling=getattr(args, "draw_action_sampling", 0),
         game_config=config,
     )
 
@@ -82,6 +83,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         choices=AVERAGE_MODES)
     parser.add_argument("--iteration-weighting", default="linear",
                         choices=ITERATION_WEIGHTINGS)
+    parser.add_argument("--draw-action-sampling", type=int, default=0)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--label", required=True)
     return parser.parse_args(argv)
