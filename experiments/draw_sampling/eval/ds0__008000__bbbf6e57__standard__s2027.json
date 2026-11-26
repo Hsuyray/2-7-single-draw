@@ -1,0 +1,1282 @@
+{
+  "baselines": {
+    "deal_pairs": 5000,
+    "format": "duplicate: each deck played twice with seats swapped; utility is the profile's chips per deal",
+    "opponents": {
+      "call_station": {
+        "deal_pairs": 5000,
+        "first_deck_seed": 1205653720,
+        "max_zero_sum_error": 1.7763568394002505e-15,
+        "opponent_coverage": 1.0,
+        "policy_seed": 720892427,
+        "profile_coverage": 0.9373901077899243,
+        "standard_error": 0.14664362303985715,
+        "utility": 0.7339700000000006
+      },
+      "uniform": {
+        "deal_pairs": 5000,
+        "first_deck_seed": 2872474806,
+        "max_zero_sum_error": 3.552713678800501e-15,
+        "opponent_coverage": 1.0,
+        "policy_seed": 1961047217,
+        "profile_coverage": 0.950651671221358,
+        "standard_error": 0.1225378147182625,
+        "utility": 1.8244200000000026
+      }
+    }
+  },
+  "checkpoint": {
+    "metadata": {
+      "abstraction": "bucket",
+      "bet_all_in_threshold": 0.9,
+      "bet_chip_increment": 0.1,
+      "bet_include_all_in": true,
+      "bet_pot_fractions": [
+        0.33,
+        0.66,
+        1.0
+      ],
+      "bet_sizing_mode": "policy",
+      "big_blind": 2.0,
+      "big_blind_ante": 1.5,
+      "completed_iterations": 8000,
+      "created_at_utc": "2026-11-26T11:47:37.648165+00:00",
+      "draw_action_mode": "full",
+      "format_version": 3,
+      "game": "2-7-single-draw",
+      "max_draw": 5,
+      "player_count": 2,
+      "postdraw_bucket_count": 128,
+      "raise_sizes": null,
+      "small_blind": 1.0,
+      "starting_stack": 20.0,
+      "starting_stacks": null,
+      "traversal_mode": "external_sampling"
+    },
+    "name": "ds0__008000.chk.gz",
+    "sha256": "bbbf6e578c84d7d6d5a2ed2f56615b6c49d1a59d43fce369dbe2d07e96f43f1a",
+    "size_bytes": 5162117,
+    "strategy_count": 358987
+  },
+  "coverage": {
+    "action_space_mismatch_examples": [],
+    "action_space_mismatches": 0,
+    "button_seat": 0,
+    "by_phase": {
+      "draw": {
+        "matched": 23764,
+        "missing": 1990,
+        "near_uniform_played": 0.2607305167480222,
+        "rate": 0.9227304496388911,
+        "standard_error": 0.0016638695465647521,
+        "total": 25754
+      },
+      "postdraw_betting": {
+        "matched": 11589,
+        "missing": 172,
+        "near_uniform_played": 0.12131320224719101,
+        "rate": 0.9853753932488734,
+        "standard_error": 0.0011069317129954587,
+        "total": 11761
+      },
+      "predraw_betting": {
+        "matched": 45525,
+        "missing": 2337,
+        "near_uniform_played": 0.08362438220757826,
+        "rate": 0.9511721198445531,
+        "standard_error": 0.0009850722156081071,
+        "total": 47862
+      }
+    },
+    "deals": 20000,
+    "distinct_visited_states": 25591,
+    "first_deck_seed": 2850243615,
+    "first_miss": {
+      "by_phase": {
+        "draw": 896,
+        "postdraw_betting": 109,
+        "predraw_betting": 1894
+      },
+      "deals_with_miss": 2899,
+      "rate": 0.14495
+    },
+    "near_uniform_played": {
+      "rate": 0.1411112901426606,
+      "standard_error": 0.0012256421613636992,
+      "total": 80681
+    },
+    "overall": {
+      "matched": 80878,
+      "missing": 4499,
+      "rate": 0.947304309123066,
+      "standard_error": 0.0007646485382189919,
+      "total": 85377
+    },
+    "policy_seed": 654749614,
+    "self_play": {
+      "max_zero_sum_error": 3.552713678800501e-15,
+      "seat_0_standard_error": 0.10140259928204903,
+      "seat_0_utility": 0.6058449999999933,
+      "seat_1_standard_error": 0.10140259928204903,
+      "seat_1_utility": -0.6058449999999933
+    },
+    "top_missing_hand_keys": [
+      {
+        "count": 16,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 1, 5, 5, 5), rank_multiplicities=(2, 2, 1, 1, 1), pair_classes=(1,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 15,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 0, 2, 2, 3), rank_multiplicities=(2, 2, 2, 2, 1), pair_classes=(0, 2), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 14,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 0, 0, 2, 4), rank_multiplicities=(3, 3, 3, 1, 1), pair_classes=(), trip_classes=(0,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 14,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 1, 5, 5, 5), rank_multiplicities=(2, 2, 1, 2, 2), pair_classes=(1, 5), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 14,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 5, 5, 5), rank_multiplicities=(1, 1, 3, 3, 3), pair_classes=(), trip_classes=(5,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 13,
+        "hand_key": "DrawHandBucket(rank_classes=(2, 2, 3, 3, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 13,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 4, 5, 5, 5), rank_multiplicities=(1, 1, 3, 3, 3), pair_classes=(), trip_classes=(5,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 12,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 4, 4, 4), rank_multiplicities=(1, 1, 3, 3, 3), pair_classes=(), trip_classes=(4,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 11,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 5, 5, 5), rank_multiplicities=(1, 1, 3, 3, 3), pair_classes=(), trip_classes=(5,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 11,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 1, 1, 4, 4), rank_multiplicities=(2, 2, 1, 2, 2), pair_classes=(1, 4), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 11,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 3, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, True, True, True, True), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 3, 3, 4, 4), rank_multiplicities=(1, 1, 1, 2, 2), pair_classes=(4,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 5, 5, 5), rank_multiplicities=(1, 1, 3, 3, 3), pair_classes=(), trip_classes=(5,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(3, 3, 3, 5, 5), rank_multiplicities=(1, 2, 2, 1, 1), pair_classes=(3,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 1, 1, 1, 5), rank_multiplicities=(2, 2, 2, 2, 1), pair_classes=(1, 1), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 4, 4, 4, 4), rank_multiplicities=(1, 2, 2, 2, 2), pair_classes=(4, 4), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(2, 2, 5, 5, 5), rank_multiplicities=(1, 1, 2, 2, 1), pair_classes=(5,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 10,
+        "hand_key": "DrawHandBucket(rank_classes=(3, 3, 3, 4, 5), rank_multiplicities=(3, 3, 3, 1, 1), pair_classes=(), trip_classes=(3,), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 1, 4, 4), rank_multiplicities=(1, 2, 2, 1, 1), pair_classes=(1,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 1, 5, 5, 5), rank_multiplicities=(2, 2, 1, 2, 2), pair_classes=(1, 5), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 4, 4, 4, 5), rank_multiplicities=(1, 1, 2, 2, 1), pair_classes=(4,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 0, 0, 0, 2), rank_multiplicities=(2, 2, 2, 2, 1), pair_classes=(0, 0), trip_classes=(), quad_classes=(), unique_rank_count=3, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 1, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(True, False, True, True, True), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 3, 4), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(True, True, True, True, True), is_straight=False, is_flush=True)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 9,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 3, 4, 4, 5), rank_multiplicities=(1, 1, 2, 2, 1), pair_classes=(4,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(True, True, True, False, True), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      }
+    ],
+    "top_missing_public_nodes": [
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 790,
+        "current_bet": 2.0,
+        "history": "",
+        "history_length": 0,
+        "phase": "predraw_betting",
+        "pot": 4.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 242,
+        "current_bet": 20.0,
+        "history": "pre: s0 raise 20",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 23.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 203,
+        "current_bet": 2.0,
+        "history": "pre: s0 call",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 5.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 185,
+        "current_bet": 7.5,
+        "history": "pre: s0 raise 7.5",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 11.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 148,
+        "current_bet": 20.0,
+        "history": "pre: s0 raise 20, s1 call",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 144,
+        "current_bet": 5.6,
+        "history": "pre: s0 raise 5.6",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 9.1
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 121,
+        "current_bet": 2.0,
+        "history": "pre: s0 call, s1 check",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 5.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 107,
+        "current_bet": 18.5,
+        "history": "pre: s0 call, s1 raise 18.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 22.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 101,
+        "current_bet": 7.5,
+        "history": "pre: s0 raise 7.5, s1 call",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 16.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 94,
+        "current_bet": 18.5,
+        "history": "pre: s0 raise 7.5, s1 raise 18.5, s0 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 38.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 85,
+        "current_bet": 18.5,
+        "history": "pre: s0 call, s1 raise 18.5, s0 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 38.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 85,
+        "current_bet": 18.5,
+        "history": "pre: s0 raise 5.6, s1 raise 18.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 25.6
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 82,
+        "current_bet": 14.0,
+        "history": "pre: s0 raise 5.6, s1 raise 14",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 21.1
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 79,
+        "current_bet": 18.5,
+        "history": "pre: s0 raise 7.5, s1 raise 18.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 27.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 66,
+        "current_bet": 5.6,
+        "history": "pre: s0 raise 5.6, s1 call",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 12.7
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 66,
+        "current_bet": 5.6,
+        "history": "pre: s0 call, s1 raise 5.6",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 9.1
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 64,
+        "current_bet": 20.0,
+        "history": "pre: s0 call, s1 raise 7.5, s0 raise 20",
+        "history_length": 3,
+        "phase": "predraw_betting",
+        "pot": 29.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 63,
+        "current_bet": 7.5,
+        "history": "pre: s0 call, s1 raise 7.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 11.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 51,
+        "current_bet": 20.0,
+        "history": "pre: s0 raise 20, s1 call | draw: s1 draw 2",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 49,
+        "current_bet": 20.0,
+        "history": "pre: s0 call, s1 raise 7.5, s0 raise 20, s1 call",
+        "history_length": 4,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 46,
+        "current_bet": 14.0,
+        "history": "pre: s0 call, s1 raise 5.6, s0 raise 14",
+        "history_length": 3,
+        "phase": "predraw_betting",
+        "pot": 21.1
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 43,
+        "current_bet": 20.0,
+        "history": "pre: s0 raise 20, s1 call | draw: s1 draw 1",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 0,
+        "count": 43,
+        "current_bet": 18.5,
+        "history": "pre: s0 raise 5.6, s1 raise 18.5, s0 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 38.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 42,
+        "current_bet": 20.0,
+        "history": "pre: s0 raise 20, s1 call | draw: s1 draw 3",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 0,
+        "count": 42,
+        "current_bet": 9.8,
+        "history": "pre: s0 raise 5.6, s1 raise 9.8",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 16.9
+      }
+    ]
+  },
+  "coverage_button_1": {
+    "action_space_mismatch_examples": [],
+    "action_space_mismatches": 0,
+    "button_seat": 1,
+    "by_phase": {
+      "draw": {
+        "matched": 0,
+        "missing": 1684,
+        "near_uniform_played": null,
+        "rate": 0.0,
+        "standard_error": 0.0,
+        "total": 1684
+      },
+      "postdraw_betting": {
+        "matched": 0,
+        "missing": 1075,
+        "near_uniform_played": null,
+        "rate": 0.0,
+        "standard_error": 0.0,
+        "total": 1075
+      },
+      "predraw_betting": {
+        "matched": 0,
+        "missing": 4457,
+        "near_uniform_played": null,
+        "rate": 0.0,
+        "standard_error": 0.0,
+        "total": 4457
+      }
+    },
+    "deals": 2000,
+    "distinct_visited_states": 0,
+    "first_deck_seed": 1053106142,
+    "first_miss": {
+      "by_phase": {
+        "predraw_betting": 2000
+      },
+      "deals_with_miss": 2000,
+      "rate": 1.0
+    },
+    "near_uniform_played": {
+      "rate": null,
+      "standard_error": null,
+      "total": 0
+    },
+    "note": "Training only uses button_seat=0 and PublicNodeKey stores the absolute button seat, so button-1 states are expected to be missing. Diagnostic only; not part of the main coverage.",
+    "overall": {
+      "matched": 0,
+      "missing": 7216,
+      "rate": 0.0,
+      "standard_error": 0.0,
+      "total": 7216
+    },
+    "policy_seed": 863827203,
+    "self_play": {
+      "max_zero_sum_error": 3.552713678800501e-15,
+      "seat_0_standard_error": 0.24908806912471235,
+      "seat_0_utility": -0.1749250000000001,
+      "seat_1_standard_error": 0.24908806912471235,
+      "seat_1_utility": 0.1749250000000001
+    },
+    "top_missing_hand_keys": [
+      {
+        "count": 85,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 3, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 84,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 3, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 84,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 2, 3, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 68,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 3, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 66,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 55,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 3, 4), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 46,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 3, 4, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 45,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 42,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 2, 4, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 40,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 4, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 39,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 3, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 37,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 4, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 36,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 2, 3, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 35,
+        "hand_key": "DrawHandBucket(rank_classes=(2, 3, 4, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 33,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 3, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 32,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 3, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 32,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 3, 4, 5, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 31,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 3, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 30,
+        "hand_key": "DrawHandBucket(rank_classes=(1, 2, 3, 5, 5), rank_multiplicities=(1, 1, 1, 2, 2), pair_classes=(5,), trip_classes=(), quad_classes=(), unique_rank_count=4, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 29,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 29,
+        "hand_key": "DrawHandBucket(rank_classes=(2, 3, 4, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 27,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 2, 3, 4, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "draw"
+      },
+      {
+        "count": 27,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 1, 2, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 27,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 2, 2, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      },
+      {
+        "count": 27,
+        "hand_key": "DrawHandBucket(rank_classes=(0, 1, 3, 3, 5), rank_multiplicities=(1, 1, 1, 1, 1), pair_classes=(), trip_classes=(), quad_classes=(), unique_rank_count=5, flush_risk_positions=(False, False, False, False, False), is_straight=False, is_flush=False)",
+        "phase": "predraw_betting"
+      }
+    ],
+    "top_missing_public_nodes": [
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 2000,
+        "current_bet": 2.0,
+        "history": "",
+        "history_length": 0,
+        "phase": "predraw_betting",
+        "pot": 4.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 423,
+        "current_bet": 5.6,
+        "history": "pre: s1 raise 5.6",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 9.1
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 390,
+        "current_bet": 20.0,
+        "history": "pre: s1 raise 20",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 23.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 388,
+        "current_bet": 2.0,
+        "history": "pre: s1 call",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 5.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 386,
+        "current_bet": 7.5,
+        "history": "pre: s1 raise 7.5",
+        "history_length": 1,
+        "phase": "predraw_betting",
+        "pot": 11.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 200,
+        "current_bet": 20.0,
+        "history": "pre: s1 raise 20, s0 call",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 140,
+        "current_bet": 7.5,
+        "history": "pre: s1 raise 7.5, s0 call",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 16.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 127,
+        "current_bet": 18.5,
+        "history": "pre: s1 raise 7.5, s0 raise 18.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 27.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 127,
+        "current_bet": 5.6,
+        "history": "pre: s1 call, s0 raise 5.6",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 9.1
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 100,
+        "current_bet": 7.5,
+        "history": "pre: s1 call, s0 raise 7.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 11.0
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 100,
+        "current_bet": 14.0,
+        "history": "pre: s1 raise 5.6, s0 raise 14",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 21.1
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 90,
+        "current_bet": 18.5,
+        "history": "pre: s1 call, s0 raise 18.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 22.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 82,
+        "current_bet": 5.6,
+        "history": "pre: s1 raise 5.6, s0 call",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 12.7
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 76,
+        "current_bet": 18.5,
+        "history": "pre: s1 raise 5.6, s0 raise 18.5",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 25.6
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 73,
+        "current_bet": 9.8,
+        "history": "pre: s1 raise 5.6, s0 raise 9.8",
+        "history_length": 2,
+        "phase": "predraw_betting",
+        "pot": 16.9
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 71,
+        "current_bet": 2.0,
+        "history": "pre: s1 call, s0 check",
+        "history_length": 2,
+        "phase": "draw",
+        "pot": 5.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 67,
+        "current_bet": 20.0,
+        "history": "pre: s1 raise 20, s0 call | draw: s0 draw 3",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 64,
+        "current_bet": 18.5,
+        "history": "pre: s1 raise 7.5, s0 raise 18.5, s1 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 38.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 62,
+        "current_bet": 20.0,
+        "history": "pre: s1 raise 20, s0 call | draw: s0 draw 2",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 54,
+        "current_bet": 14.0,
+        "history": "pre: s1 raise 5.6, s0 raise 14, s1 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 29.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 43,
+        "current_bet": 7.5,
+        "history": "pre: s1 raise 7.5, s0 call | draw: s0 draw 3",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 16.5
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 40,
+        "current_bet": 18.5,
+        "history": "pre: s1 call, s0 raise 18.5, s1 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 38.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 39,
+        "current_bet": 20.0,
+        "history": "pre: s1 raise 20, s0 call | draw: s0 draw 4",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 40.0
+      },
+      {
+        "acting_seat": 0,
+        "button_seat": 1,
+        "count": 38,
+        "current_bet": 18.5,
+        "history": "pre: s1 raise 5.6, s0 raise 18.5, s1 call",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 38.5
+      },
+      {
+        "acting_seat": 1,
+        "button_seat": 1,
+        "count": 36,
+        "current_bet": 7.5,
+        "history": "pre: s1 raise 7.5, s0 call | draw: s0 draw 2",
+        "history_length": 3,
+        "phase": "draw",
+        "pot": 16.5
+      }
+    ]
+  },
+  "current_vs_average": {
+    "available": false,
+    "reason": "Checkpoints store the average strategy only (no regrets), so the current strategy cannot be reconstructed. Use the distance to a previous checkpoint and the SBR proxy instead."
+  },
+  "environment": {
+    "git_commit": "75674f168fa9343d7dcc6cfa2f83f17bc2bde06d",
+    "platform": "Linux-6.18.44-fc-v880-x86_64-with-glibc2.39",
+    "python": "3.13.18"
+  },
+  "gates": {
+    "benchmark_run": true,
+    "gates": [
+      {
+        "description": "No NaN, inf, negative or non-normalized stored strategy",
+        "id": "H1",
+        "kind": "hard",
+        "status": "pass",
+        "threshold": "== 0",
+        "value": 0
+      },
+      {
+        "description": "Stored action sets equal the rebuilt legal actions at every played state",
+        "id": "H2",
+        "kind": "hard",
+        "status": "pass",
+        "threshold": "== 0",
+        "value": 0
+      },
+      {
+        "description": "Every simulated deal is zero-sum",
+        "id": "H3",
+        "kind": "hard",
+        "status": "pass",
+        "threshold": "<= 1e-09",
+        "value": 3.552713678800501e-15
+      },
+      {
+        "description": "Same checkpoint and arguments give an identical report",
+        "detail": "checked by evaluate_checkpoint --compare on two runs",
+        "id": "H4",
+        "kind": "hard",
+        "status": "external"
+      },
+      {
+        "description": "Self-play coverage (button 0): overall >= 97%, every phase >= 95%",
+        "failing_phases": [
+          "draw"
+        ],
+        "id": "Q1",
+        "kind": "quality",
+        "status": "fail",
+        "value": {
+          "by_phase": {
+            "draw": 0.9227304496388911,
+            "postdraw_betting": 0.9853753932488734,
+            "predraw_betting": 0.9511721198445531
+          },
+          "overall": 0.947304309123066
+        }
+      },
+      {
+        "description": "Deals with any missing decision <= 10%",
+        "id": "Q2",
+        "kind": "quality",
+        "status": "fail",
+        "value": 0.14495
+      },
+      {
+        "description": "Played decisions using a near-uniform stored strategy, every phase <= 10%",
+        "failing_phases": [
+          "draw",
+          "postdraw_betting"
+        ],
+        "id": "Q3",
+        "kind": "quality",
+        "status": "fail",
+        "value": {
+          "draw": 0.2607305167480222,
+          "postdraw_betting": 0.12131320224719101,
+          "predraw_betting": 0.08362438220757826
+        }
+      },
+      {
+        "description": "Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only",
+        "failing_opponents": [],
+        "id": "Q4",
+        "kind": "quality",
+        "status": "pass",
+        "value": {
+          "call_station": {
+            "standard_error": 0.14664362303985715,
+            "utility": 0.7339700000000006
+          },
+          "uniform": {
+            "standard_error": 0.1225378147182625,
+            "utility": 1.8244200000000026
+          }
+        }
+      },
+      {
+        "description": "Does not lose to the previous compatible checkpoint (utility >= -2 SE)",
+        "detail": "no --previous given",
+        "id": "Q5",
+        "kind": "quality",
+        "status": "n/a"
+      },
+      {
+        "description": "SBR exploitability lower bound: mean gain - 2 SE <= 0.2 chips/deal (can only reject)",
+        "id": "Q6",
+        "kind": "quality",
+        "status": "fail",
+        "threshold": "<= 0.2",
+        "value": {
+          "lower_bound": 2.4693818768125744,
+          "mean_gain": 3.7573749999999992,
+          "runs": 4,
+          "standard_error": 0.6439965615937124
+        }
+      }
+    ],
+    "gates_version": 2,
+    "note": null,
+    "verdict": "FAIL"
+  },
+  "parameters": {
+    "button1_deals": 2000,
+    "deals": 20000,
+    "match_deal_pairs": 5000,
+    "overridden": [],
+    "preset": "standard",
+    "sbr_grouping": "coarse",
+    "sbr_repeats": 2,
+    "sbr_response_deals": 1000,
+    "sbr_sweeps": 3,
+    "sbr_validation_deals": 1000,
+    "sections": [
+      "static",
+      "coverage",
+      "button1",
+      "sbr",
+      "baselines",
+      "previous"
+    ],
+    "seed": 2027,
+    "top": 25
+  },
+  "report_version": 2,
+  "sbr": {
+    "gain_by_seat": {
+      "seat_0": {
+        "count": 2,
+        "max": 3.1807,
+        "mean": 2.9960999999999998,
+        "min": 2.8114999999999997,
+        "sd": 0.2610638236140735,
+        "standard_error": 0.18460000000000193
+      },
+      "seat_1": {
+        "count": 2,
+        "max": 4.572499999999998,
+        "mean": 4.518649999999999,
+        "min": 4.464799999999999,
+        "sd": 0.07615540033379016,
+        "standard_error": 0.05384999999998231
+      }
+    },
+    "grouping": "coarse",
+    "max_sweeps": 3,
+    "mean_seat_gain": {
+      "count": 2,
+      "max": 3.8227499999999996,
+      "mean": 3.7573749999999992,
+      "min": 3.691999999999999,
+      "sd": 0.09245421164014167,
+      "standard_error": 0.06537500000000636
+    },
+    "note": "Lower-bound proxy, not exact exploitability. Gain = held-out response value minus held-out profile value for the responder seat. grouping 'coarse' learns one action per (seat, public node, coarse hand class) and plays the profile elsewhere; 'none' is the original per-state SBR, which is sample-starved (A2_DESIGN 11-12).",
+    "repeats": 2,
+    "response_deals": 1000,
+    "runs": {
+      "seat_0": [
+        {
+          "baseline_standard_error": 0.46147890094349486,
+          "baseline_value": 1.0974000000000002,
+          "changed_actions": 20498,
+          "gain": 3.1807,
+          "gain_standard_error": 0.6551885908649503,
+          "information_states": 20498,
+          "opponent_strategy_coverage": 0.959777343506372,
+          "policy_seed": 2013936138,
+          "repeat": 0,
+          "response_decisions": 2849,
+          "response_fallback_share": 0.004914004914004914,
+          "response_fallback_tie_decisions": 14,
+          "response_first_deck_seed": 2413011771,
+          "response_value": 4.2781,
+          "sweeps_completed": 3
+        },
+        {
+          "baseline_standard_error": 0.45456124283036203,
+          "baseline_value": 1.1838000000000002,
+          "changed_actions": 20507,
+          "gain": 2.8114999999999997,
+          "gain_standard_error": 0.613702508157265,
+          "information_states": 20507,
+          "opponent_strategy_coverage": 0.9581248964717575,
+          "policy_seed": 1088867861,
+          "repeat": 1,
+          "response_decisions": 2441,
+          "response_fallback_share": 0.009422367882015567,
+          "response_fallback_tie_decisions": 22,
+          "response_first_deck_seed": 1705444815,
+          "response_value": 3.9953,
+          "sweeps_completed": 3
+        }
+      ],
+      "seat_1": [
+        {
+          "baseline_standard_error": 0.46203375302994787,
+          "baseline_value": -1.612500000000001,
+          "changed_actions": 20401,
+          "gain": 4.464799999999999,
+          "gain_standard_error": 0.6503946911024211,
+          "information_states": 20401,
+          "opponent_strategy_coverage": 0.9452492264843386,
+          "policy_seed": 196826116,
+          "repeat": 0,
+          "response_decisions": 2329,
+          "response_fallback_share": 0.005152425933877201,
+          "response_fallback_tie_decisions": 8,
+          "response_first_deck_seed": 3044649421,
+          "response_value": 2.8522999999999983,
+          "sweeps_completed": 3
+        },
+        {
+          "baseline_standard_error": 0.45469208223769364,
+          "baseline_value": -1.4282,
+          "changed_actions": 20390,
+          "gain": 4.572499999999998,
+          "gain_standard_error": 0.6567004562502136,
+          "information_states": 20390,
+          "opponent_strategy_coverage": 0.9520274527835965,
+          "policy_seed": 552741942,
+          "repeat": 1,
+          "response_decisions": 2184,
+          "response_fallback_share": 0.0009157509157509158,
+          "response_fallback_tie_decisions": 0,
+          "response_first_deck_seed": 2057928573,
+          "response_value": 3.1442999999999985,
+          "sweeps_completed": 3
+        }
+      ]
+    },
+    "validation_deals": 1000,
+    "validation_first_deck_seed": 2557633233
+  },
+  "setup": {
+    "abstraction": "bucket",
+    "assumed_fields": [],
+    "bet_sizing_policy": {
+      "all_in_threshold": 0.9,
+      "chip_increment": 0.1,
+      "include_all_in": true,
+      "pot_fractions": [
+        0.33,
+        0.66,
+        1.0
+      ]
+    },
+    "draw_action_mode": "full",
+    "game_config": {
+      "big_blind": 2.0,
+      "big_blind_ante": 1.5,
+      "player_count": 2,
+      "small_blind": 1.0,
+      "starting_stack": 20.0,
+      "starting_stacks": null
+    },
+    "max_draw": 5,
+    "raise_sizes": null
+  },
+  "static": {
+    "by_phase": {
+      "draw": {
+        "deterministic": 27,
+        "deterministic_fraction": 0.0005389329128325915,
+        "information_states": 50099,
+        "invalid": 0,
+        "multi_action": 50099,
+        "near_uniform": 41110,
+        "near_uniform_fraction": 0.8205752609832532,
+        "public_nodes": 133,
+        "single_action": 0
+      },
+      "postdraw_betting": {
+        "deterministic": 38093,
+        "deterministic_fraction": 0.13565158556344925,
+        "information_states": 294406,
+        "invalid": 0,
+        "multi_action": 280815,
+        "near_uniform": 165766,
+        "near_uniform_fraction": 0.5903032245428484,
+        "public_nodes": 3168,
+        "single_action": 13591
+      },
+      "predraw_betting": {
+        "deterministic": 938,
+        "deterministic_fraction": 0.06477005938406298,
+        "information_states": 14482,
+        "invalid": 0,
+        "multi_action": 14482,
+        "near_uniform": 9276,
+        "near_uniform_fraction": 0.6405192652948488,
+        "public_nodes": 20,
+        "single_action": 0
+      }
+    },
+    "deterministic_threshold": 0.999,
+    "information_states": 358987,
+    "invalid_examples": [],
+    "invalid_strategies": 0,
+    "near_uniform_tolerance": 1e-06
+  },
+  "timing": {
+    "baselines_s": 93.23377444699872,
+    "button1_s": 7.9164512439992905,
+    "coverage_s": 85.3737251270004,
+    "load_s": 6.970785798999714,
+    "peak_rss_gb": 0.624,
+    "sbr_runs_s": {
+      "seat0_repeat0": 849.6014420209995,
+      "seat0_repeat1": 861.3273621219996,
+      "seat1_repeat0": 1030.0721088459995,
+      "seat1_repeat1": 1067.0159523589991
+    },
+    "sbr_s": 3808.0177563039997,
+    "static_s": 1.4479036599996107
+  }
+}

@@ -1,0 +1,51 @@
+========================================================================
+CHECKPOINT EVALUATION
+========================================================================
+  checkpoint: ds4__008000.chk.gz
+  sha256: c2f2176520035d85468c9523a186d963abe65cf258fc50a578502648981606d6
+  format v3, 8,000 iterations, 207,535 strategies
+  abstraction=bucket max_draw=5 draw_action_mode=full bet_sizing=policy [0.33, 0.66, 1.0]
+  preset=standard seed=2027 overridden=-
+
+COVERAGE (self-play, 20,000 deals, button 0)
+  overall: 92.64% (se 0.09%, 77,713/83,883)
+  predraw_betting    95.25% (45,332/47,591)  near-uniform when played: 8.73%
+  draw               90.18% (22,966/25,468)  near-uniform when played: 24.28%
+  postdraw_betting   86.98% (9,415/10,824)  near-uniform when played: 45.71%
+  deals with any miss: 19.51%; first miss by phase: predraw_betting=1,862, draw=1,346, postdraw_betting=694
+  action-space mismatches: 0
+  self-play seat 0: +0.5748 ± 0.1002 chips/deal; max zero-sum error 3.55e-15
+  top missing public nodes:
+       790  pot=4.5 bet=2  (root)
+       295  pot=23.5 bet=20  pre: s0 raise 20
+       208  pot=40 bet=20  pre: s0 raise 20, s1 call
+       170  pot=5.5 bet=2  pre: s0 call
+       169  pot=11 bet=7.5  pre: s0 raise 7.5
+       136  pot=9.1 bet=5.6  pre: s0 raise 5.6
+       120  pot=16.5 bet=7.5  pre: s0 raise 7.5, s1 call
+       100  pot=27.5 bet=18.5  pre: s0 raise 7.5, s1 raise 18.5
+        93  pot=5.5 bet=2  pre: s0 call, s1 check
+        91  pot=38.5 bet=18.5  pre: s0 call, s1 raise 18.5, s0 call
+
+PREVIOUS: ds0__008000.chk.gz
+  visit-weighted L1: 0.8419413532953581
+  predraw_betting   weighted=0.7487301129072049 median=0.11309211358246189 shared=12,203
+  draw              weighted=1.0694253262251185 median=0.0 shared=26,197
+  postdraw_betting  weighted=0.7679340009005644 median=0.36000000000000004 shared=141,479
+  head-to-head: -0.8131 ± 0.1366 chips/deal for the current checkpoint
+
+current-vs-average: unavailable (checkpoint has no regrets)
+
+GATES v2: INCOMPLETE
+  H1  MISSING  No NaN, inf, negative or non-normalized stored strategy
+  H2  PASS     Stored action sets equal the rebuilt legal actions at every played state
+  H3  PASS     Every simulated deal is zero-sum
+  H4  EXTERNAL Same checkpoint and arguments give an identical report
+  Q1  FAIL     Self-play coverage (button 0): overall >= 97%, every phase >= 95%  failing: draw, postdraw_betting
+  Q2  FAIL     Deals with any missing decision <= 10%
+  Q3  FAIL     Played decisions using a near-uniform stored strategy, every phase <= 10%  failing: draw, postdraw_betting
+  Q4  MISSING  Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only
+  Q5  FAIL     Does not lose to the previous compatible checkpoint (utility >= -2 SE)
+  Q6  MISSING  SBR exploitability lower bound: mean gain - 2 SE <= 0.2 chips/deal (can only reject)
+
+TIMING  load_s=4.0  coverage_s=81.4  previous_load_s=7.8  previous_s=45.7  peak_rss_gb=0.867

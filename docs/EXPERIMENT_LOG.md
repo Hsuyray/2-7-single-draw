@@ -443,3 +443,23 @@ No metric differs by more than ~1 SE except postdraw near-uniform (−0.7 points
 Gates FAIL (Q1, Q2, Q3, Q6), as e70 8k. Replicates the day74 fast-sizing result at full sizing: less uniform in every phase, better vs uniform (~2.6 SE), no detectable difference in SBR or vs call_station. Head-to-head e70s vs e70 not run yet.
 
 Timing: training took 71% longer than e70 8k (16,341 s) and SBR 54% longer (21,523 s vs 13,984 s). SBR does not depend on the average mode, and a cloud timing of 300 full-sizing iterations gave reach 381 s / simple 384 s (same nodes, 170,391). Likely cause: the laptop ran slower during this run (power / thermal / other load), not the code. Not verified on the laptop.
+
+## Draw-action sampling (day76, cloud)
+
+`--draw-action-sampling k` (`CFRTrainer.draw_action_sampling`; default 0 = unchanged, fingerprints identical): at the traverser's draw nodes each discard action is expanded with probability min(1, max(0.05, k·σ)), importance-weighted (unbiased; needs external sampling + simple averaging). Design: `docs/proposals/CFR-draw-action-sampling.md`. Diagnosis (2k fast run): per iteration only one hand bucket per draw public node is updated; 32 draw actions each expand a full postdraw subtree, so 372 of 458 node visits per iteration are postdraw under the traverser's draw branches.
+
+Run: `scripts/train_weighting_variant.py`, `max_draw=5`, bucket, `fast` sizing, stack 20, seed 42, simple + uniform (same deal sequence as day74). k=4: 8k 838 s / 207,535 nodes, 32k 3,610 s / 365,807 nodes. k=0 baseline: 8k 4,833 s / 358,987 nodes (identical to day74 simple 8k, report identical). Concurrent cloud jobs, so timings are rough. A2 `standard`, seed 2027, reports in `experiments/draw_sampling/eval/`; head-to-head vs k=0 8k.
+
+| | k=0 8k | k=4 8k | k=4 32k (less time) |
+|---|---|---|---|
+| training s | 4,833 | 838 | 3,610 |
+| coverage | 94.73% | 92.64% | 98.13% |
+| near-uniform when played (pre / draw / post) | 8.36 / 26.07 / 12.13% | 8.73 / 24.28 / 45.71% | 2.90 / 9.10 / 12.66% |
+| deals with any miss | 14.49% | 19.51% | 5.92% |
+| SBR mean | 3.76 | 4.12 | 2.22 |
+| vs uniform / vs call_station | +1.82 / +0.73 | +1.05 / +0.37 | +1.94 / +0.37 (± 0.12–0.15) |
+| head-to-head vs k=0 8k | | −0.81 ± 0.14 | −0.14 ± 0.14 |
+| gates failing | Q1 Q2 Q3 Q6 | Q1 Q2 Q3 Q6 | Q3 (postdraw only), Q6 |
+
+Equal iterations: worse (expected noise cost). Equal (less) wall-clock: draw near-uniform 26% → 9%, coverage +3.4 points (Q1, Q2 pass for the first time), SBR −1.54 (~3 SE or more); vs uniform and head-to-head within 1 SE. vs call_station −0.37 (~1.8 SE): below the 2 SE falsification threshold, to watch. No falsification condition triggered: k=4 recommended. Single seed, fast sizing; the speed-up at `full` sizing is not measured.
+
