@@ -3,3 +3,73 @@ Static statistics ...
 Coverage (20,000 deals, button 0) ...
 Coverage diagnostic (2,000 deals, button 1) ...
 Sampled best response (2 repeats per seat) ...
+  SBR seat 0 repeat 0: gain +4.3507 (se 0.5965) in 896.3s
+  SBR seat 1 repeat 0: gain +4.0002 (se 0.6437) in 949.7s
+  SBR seat 0 repeat 1: gain +3.3300 (se 0.6153) in 852.8s
+  SBR seat 1 repeat 1: gain +4.7843 (se 0.6392) in 944.1s
+Baselines (5,000 deal pairs each) ...
+========================================================================
+CHECKPOINT EVALUATION
+========================================================================
+  checkpoint: ds4__008000.chk.gz
+  sha256: c2f2176520035d85468c9523a186d963abe65cf258fc50a578502648981606d6
+  format v3, 8,000 iterations, 207,535 strategies
+  abstraction=bucket max_draw=5 draw_action_mode=full bet_sizing=policy [0.33, 0.66, 1.0]
+  preset=standard seed=2027 overridden=-
+
+STATIC
+  invalid strategies: 0
+  predraw_betting   states=   14,450 public=     20 near-uniform= 64.04% deterministic=  7.12%
+  draw              states=   40,662 public=    133 near-uniform= 79.96% deterministic=  0.47%
+  postdraw_betting  states=  152,423 public=  3,124 near-uniform= 81.42% deterministic=  7.18%
+
+COVERAGE (self-play, 20,000 deals, button 0)
+  overall: 92.64% (se 0.09%, 77,713/83,883)
+  predraw_betting    95.25% (45,332/47,591)  near-uniform when played: 8.73%
+  draw               90.18% (22,966/25,468)  near-uniform when played: 24.28%
+  postdraw_betting   86.98% (9,415/10,824)  near-uniform when played: 45.71%
+  deals with any miss: 19.51%; first miss by phase: predraw_betting=1,862, draw=1,346, postdraw_betting=694
+  action-space mismatches: 0
+  self-play seat 0: +0.5748 ± 0.1002 chips/deal; max zero-sum error 3.55e-15
+  top missing public nodes:
+       790  pot=4.5 bet=2  (root)
+       295  pot=23.5 bet=20  pre: s0 raise 20
+       208  pot=40 bet=20  pre: s0 raise 20, s1 call
+       170  pot=5.5 bet=2  pre: s0 call
+       169  pot=11 bet=7.5  pre: s0 raise 7.5
+       136  pot=9.1 bet=5.6  pre: s0 raise 5.6
+       120  pot=16.5 bet=7.5  pre: s0 raise 7.5, s1 call
+       100  pot=27.5 bet=18.5  pre: s0 raise 7.5, s1 raise 18.5
+        93  pot=5.5 bet=2  pre: s0 call, s1 check
+        91  pot=38.5 bet=18.5  pre: s0 call, s1 raise 18.5, s0 call
+
+BUTTON 1 DIAGNOSTIC (2,000 deals): coverage 0.00%
+
+SBR PROXY (2 repeats/seat, 1,000 response deals, 1,000 validation deals, <= 3 sweeps, grouping coarse)
+  seat_0: mean gain +3.8403 sd 0.7217 [+3.3300, +4.3507]
+  seat_1: mean gain +4.3922 sd 0.5544 [+4.0002, +4.7843]
+  mean over seats: +4.1163 ± 0.0592 (se over repeats)
+  per-run gain se (validation noise): 0.5965..0.6437
+  responder validation decisions from fallback: 0.20%..1.10%
+  proxy only; NOT exploitability
+
+BASELINES (duplicate, 5,000 deal pairs)
+  vs uniform       +1.0536 ± 0.1216 chips/deal (profile coverage 92.52%)
+  vs call_station  +0.3688 ± 0.1462 chips/deal (profile coverage 77.20%)
+
+current-vs-average: unavailable (checkpoint has no regrets)
+
+GATES v2: FAIL
+  H1  PASS     No NaN, inf, negative or non-normalized stored strategy
+  H2  PASS     Stored action sets equal the rebuilt legal actions at every played state
+  H3  PASS     Every simulated deal is zero-sum
+  H4  EXTERNAL Same checkpoint and arguments give an identical report
+  Q1  FAIL     Self-play coverage (button 0): overall >= 97%, every phase >= 95%  failing: draw, postdraw_betting
+  Q2  FAIL     Deals with any missing decision <= 10%
+  Q3  FAIL     Played decisions using a near-uniform stored strategy, every phase <= 10%  failing: draw, postdraw_betting
+  Q4  PASS     Does not lose to any fixed opponent (utility >= -2 SE). Necessary for equilibrium; the winning margin is information only
+  Q5  N/A      Does not lose to the previous compatible checkpoint (utility >= -2 SE)
+  Q6  FAIL     SBR exploitability lower bound: mean gain - 2 SE <= 0.2 chips/deal (can only reject)
+
+TIMING  load_s=3.5  static_s=0.9  coverage_s=76.5  button1_s=6.5  sbr_s=3642.9  baselines_s=91.0  peak_rss_gb=0.47
+Wrote experiments/draw_sampling/eval/ds4__008000__c2f21765__standard__s2027.json and experiments/draw_sampling/eval/ds4__008000__c2f21765__standard__s2027.txt

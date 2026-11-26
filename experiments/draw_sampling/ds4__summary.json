@@ -17,6 +17,21 @@
       "elapsed_s": 838.0,
       "iterations": 8000,
       "nodes": 207535
+    },
+    {
+      "elapsed_s": 1744.0,
+      "iterations": 16000,
+      "nodes": 285452
+    },
+    {
+      "elapsed_s": 2668.4,
+      "iterations": 24000,
+      "nodes": 332011
+    },
+    {
+      "elapsed_s": 3610.4,
+      "iterations": 32000,
+      "nodes": 365807
     }
   ]
 }

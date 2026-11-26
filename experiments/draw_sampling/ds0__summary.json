@@ -1,0 +1,22 @@
+{
+  "arguments": {
+    "abstraction": "bucket",
+    "average_mode": "simple",
+    "bet_sizing": "fast",
+    "draw_action_sampling": 0,
+    "iteration_weighting": "uniform",
+    "iterations": "8000",
+    "label": "ds0",
+    "max_draw": 5,
+    "out_dir": "experiments/draw_sampling",
+    "seed": 42,
+    "stack": 20.0
+  },
+  "milestones": [
+    {
+      "elapsed_s": 4832.9,
+      "iterations": 8000,
+      "nodes": 358987
+    }
+  ]
+}
