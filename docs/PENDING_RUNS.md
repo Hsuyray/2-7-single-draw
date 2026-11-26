@@ -2,31 +2,21 @@
 
 雲端 session 寫好程式、但需要在筆電上跑的東西，依順序列在這裡。跑完一項就刪掉那一項，並把結果檔 commit 進去。
 
-最後更新:day75。
+最後更新:day76。
 
-## 1. C1 重訓:`hu_d5_full_bucket_s20_e70s` 到 8k(約 4.5–5 小時，峰值約 3.3 GB)
+## 1. 推上 e70s 8k 的結果，並跑對打(約 5 分鐘)
 
-和 `hu_d5_full_bucket_s20_e70` 只差一個變數:`--average-mode simple`(day75 採用)。Linear CFR 沒有採用(`docs/proposals/CFR-linear-weighting.md` 第 7 節),所以 iteration weighting 維持 uniform。manifest 項目已經在雲端加好，並用 3 次迭代試跑過。
+訓練和評估已完成(day76),結果已寫進 `docs/EXPERIMENT_LOG.md`。筆電上 manifest 和評估報告還沒推上來，另外補一個只跑對打的短評估(e70s 對 e70,正值 = simple 贏):
 
 ```powershell
 git pull origin claude/lucid-ritchie-myhksz
-python -m pytest tests -q
-python -m scripts.solve_library train hu_d5_full_bucket_s20_e70s --until 8000
-```
-
-- 測試約 3–5 分鐘;有失敗就先不要訓練，把輸出貼給我。
-- 參考時間:e70 的 8k 在筆電上是 16,341 秒(約 4.5 小時)、峰值 3.26 GB。
-- 要中途停止(Ctrl+C)或被中斷的話，再跑一次同一行 `train` 就會從最後存的狀態續跑(每個 batch 存一次狀態)。
-- 跑完後把下面這些 commit 並 push(checkpoint 本身不進 git):
-
-```powershell
-python -m scripts.solve_library status
-git add solutions/manifest.json
-git commit -m "day76: C1 e70s 8k trained"
+python -m scripts.evaluate_checkpoint solutions/hu_d5_full_bucket_s20_e70s/strategy_008000.chk.gz --previous solutions/hu_d5_full_bucket_s20_e70/strategy_008000.chk.gz --sections previous --out-dir experiments/eval/e70s_vs_e70
+git add solutions/manifest.json solutions/hu_d5_full_bucket_s20_e70s/eval experiments/eval/e70s_vs_e70
+git commit -m "day76: C1 e70s 8k trained and evaluated; head-to-head vs e70"
 git push origin claude/lucid-ritchie-myhksz
 ```
 
-評估(A2,約 3 小時)等訓練完再說，不用接著跑。
+`--sections previous` 只跑對打，不跑 SBR,所以不是 benchmark 報告，也不會記進 manifest。
 
 ## 2. 可以跑(選擇性)
 

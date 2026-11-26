@@ -106,3 +106,18 @@ A2 評估:
 - 第 5 節第 1 點(手算期望權重的小例子)沒有做：遊戲沒有夠小的子樹可以手算;改用上面「和實驗旁表逐位元相同」加上推導(第 2–3 節)。
 
 下一步：第 2 項 Linear CFR,用同樣的雲端小實驗、以 `simple` 為基準比較。兩項都有結論後，C1 才新增一個解從 0 重訓。
+
+## 10. [實測] C1 full sizing 8k(day76,筆電)
+
+`hu_d5_full_bucket_s20_e70s`(simple)對 `hu_d5_full_bucket_s20_e70`(reach),兩者只差 average mode。節點數都是 1,342,329:regret 和取樣軌跡相同，只有平均策略不同(符合第 9 節的測試)。
+
+| 8k | e70(reach) | e70s(simple) |
+|---|---|---|
+| coverage | 92.35% | 92.98% |
+| 近均勻(實際打到;pre / draw / post) | 21.15 / 45.03 / 29.28% | 13.76 / 33.37 / 21.89% |
+| deals with any miss | 21.79% | 20.29% |
+| SBR mean | 3.63 ± 0.31 | 3.49 ± 0.12 |
+| vs uniform | +1.32 ± 0.12 | +1.77 ± 0.12 |
+| vs call_station | +0.15 ± 0.14 | +0.19 ± 0.15 |
+
+和 day74 fast sizing 實驗同方向：近均勻每個階段都降 7–12 個百分點，vs uniform 好 0.44(約 2.6 SE),SBR 和 vs call_station 沒有可偵測的差別。對打(e70s vs e70)還沒跑。

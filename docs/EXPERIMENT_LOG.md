@@ -426,3 +426,20 @@ Simple averaging is less uniform in every phase and better against the fixed bas
 | head-to-head (linear vs uniform) | | −0.06 ± 0.14 |
 
 No metric differs by more than ~1 SE except postdraw near-uniform (−0.7 points, ~2 SE). The lower SBR mean comes with one very noisy seat (sd 1.89) and is within 1 SE. 2k was also within noise. By the proposal's falsification rule: **not adopted** at this scale; the code stays (default `uniform`). Hypothesis (untested): linear weighting discounts early regrets, but draw nodes get only a handful of updates by 8k, so per-node sample count, not early-iteration weight, is the bottleneck.
+
+## C1 simple-averaging solution, 8k (day76, laptop)
+
+`hu_d5_full_bucket_s20_e70s`: same game and settings as `hu_d5_full_bucket_s20_e70` (`max_draw=5`, bucket, `full` sizing, external sampling, seed 42 sequential) except `average_mode=simple`. `solve_library train --until 8000`, one segment: 27,906 s, 1,342,329 info sets (identical to e70 8k, as expected: same traversal and regrets), peak RSS 3.36 GB (during the final save). A2 `standard`, seed 2027: report in `solutions/hu_d5_full_bucket_s20_e70s/eval/`, checkpoint sha256 `04060610…`.
+
+| 8k | e70 (reach) | e70s (simple) |
+|---|---|---|
+| coverage | 92.35% | 92.98% |
+| near-uniform when played (pre / draw / post) | 21.15 / 45.03 / 29.28% | 13.76 / 33.37 / 21.89% |
+| deals with any miss | 21.79% | 20.29% |
+| SBR mean (lower bound) | 3.63 ± 0.31 (+2.38) | 3.49 ± 0.12 (+2.24) |
+| vs uniform / vs call_station | +1.32 / +0.15 | +1.77 / +0.19 (± 0.12–0.15) |
+| self-play seat 0 | +0.89 ± 0.10 | +0.84 ± 0.10 |
+
+Gates FAIL (Q1, Q2, Q3, Q6), as e70 8k. Replicates the day74 fast-sizing result at full sizing: less uniform in every phase, better vs uniform (~2.6 SE), no detectable difference in SBR or vs call_station. Head-to-head e70s vs e70 not run yet.
+
+Timing: training took 71% longer than e70 8k (16,341 s) and SBR 54% longer (21,523 s vs 13,984 s). SBR does not depend on the average mode, and a cloud timing of 300 full-sizing iterations gave reach 381 s / simple 384 s (same nodes, 170,391). Likely cause: the laptop ran slower during this run (power / thermal / other load), not the code. Not verified on the laptop.
